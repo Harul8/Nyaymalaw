@@ -314,7 +314,7 @@ def test_a_saved_turn_keeps_its_disputes_case_as_records_and_the_board_and_the_a
             was = {"was": 1} if prompt.operation == "core_case_check" else {}
             return ModelResult(None, {"headings": ["The notice"], "elements": [{
                 "element": "Service of the notice", "label": "Service of the notice", "heading": 1,
-                "law": {"source_id": passage["id"], "quote": "Counsel submitted"},
+                "law": [{"source_id": passage["id"], "quote": "Counsel submitted"}],
                 "proves": "client", "status": "missing", "points": [], "why": "Nothing yet shows when it was served.", **was}],
                 "to_get": [{"what": "The postal receipt", "from_whom": "the client", "elements": [1],
                             "why": "It proves the date of posting.", "helps": "It shows the notice was served in time."}],
@@ -333,7 +333,8 @@ def test_a_saved_turn_keeps_its_disputes_case_as_records_and_the_board_and_the_a
     assert case["state"] == "checked"
     element, = case["elements"]
     assert (element["element"], element["status"], element["proves"]) == ("Service of the notice", "missing", "client")
-    assert element["law"]["found"] is True and element["law"]["words"] == "Counsel submitted" and element["law"]["kind"] == "judgment"
+    law, = element["law"]
+    assert law["found"] is True and law["words"] == "Counsel submitted" and law["kind"] == "judgment"
     assert case["to_get"] == [{"what": "The postal receipt", "from_whom": "the client", "why": "It proves the date of posting.",
                                "helps": "It shows the notice was served in time.", "for": "Service of the notice",
                                "serves": ["Service of the notice"]}]

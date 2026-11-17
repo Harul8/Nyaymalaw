@@ -9,8 +9,8 @@ v2 gives it, with the numbers of the elements it attacks (D285: the paid check f
 asked for a heading; code reads the heading from the element); and the few things that most decide the dispute as the papers
 stand. Gathering and deciding are judgments of meaning, left to the model. Code checks only what is mechanical, made again exactly
 on replay (P46):
-- every check of v2, by case_strength.admit itself: the law's exact words in a held passage offered for the dispute, the points of
-  the papers' list, "shown" only with a point found on its page;
+- every check of v2, by case_strength.admit itself: the points of the papers' list, "shown" only with a point found on its page;
+  and v2's own law check, case_strength._law, for each passage of an item's law (D293);
 - an element whose heading number names no heading with a name is put under code's own heading, 'Other things the law requires',
   and said so - never dropped; a heading no element sits under is not shown;
 - a number of what a point of the other side attacks that names no element is taken off; the point's heading is that of the first
@@ -39,6 +39,16 @@ the record keeps them all, and the line on the account and the research note say
 only: a number the review gives that names nothing it was shown is not taken, said so. The review is not made where nothing is
 left to show it. A failed review leaves the account as checked, said so; 'checked' is the view's state only where the second look
 and the review were both made (F-03). A usage limit stops the turn, as at every step.
+
+SEVERAL PASSAGES OF LAW FOR ONE REQUIREMENT (plan AN.49, D293; the owner's "D293 - Ok", 17 Nov 2026, before any answer was saved
+under v3 - so v3 takes it). The bounded live run of that evening found 7 of 13 requirements set by several provisions or judgments
+read together, each named in v3's one law field ('P1; P2', each passage's words after its ID): code could not place them, and D290
+left all seven out although six were quoted word for word. Each requirement, and each point of the other side, now gives its law
+as a list of passages, each with its own exact words (none where no held law is theirs). Code looks for each quotation in its own
+passage, as v2 looks for the one; the record keeps each with whether it was found, and a note for each not found. A requirement is
+left out by law only where none of its quotations is found; it is shown with the quotations found, and those not found are shown
+as not found, as v2 shows its one. The view gives each item's law as a list, each entry as v2's view gives the one; the board and
+the note show each as they show the one (the owner's yes under D60, for this only).
 """
 from __future__ import annotations
 
@@ -64,12 +74,18 @@ def _object(fields):
 
 _ELEMENT = case_strength.ELEMENT["properties"]
 _OTHER_SIDE = case_strength.OTHER_SIDE["properties"]
-#: v2's element and point of the other side, each with its number in the gathering; the asks and what decides it, new.
+#: D293: an item's law - each passage it rests on, with its own exact words.
+LAWS = {"type": "array", "items": case_strength.LAW}
+#: v2's element and point of the other side, each with its number in the gathering and its law as a list (D293); the asks and what
+#: decides it, new.
 ELEMENT = _object({"element": _ELEMENT["element"], "label": _ELEMENT["label"], "heading": NUMBER,
-                   **{key: value for key, value in _ELEMENT.items() if key not in ("element", "label")}})
+                   **{key: value for key, value in _ELEMENT.items() if key not in ("element", "label", "law")}, "law": LAWS})
 TO_GET = _object({"what": STRING, "from_whom": STRING, "elements": NUMBERS, "why": STRING, "helps": STRING})
 OTHER_SIDE = _object({"relies_on": _OTHER_SIDE["relies_on"], "label": _OTHER_SIDE["label"], "attacks": NUMBERS,
-                      **{key: value for key, value in _OTHER_SIDE.items() if key not in ("relies_on", "label")}})
+                      **{key: value for key, value in _OTHER_SIDE.items() if key not in ("relies_on", "label", "law")},
+                      "law": LAWS})
+#: What v2's own checks are given in place of an item's law, which v3 checks passage by passage (D293).
+NO_LAW = {"source_id": "", "quote": ""}
 DECIDES = _object({"what": STRING, "why": STRING, "elements": NUMBERS, "other_side": NUMBERS})
 SCHEMA = _object({"headings": {"type": "array", "items": STRING}, "elements": {"type": "array", "items": ELEMENT},
                   "to_get": {"type": "array", "items": TO_GET}, "other_side": {"type": "array", "items": OTHER_SIDE},
@@ -91,9 +107,9 @@ CASE = """Message: You receive one dispute of an advocate's matter as our resear
 
 Purpose: Our client's case on this dispute is to be made as strong as the law and the facts allow. A lawyer preparing it asks what the law requires to be proven, which of it the papers already prove, which they prove only weakly, and which they do not prove at all - and so what must still be gathered from the client or elsewhere before the matter is argued, and what the other side will rely on. The advocate reads the account on the matter board at a glance and acts on it, so it is gathered as a lawyer would brief it: the requirements under a few headings that belong together for this dispute, each thing to get asked once of the person or place that can give it however many requirements it serves, each point of the other side set against what it attacks, and the few things that most decide the dispute as the papers stand.
 
-Look for: each element the governing provisions and the judgments' tests require for the client to succeed, or that the other side must establish against the client - said in plain words, with the provision's or the judgment's own words that set it (its short ID and those exact words), and who must prove it. For each, how the papers stand: shown (name the points that show it), weak (shown only in part, contested by another paper, or resting on the advocate's word alone - say why), or missing. For each element weak or missing, what would prove it - the document, record, certified copy, statement or witness - from whom it can be had, why the law needs it and how it would help; where one document or one person would prove several elements, that is one thing to get, serving each of them. What the other side will rely on, with the law's words or the points they would cite where there are any, what it attacks and what would answer it. And which few things most decide this dispute as the papers stand.
+Look for: each element the governing provisions and the judgments' tests require for the client to succeed, or that the other side must establish against the client - said in plain words, with the provisions' or the judgments' own words that set it (each passage's short ID and its exact words - one passage or several, as the law sets it), and who must prove it. For each, how the papers stand: shown (name the points that show it), weak (shown only in part, contested by another paper, or resting on the advocate's word alone - say why), or missing. For each element weak or missing, what would prove it - the document, record, certified copy, statement or witness - from whom it can be had, why the law needs it and how it would help; where one document or one person would prove several elements, that is one thing to get, serving each of them. What the other side will rely on, with the law's words or the points they would cite where there are any, what it attacks and what would answer it. And which few things most decide this dispute as the papers stand.
 
-Outcome: headings - the headings you gather the elements under, each named in a few words, as many as this dispute needs; elements - each with element, label (the element named in a few words, as the advocate's matter board lists it), heading (the number of its heading in your list, from 1), law (source_id and quote), proves (client or other_side), status (shown, weak or missing), points (the IDs of the points that show it or bear on it), why (a sentence or two); to_get - each thing to get from one person or place, with what, from_whom, elements (the numbers of every element in your list, from 1, that it would prove or help to prove), why and helps; other_side - each with relies_on, label (what they will rely on, in a few words), attacks (the numbers of the elements in your list, from 1, that it attacks; none where it attacks none), law (source_id and quote, or both empty where no held law is theirs), answer and points; decides - the few things that most decide this dispute as the papers stand, each with what (in a few words), why, elements (the numbers of the elements it concerns) and other_side (the numbers of the other side's points it concerns, from 1). Ask only for what the papers do not already show; leave out what the law does not require of this dispute.
+Outcome: headings - the headings you gather the elements under, each named in a few words, as many as this dispute needs; elements - each with element, label (the element named in a few words, as the advocate's matter board lists it), heading (the number of its heading in your list, from 1), law (each passage that sets it, with its source_id and quote - the exact words of that passage alone), proves (client or other_side), status (shown, weak or missing), points (the IDs of the points that show it or bear on it), why (a sentence or two); to_get - each thing to get from one person or place, with what, from_whom, elements (the numbers of every element in your list, from 1, that it would prove or help to prove), why and helps; other_side - each with relies_on, label (what they will rely on, in a few words), attacks (the numbers of the elements in your list, from 1, that it attacks; none where it attacks none), law (each passage they would rely on, with its source_id and quote - that passage's exact words; none where no held law is theirs), answer and points; decides - the few things that most decide this dispute as the papers stand, each with what (in a few words), why, elements (the numbers of the elements it concerns) and other_side (the numbers of the other side's points it concerns, from 1). Ask only for what the papers do not already show; leave out what the law does not require of this dispute.
 
 Work in a loop: read the material, set out the elements and gather them, check each against the law's words and the points before you give it, correct what does not hold, then give the whole."""
 
@@ -138,9 +154,24 @@ def _call(model, operation, system, user, step, schema=SCHEMA, tier=Tier.ROUTINE
 def admit(data, offered, points, sources):
     """The gathered account as the record keeps it, and what code said of it (notes: told to the check call, and kept).
     Deterministic in its inputs, so that replay re-derives it."""
-    base = case_strength.admit({"elements": data["elements"], "to_get": [], "other_side": data["other_side"]}, offered, points,
-                               sources, case_strength.CONTRACT)
-    elements, other_side, notes = base["elements"], base["other_side"], list(base["notes"])
+    # v2's checks of the points and the status, by case_strength.admit itself; each item's law checked here, passage by passage
+    # (D293) - so v2's note on the law it was not given is not kept.
+    base = case_strength.admit({"elements": [{**item, "law": NO_LAW} for item in data["elements"]], "to_get": [],
+                                "other_side": [{**item, "law": NO_LAW} for item in data["other_side"]]}, offered, points, sources,
+                               case_strength.CONTRACT)
+    unasked = {f"Element {number}'s law is not words of a held passage offered for this dispute"
+               for number in range(1, len(data["elements"]) + 1)}
+    elements, other_side = base["elements"], base["other_side"]
+    notes = [note for note in base["notes"] if note not in unasked]
+    for number, (item, entry) in enumerate(zip(data["elements"], elements), 1):
+        entry["law"], entry["law_found"] = _laws(item["law"], offered, sources)
+        if not entry["law"]:
+            notes.append(f"Element {number} names no law")
+        notes += [f"Element {number}'s law {index} ({given['source_id'] or 'naming no passage'}) is not words of that held passage "
+                  "offered for this dispute" for index, (given, found) in enumerate(zip(entry["law"], entry["law_found"]), 1)
+                  if not found]
+    for item, entry in zip(data["other_side"], other_side):
+        entry["law"], entry["law_found"] = _laws(item["law"], offered, sources)
     named = [_plain(name) for name in data["headings"]]
     under = []
     for number, item in enumerate(data["elements"], 1):
@@ -208,6 +239,13 @@ def admit(data, offered, points, sources):
             "set_aside": set_aside, "notes": notes}
 
 
+def _laws(given, offered, sources):
+    """An item's law as code finds it (D293): each passage as given, and whether its words are exactly in the held passage it names
+    - v2's own check (case_strength._law), passage by passage."""
+    checked = [case_strength._law(law, offered, sources, case_strength.CONTRACT) for law in given]
+    return [law for law, _ in checked], [found is True for _, found in checked]
+
+
 def not_carried(first, kept, checked=True):
     """Each element of the first call's account that the checked account no longer holds, by its number there (D181: nothing of the
     account lost unremarked between the first call and the gathered form; D286: known by the number the check call gives each of
@@ -248,8 +286,8 @@ def _kept(account, out):
 
 
 def _law_out(account):
-    """The requirements whose law's words are not in a held passage offered for the dispute (D290)."""
-    return {("element", number) for number, item in enumerate(account["elements"], 1) if not item["law_found"]}
+    """The requirements none of whose law's quotations is in the held passage it names, offered for the dispute (D290; D293)."""
+    return {("element", number) for number, item in enumerate(account["elements"], 1) if not any(item["law_found"])}
 
 
 def for_review(account):
@@ -358,8 +396,14 @@ def shown(record, context, part, sources):
     other_side = [{**item, "against": [place[number] for number in item["against"]]} for item in kept["other_side"]]
     decides = [{"what": item["what"], "why": item["why"], "elements": [place[number] for number in item["elements"]],
                 "other_side": [theirs[number] for number in item["other_side"]]} for item in kept["decides"]]
-    view = case_strength.shown({**record, "elements": elements, "other_side": other_side,
-                                "to_get": [{**ask, "element": ask["elements"][0]} for ask in asks]}, context, part, sources)
+    # v2's view, made by case_strength.shown itself once for each passage of an item's law (D293), and gathered again.
+    each, starts = _one_law_each(elements)
+    theirs_each, their_starts = _one_law_each(other_side)
+    view = case_strength.shown({**record, "elements": each, "other_side": theirs_each,
+                                "to_get": [{**ask, "element": starts[ask["elements"][0] - 1] + 1} for ask in asks]},
+                               context, part, sources)
+    view["elements"] = _gathered_law(view["elements"], starts)
+    view["other_side"] = _gathered_law(view["other_side"], their_starts)
     for entry, item in zip(view["elements"], elements):
         entry["heading"] = item["heading"]
     for entry, ask in zip(view["to_get"], asks):
@@ -375,6 +419,24 @@ def shown(record, context, part, sources):
     return {"state": state, "headings": list(record["headings"]), "elements": view["elements"], "to_get": view["to_get"],
             "other_side": view["other_side"], "decides": decides, "left_out": left,
             "said": checked_line(record["checked"] == "checked", record["review"] is not None, left)}
+
+
+def _one_law_each(items):
+    """Each item once for each passage of its law, as v2 gives an item its one law (once with none where it gives none), and the
+    place each item's first copy has (D293)."""
+    each, starts = [], []
+    for item in items:
+        starts.append(len(each))
+        each += [{**item, "law": given, "law_found": found}
+                 for given, found in (list(zip(item["law"], item["law_found"])) or [(NO_LAW, False)])]
+    return each, starts
+
+
+def _gathered_law(entries, starts):
+    """v2's view of each copy of an item gathered back into the item, its law the list of each copy's (D293)."""
+    ends = [*starts[1:], len(entries)]
+    return [{**entries[start], "law": [entry["law"] for entry in entries[start:end] if entry["law"] is not None]}
+            for start, end in zip(starts, ends)]
 
 
 #: How many of what was left out, and why, in code's words (D290).

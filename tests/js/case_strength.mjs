@@ -495,4 +495,23 @@ assert.ok(none.textContent.includes('NM could not set out what would make this c
     case: { ...asked, to_get: [] } } }, board, 1)), undefined);
   document.createElement = create;
 }
+// SEVERAL PASSAGES OF LAW FOR ONE REQUIREMENT (plan AN.49, D293; the owner's "D293 - Ok", 17 Nov 2026): a gathered case gives each
+// item's law as a list of passages, and the page draws each as it draws the one law of a case saved earlier - the found ones with
+// their words and the passage to open, one not found saying so - counting an item with any quotation not found once.
+{
+  const found = view.elements[0].law;
+  const missed = { found: false, words: 'words another passage holds' };
+  const several = { ...view, elements: [{ ...view.elements[0], law: [found, missed] }, { ...view.elements[1], law: [found] }],
+    other_side: [{ ...view.other_side[0], law: [] }] };
+  const drawn = context.renderCaseBlock(several).map((node) => node.textContent).join('\n');
+  assert.equal(drawn.split('Section 4, Imagined Relief Act, 1907').length - 1, 2, 'each found passage is drawn, as the one was');
+  assert.ok(drawn.includes('NM could not find these words in the law it read: “words another passage holds”'), 'one not found says so');
+  const [summary] = walk(turnOf(several)).filter(has('case-summary'));
+  assert.ok(summary.textContent.includes('For 1 of its points NM could not find the quoted words in the law it read.'));
+  const pane = context.renderCaseItem(several.elements[0], several, dispute, null).map((node) => node.textContent).join('\n');
+  assert.ok(pane.includes('Section 4, Imagined Relief Act, 1907') && pane.includes('“words another passage holds”'),
+    'the pane draws each passage of the requirement’s law');
+  const theirs = context.renderOtherSideItem(several.other_side[0], dispute, null).map((node) => node.textContent).join('\n');
+  assert.ok(!theirs.includes('The law they would rely on'), 'no held law of theirs: no block for it');
+}
 console.log('case_strength.mjs: ok');

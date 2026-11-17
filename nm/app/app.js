@@ -3286,7 +3286,9 @@ function renderTurn(entry) {
         const shown = stand('shown');
         const weak = stand('weak');
         const toGet = (view.to_get || []).length;
-        const unfound = [...listed, ...(view.other_side || [])].filter((item) => item.law && item.law.found === false).length;
+        // D293 (plan AN.49): a gathered case's item gives its law as a list of passages; one saved earlier, as the one.
+        const unfound = [...listed, ...(view.other_side || [])]
+          .filter((item) => [].concat(item.law || []).some((given) => given && given.found === false)).length;
         const summary = document.createElement('div');
         summary.className = 'case-summary';
         summary.appendChild(say('board-lede', `NM set out ${listed.length} ${listed.length === 1 ? 'thing' : 'things'} the law `
@@ -4684,7 +4686,8 @@ function renderCaseBlock(view, holder = null) {
   };
   const out = [];
   if (CASE_STATES[view.state]) out.push(make('p', 'check-none', CASE_STATES[view.state]));
-  const law = (given, usedFor) => (given && given.found
+  // D293 (plan AN.49): each passage of a gathered case's law, as the one law of a case saved earlier.
+  const law = (given, usedFor) => (Array.isArray(given) ? given.flatMap((one) => law(one, usedFor)) : given && given.found
     ? [make('blockquote', 'detail-words', given.words), ...caseLaw(given, holder, usedFor)] : caseLaw(given, holder, usedFor));
   const points = (said) => casePoints(said, holder);
   const elements = view.elements || [];
@@ -4743,7 +4746,8 @@ function renderCaseBlock(view, holder = null) {
 
 // A CASE'S LAW (plan AN.39, D53): the section and the Act, or the paragraph and the judgment, as a link that opens the passage in the
 // reading pane - from the saved record of the answer that holds the case, its words marked - or, where the page holds no such answer,
-// its words as the case kept them. Words NM could not find in the law it read say so.
+// its words as the case kept them. Words NM could not find in the law it read say so. A gathered case gives each passage of an
+// item's law, each shown so (plan AN.49, D293).
 function caseLaw(given, holder, usedFor) {
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -4751,6 +4755,7 @@ function caseLaw(given, holder, usedFor) {
     if (text !== undefined) node.textContent = text;
     return node;
   };
+  if (Array.isArray(given)) return given.flatMap((one) => caseLaw(one, holder, usedFor));
   if (!given) return [];
   if (!given.found) return [make('p', 'board-meta', `NM could not find these words in the law it read: “${given.words}”`)];
   const open = make('button', 'cite', [given.locator, given.title].filter(Boolean).join(', ') || 'The law');

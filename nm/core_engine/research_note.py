@@ -95,6 +95,9 @@ def _case_blocks(element):
         said(case_checked_line(case))
 
     def law(given):
+        # D293 (plan AN.49): a gathered case gives an item's law as a list of passages, each said as the one is.
+        if isinstance(given, list):
+            return "".join(law(one) for one in given)
         if not given:
             return ""
         if not given.get("found"):

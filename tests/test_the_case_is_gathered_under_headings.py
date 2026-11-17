@@ -24,7 +24,7 @@ OTHER = "Other things the law requires"
 
 
 def element(alias, words, heading, status, points, name):
-    return {"element": name, "label": name.split(" ")[0], "heading": heading, "law": {"source_id": alias, "quote": words},
+    return {"element": name, "label": name.split(" ")[0], "heading": heading, "law": [{"source_id": alias, "quote": words}],
             "proves": "client", "status": status, "points": list(points), "why": "The papers say little of it."}
 
 
@@ -33,7 +33,7 @@ def ask(elements, what="A certified copy of the revenue record", from_whom="the 
 
 
 def other(attacks, relies_on="Their own entry in the record"):
-    return {"relies_on": relies_on, "label": relies_on.split(" ")[-1], "attacks": attacks, "law": {"source_id": "", "quote": ""},
+    return {"relies_on": relies_on, "label": relies_on.split(" ")[-1], "attacks": attacks, "law": [],
             "answer": "It was made later.", "points": []}
 
 
@@ -83,11 +83,13 @@ def test_the_same_two_calls_give_the_gathered_account_and_code_keeps_only_the_me
     assert [(item["element"], item["heading"], item["status"]) for item in case["elements"]] == [
         ("Possession for twelve years", 1, "shown"), ("Possession that was open", 3, "weak"), ("Notice before the suit", 3, "missing"),
         ("Possession without the owner's leave", 1, "missing"), ("Title of the predecessor", 2, "weak")]
-    assert [item["law_found"] for item in case["elements"]] == [True, True, True, True, False], "v2's law check, unchanged"
+    assert [item["law_found"] for item in case["elements"]] == [[True], [True], [True], [True], [False]], (
+        "v2's law check, for each passage of an element's law (D293)")
     for note in ("Element 2 is under no named heading of the list: it is put under 'Other things the law requires'",
                  "Element 3 is under no named heading of the list: it is put under 'Other things the law requires'",
                  "Heading 2 ('Notice') has no element under it: it is not shown", "Heading 3 has no name: it is not shown",
-                 "Element 5's law is not words of a held passage offered for this dispute"):
+                 f"Element 5's law 1 ({case['elements'][4]['law'][0]['source_id']}) is not words of that held passage offered for "
+                 "this dispute"):
         assert note in case["notes"], note
     # Each ask serves every element it names that is in the list and not shown; one left serving none is set aside.
     assert [(entry["what"], entry["elements"]) for entry in case["to_get"]] == [
@@ -185,7 +187,7 @@ def test_the_view_keeps_what_the_pages_read_today_and_adds_the_gathering():
     # Plan AN.51 (D290): the requirement whose law is not in a held passage is left out of what is shown, said so; its heading,
     # now holding nothing shown, is drawn by no page.
     assert view["headings"] == ["Possession", "Title", OTHER] and [item["heading"] for item in view["elements"]] == [1, 3, 3, 1]
-    assert view["elements"][0]["law"]["found"] is True and view["elements"][0]["points"][0]["located"] is True
+    assert view["elements"][0]["law"][0]["found"] is True and view["elements"][0]["points"][0]["located"] is True
     assert view["left_out"] == [{"item": "element", "words": "Title of the predecessor", "by": "law", "why": ""}]
     assert [(entry["for"], entry["serves"]) for entry in view["to_get"]] == [
         ("Notice before the suit", ["Notice before the suit"]),
