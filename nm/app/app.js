@@ -4660,7 +4660,18 @@ const CASE_PROVES = { client: 'For your client to prove', other_side: 'For the o
 const CASE_STATES = {
   unchecked: 'NM’s second look at this list could not be made, so it stands as first set out.',
   unavailable: 'NM could not set out what would make this case stronger this time. The rest stands as checked.',
+  // Plan AN.51 (D290): the second look was made, the independent review could not be.
+  unreviewed: 'NM’s independent review of this list could not be made, so it stands as NM set it out and checked it.',
 };
+
+// WHERE NO REQUIREMENT IS SHOWN (plan AN.51, D290): one set out and every one left out is said so with code's line, never that none
+// was set out.
+function caseNoneLine(view) {
+  return (view && (view.left_out || []).some((item) => item.item === 'element') && typeof view.said === 'string')
+    ? `NM left out every requirement it set out for this dispute. ${view.said}`
+    : 'NM set out no element for this dispute from the law it read. That is what this research returned, not a finding that '
+      + 'the law requires nothing.';
+}
 
 // holder: the answer that holds the case ({chat_id, turn_id}), from whose saved record its law and its pages open (plan AN.39); none
 // where the page does not hold it, and then the law is shown as its words alone.
@@ -4698,8 +4709,7 @@ function renderCaseBlock(view, holder = null) {
     }
     out.push(ul);
   } else if (view.state !== 'unavailable') {
-    out.push(make('p', 'check-none', 'NM set out no element for this dispute from the law it read. That is what this '
-      + 'research returned, not a finding that the law requires nothing.'));
+    out.push(make('p', 'check-none', caseNoneLine(view)));
   }
   const toGet = view.to_get || [];
   if (toGet.length) {
@@ -5022,8 +5032,10 @@ function deadlineChips(limits) {
 }
 
 // HOW A CASE WAS CHECKED, IN CODE'S WORDS (plan AN.49, D185), ONE COPY: said wherever the account is shown, outside any fold. A second
-// look is claimed only where one was made.
+// look is claimed only where one was made. A gathered account carries code's own line from the server (plan AN.51, D290): whether the
+// independent review read it, and how many items were left out and why.
 function caseCheckedLine(view) {
+  if (view && typeof view.said === 'string') return view.said;
   return `This is NM’s working list: ${view && view.state === 'checked' ? 'a second look checked it and ' : ''}`
     + 'code looked for each quotation of law in the passage it names. It did not go through the independent review that the '
     + 'sections of an answer do.';
@@ -5266,8 +5278,7 @@ function renderDisputeCard(dispute, board, number = null, fold = null) {
     if (!view || view.state === 'unavailable' || !elements.length) {
       section.appendChild(make('p', 'check-none', !view || view.state === 'unavailable'
         ? 'NM could not set out what would make this case stronger when it last answered.'
-        : 'NM set out no element for this dispute from the law it read. That is what this research returned, not a '
-          + 'finding that the law requires nothing.'));
+        : caseNoneLine(view)));
       return section;
     }
     const lines = caseLines(view, dispute, number ? `Dispute ${number}` : dispute.name, { otherAsLine: true });

@@ -69,9 +69,11 @@ def made(first=None, checked=None):
 
 def test_the_same_two_calls_give_the_gathered_account_and_code_keeps_only_the_mechanical_rules():
     case, model, _ = made()
-    asked, checked = model.seen
+    asked, checked, reviewed = model.seen
     assert (asked.operation, asked.system, checked.operation, checked.system) == (
-        "core_case", case_gathered.CASE, "core_case_check", case_gathered.CASE_CHECK), "the same two steps, no call added"
+        "core_case", case_gathered.CASE, "core_case_check", case_gathered.CASE_CHECK), "the same two steps"
+    # Plan AN.51 (D290): then the independent review of the account (tests/test_the_case_account_goes_through_the_review.py).
+    assert (reviewed.operation, reviewed.system) == ("core_case_review", case_gathered.CASE_REVIEW)
     assert checked.user.startswith(asked.user) and "Your colleague's account:" in checked.user
     told = json.loads(checked.user[checked.user.index("What code could not check:\n") + len("What code could not check:\n"):])
     assert case["contract"] == "core_case_v3" and case["checked"] == "checked" and told == case["notes"]
@@ -178,17 +180,20 @@ def test_a_case_of_any_version_is_read_as_its_version_reads_it():
 def test_the_view_keeps_what_the_pages_read_today_and_adds_the_gathering():
     case, _, (ctx, record, sources, _) = made()
     view = case_gathered.shown(case, ctx, record, sources)
-    assert list(view) == ["state", "headings", "elements", "to_get", "other_side", "decides"] and view["state"] == "checked"
-    assert view["headings"] == ["Possession", "Title", OTHER] and [item["heading"] for item in view["elements"]] == [1, 3, 3, 1, 2]
+    assert list(view) == ["state", "headings", "elements", "to_get", "other_side", "decides", "left_out", "said"]
+    assert view["state"] == "checked"
+    # Plan AN.51 (D290): the requirement whose law is not in a held passage is left out of what is shown, said so; its heading,
+    # now holding nothing shown, is drawn by no page.
+    assert view["headings"] == ["Possession", "Title", OTHER] and [item["heading"] for item in view["elements"]] == [1, 3, 3, 1]
     assert view["elements"][0]["law"]["found"] is True and view["elements"][0]["points"][0]["located"] is True
-    assert view["elements"][4]["law"] == {"found": False, "words": "words no passage holds"}
+    assert view["left_out"] == [{"item": "element", "words": "Title of the predecessor", "by": "law", "why": ""}]
     assert [(entry["for"], entry["serves"]) for entry in view["to_get"]] == [
         ("Notice before the suit", ["Notice before the suit"]),
         ("Notice before the suit", ["Notice before the suit", "Possession without the owner's leave"])]
-    assert [item["attacks"] for item in view["other_side"]] == [1, 0, 0, 2] and view["decides"] == case["decides"]
+    assert [item["attacks"] for item in view["other_side"]] == [1, 0, 0, 3] and view["decides"] == case["decides"]
     assert [item["against"] for item in view["other_side"]] == [
         ["Possession for twelve years", "Possession without the owner's leave"], [], [],
-        ["Title of the predecessor", "Possession that was open"]], "each point with the requirements it attacks, by their words"
+        ["Possession that was open"]], "each point with the requirements it attacks that are shown, by their words"
     # The note reads the view (D233's note piece): its headings with their counts, and each ask for every element it serves.
     said = [block["text"] for block in research_note._case_blocks({"text": "The boundary dispute", "case": view})]
     assert "Possession: 1 of 2 shown by the papers." in said and f"{OTHER}: 0 of 2 shown by the papers." in said

@@ -47,6 +47,8 @@ STEPS = {
     "weigh": ("medium", True), "weigh_check": ("high", True),
     # Plan AN.35 (piece 35c1): what makes a dispute's case stronger, and its check.
     "case": ("medium", True), "case_check": ("high", True),
+    # Plan AN.51 (D290): the independent review of that account, on the review tier - a judgement, reading what the account read.
+    "case_review": ("medium", True),
     # Plan AN.35 (piece 35d): the law still missing for a dispute, named once - a lawyer's judgement on what was chosen.
     "further": ("medium", False),
     # Plan AN.37 (piece 37d): what only the advocate can settle, asked before the answer is written - a judgement, small to read.

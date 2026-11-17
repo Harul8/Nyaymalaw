@@ -49,12 +49,24 @@ _LEADS = {"ROW_ACTION": "What to do: ", "ROW_READY": "Have ready: ", "DO_FIRST":
 _STANDS = {"shown": "Shown by the papers", "weak": "Shown only weakly", "missing": "Not yet shown"}
 _PROVES = {"client": "for the client to prove", "other_side": "for the other side to prove"}
 _CASE_STATES = {"unchecked": "NM's second look at this list could not be made, so it stands as first set out.",
-                "unavailable": "NM could not set out what would make this case stronger this time."}
+                "unavailable": "NM could not set out what would make this case stronger this time.",
+                # Plan AN.51 (D290): the second look was made, the independent review could not be.
+                "unreviewed": "NM's independent review of this list could not be made, so it stands as NM set it out and "
+                              "checked it."}
+#: Plan AN.51 (D290): each item left out of a gathered account, by its kind and why, in code's words; the review's reason after it.
+_LEFT_KIND = {"element": "A requirement", "to_get": "A thing to get", "other_side": "A point of the other side",
+              "decides": "A thing said to decide the dispute"}
+_LEFT_BY = {"review": "The independent review found it wrong: ",
+            "law": "NM could not find the words of the law it names in the law it read.",
+            "with": "It was to get only for what was left out."}
 
 
 def case_checked_line(case):
     """How a dispute's case was checked, in code's words (plan AN.49, D185): the line the page shows wherever the account is
-    (app.js, caseCheckedLine), said in the note too. A second look is claimed only where one was made."""
+    (app.js, caseCheckedLine), said in the note too. A second look is claimed only where one was made. A gathered account carries
+    code's own line (plan AN.51, D290: whether the independent review read it, and what was left out and why)."""
+    if isinstance(case.get("said"), str):
+        return case["said"]
     second = "a second look checked it and " if case.get("state") == "checked" else ""
     return (f"This is NM's working list: {second}code looked for each quotation of law in the passage it names. It did not "
             "go through the independent review that the sections of an answer do.")
@@ -78,7 +90,8 @@ def _case_blocks(element):
     if case.get("state") in _CASE_STATES:
         said(_CASE_STATES[case["state"]])
     elements, to_get, other = case.get("elements") or (), case.get("to_get") or (), case.get("other_side") or ()
-    if elements or to_get or other:
+    left = case.get("left_out") or ()
+    if elements or to_get or other or left:
         said(case_checked_line(case))
 
     def law(given):
@@ -129,7 +142,9 @@ def _case_blocks(element):
         for item in elements:
             if not (isinstance(item.get("heading"), int) and 1 <= item["heading"] <= len(headings)):
                 requirement(item)
-    if not elements and case.get("state") != "unavailable":
+    if not elements and any(entry.get("item") == "element" for entry in left):
+        said("NM left out every requirement it set out for this dispute.")
+    elif not elements and case.get("state") != "unavailable":
         said("NM set out no element for this dispute from the law it read. That is what this research returned, not a finding "
              "that the law requires nothing.")
     for ask in to_get:
@@ -143,6 +158,12 @@ def _case_blocks(element):
         against = f" It goes against: {against[0]}." if against else ""
         said(f"The other side will rely on: {item['relies_on']}.{against}{answers}" + law(item.get("law")))
         points(item.get("points"))
+    # Plan AN.51 (D290): what was left out of the account, item by item, and why - with the independent review's reason.
+    if left:
+        said("Left out of this list:")
+    for entry in left:
+        said(f"• {_LEFT_KIND.get(entry['item'], entry['item'])}: {entry['words']}. {_LEFT_BY.get(entry['by'], '')}"
+             + (entry.get("why") or ""))
     return blocks
 
 

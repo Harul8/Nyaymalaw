@@ -413,6 +413,25 @@ assert.ok(none.textContent.includes('NM could not set out what would make this c
   const caseFold = detail.find((node) => node.tagName === 'DETAILS' && node.children[0].textContent.startsWith('The case ('));
   assert.ok(caseFold.textContent.includes('Most needs attention now') && caseFold.textContent.includes('1 of 2 shown'),
     'the whole-dispute view draws the same gathered lines');
+
+  // THE ACCOUNT THROUGH THE INDEPENDENT REVIEW (plan AN.51, D290): the server's own line on how it was checked is said as it is,
+  // with the state the review leaves; an account whose every requirement was left out says so, never that none was set out.
+  const said = 'This is NM’s working list: a second look checked it, code looked for each quotation of law in the passage it '
+    + 'names, and the independent review read it against the papers and the law. Left out of it: 1 item the independent review '
+    + 'found wrong; the research note says which and why.';
+  const reviewed = { ...gathered, state: 'unreviewed', said,
+    left_out: [{ item: 'element', words: 'Notice served', by: 'review', why: 'The notice is not required.' }] };
+  const reviewedText = context.renderDisputeCard({ ...dispute, checklist: { ...dispute.checklist, case: reviewed } }, board, 1)
+    .textContent;
+  assert.ok(reviewedText.includes(said), 'the server’s line, as it is');
+  assert.ok(reviewedText.includes('NM’s independent review of this list could not be made'), 'the state the review leaves');
+  assert.ok(!reviewedText.includes('It did not go through the independent review'), 'not the earlier line');
+  const none = { ...reviewed, state: 'checked', elements: [], to_get: [], decides: [] };
+  const noneText = context.renderDisputeCard({ ...dispute, checklist: { ...dispute.checklist, case: none } }, board, 1).textContent;
+  assert.ok(noneText.includes(`NM left out every requirement it set out for this dispute. ${said}`), 'left out, said so');
+  assert.ok(!noneText.includes('NM set out no element'), 'not that none was set out');
+  assert.ok(context.renderCaseBlock(none).map((node) => node.textContent).join('\n')
+    .includes('NM left out every requirement it set out for this dispute.'), 'the answer says the same');
 }
 // SEVERAL THINGS IN ONE REPLY (plan AN.49, 49f; D183): 'Tell NM about these' on a dispute opens the answers window of AN.37 with a row
 // for each thing to get of a gathered case or, for a case saved earlier, each requirement not yet shown; what is written goes as one

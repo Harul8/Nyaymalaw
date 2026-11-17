@@ -251,13 +251,17 @@ def test_the_note_sets_out_a_gathered_case_as_the_board_gathers_it():
 
 def test_the_notes_line_on_how_a_case_was_checked_is_the_pages_line():
     """The note and the page say one line (plan AN.49, D185): the page's own words, read from app.js, for a case a second
-    look checked and for one it did not."""
+    look checked and for one it did not. From plan AN.51 (D290) a gathered account carries code's own line, which both say as it
+    is."""
     import re
     from pathlib import Path
     page = (Path(__file__).resolve().parents[1] / "nm" / "app" / "app.js").read_text(encoding="utf8")
     body = page[page.index("function caseCheckedLine(view) {"):]
-    body = body[body.index("return ") + len("return "):body.index(";\n}")]
+    body = body[:body.index(";\n}")]
+    assert "if (view && typeof view.said === 'string') return view.said;" in body
+    body = body[body.rindex("return ") + len("return "):]
     for state, second in (("checked", "a second look checked it and "), ("unchecked", "")):
         said = body.replace("${view && view.state === 'checked' ? 'a second look checked it and ' : ''}", second)
         shown = "".join(quoted or plain for quoted, plain in re.findall(r"`([^`]*)`|'([^']*)'", said))
         assert research_note.case_checked_line({"state": state}).replace("'", "\u2019") == shown, state
+    assert research_note.case_checked_line({"state": "checked", "said": "Code's own line."}) == "Code's own line."

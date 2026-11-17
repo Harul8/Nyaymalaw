@@ -21,17 +21,20 @@ pytestmark = pytest.mark.class_a
 
 
 class Scripted:
-    """Answers the case call and its check from scripts (a failure where a script is "fail"), keeping what it was shown."""
+    """Answers the case call and its check from scripts (a failure where a script is "fail"), keeping what it was shown; and from
+    plan AN.51 (D290) the review of the gathered account, finding nothing wrong unless told what to find."""
 
-    def __init__(self, first, checked):
+    def __init__(self, first, checked, reviewed=None):
         self.first, self.checked, self.seen = first, checked, []
+        self.reviewed = {"faults": []} if reviewed is None else reviewed
 
     def context_budget(self, tier):
         return 10 ** 9
 
     def structured(self, prompt, schema, tier, **kwargs):
         self.seen.append(prompt)
-        given = self.first if prompt.operation == "core_case" else self.checked
+        given = (self.first if prompt.operation == "core_case" else self.reviewed if prompt.operation == "core_case_review" else
+                 self.checked)
         if given == "fail":
             raise SchemaViolation("scripted failure")
         return _result(given, tier)

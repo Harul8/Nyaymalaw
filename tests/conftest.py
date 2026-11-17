@@ -203,6 +203,9 @@ class CaseSetOutAsNothing:
             # Research v16 (AN.35, piece 35d): a model that knows no further search finds no law still missing.
             return ModelResult(None, {"questions": []}, tier, "synthetic", "fixture", Usage(1, 1, 0), 0,
                                completion=Completion.COMPLETE)
+        if prompt.operation == "core_case_review" and not getattr(self._model, "knows_the_review", False):
+            # Plan AN.51 (D290): a model that knows no review of the case's account finds nothing wrong in it.
+            return ModelResult(None, {"faults": []}, tier, "synthetic", "fixture", Usage(1, 1, 0), 0, completion=Completion.COMPLETE)
         if prompt.operation not in ("core_case", "core_case_check") or getattr(self._model, "knows_the_case", False):
             return self._model.structured(prompt, schema, tier, **kwargs)
         # Every list the case's schema asks for, empty: v2's, and from plan AN.49 (D291) the gathered account's too.
