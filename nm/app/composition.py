@@ -393,10 +393,12 @@ class Application:
         own levels. Its review runs on the reviewer whichever model writes (plan AN.51, D289). steps (plan AN.48, 48a):
         "interactive" - the message is worked step by step, stopping for the advocate's go-ahead after each step; anything else -
         end to end, as before. go: the go-ahead of a matter already worked step by step (go_turn, continue_turn)."""
-        from nm.core_engine import routing, steps as stepwise, titles
+        from nm.core_engine import message_reader, routing, steps as stepwise, titles
         from nm.core_engine.turn import process
 
-        if go is None and steps == 'interactive':
+        # Plan AN.58 (D287): a message sent step by step is read, as its work begins, for whether it asks to be worked otherwise.
+        fresh = go is None and steps == 'interactive'
+        if fresh:
             go = stepwise.first()
 
         if document_refs:
@@ -458,7 +460,8 @@ class Application:
                              propose=self.propose_questions, desk=self.questions.bound(advocate_id),
                              stopping=running.stop.is_set, steers=running.take, attach=running.attach,
                              # Plan AN.43 (D82): the conversation's title, on the turn's own model port - metered as any call.
-                             entitle=lambda given: titles.entitle(model, given), go=go, **request)
+                             entitle=lambda given: titles.entitle(model, given), go=go,
+                             way=message_reader.way if fresh else None, **request)
             ended = 'finished'
             outcome = 'answered'
             if isinstance(result, Mapping):

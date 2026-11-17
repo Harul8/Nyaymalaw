@@ -1003,12 +1003,35 @@ def saved_rows(matter, advocate_id):
     return rows
 
 
+def _worked_as_asked(calls, context, go, gate, keeper, report, way):
+    """Plan AN.58 (D287): how the message asks to be worked, read once as its work begins. Where it asks for the work end to end,
+    or for one specific thing, the run goes straight through - the gate takes every step - and code's words saying so are saved
+    at once on the turn's record for the page. Returns the go-ahead the run works on: straight's, or go as it was. A reading that
+    fails leaves the message step by step; a usage limit goes on to the turn's own handling of it."""
+    try:
+        reading = way(calls, context.message, earlier=[row["message"] for row in context.rows][-5:],
+                      papers=len(context.documents))
+    except UsageLimitReached:
+        raise
+    except ModelError as exc:
+        log.warning("How the message asks to be worked could not be read; it is worked step by step: %s", type(exc).__name__)
+        return go
+    if reading["how"] not in stepwise.WAYS:
+        return go
+    go = stepwise.straight(go, reading["how"], reading["said"])
+    gate.through(go)
+    if keeper.now(lambda held: held.update(go=go)):
+        keeper.saved += 1
+        report("saved", saved=keeper.saved, chat_id=keeper.holder["context"].chat_id)
+    return go
+
+
 def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=None,
             matter_id=None, expected_version=None, session_current=lambda: False,
             attempts: TurnAttemptPort | None = None, case_index=None, provision_reader=None,
             progress=None, documents=(), held_acts=None, running=lambda turn_id: False,
             chosen_model=None, effort=None, propose=None, desk=None, stronger=None, stopping=None, steers=None,
-            attach=None, entitle=None, go=None, steered_with=None, appended=None):
+            attach=None, entitle=None, go=None, steered_with=None, appended=None, way=None):
     """One turn. chosen_model and effort: what the advocate chose for it (plan AN.33, D23) - the model, which the caller's model
     port already runs every call on, and the effort, which moves every call of the turn (calls.TurnCalls); both recorded with the
     turn's metrics, and in its request where they are not the defaults. None: not chosen (the defaults, unrecorded).
@@ -1032,6 +1055,10 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     go (plan AN.48, piece 48a): the go-ahead of a matter worked step by step (steps.first, steps.given) - which steps this run may
     take. The run stops when they are done, with the code 'waiting' and everything it finished kept (as a stop keeps it, D69), for
     the advocate's next go-ahead; each step claims an attempt of its own (D150). None: end to end, exactly as before.
+    way (plan AN.58, D287): how a message sent step by step and not sent before asks to be worked (message_reader.way), read once
+    on the turn's own calls after the message is saved and before any other work; a message that asks for the work end to end, or
+    for one specific thing, is worked straight through, and code's words saying so are kept on its record for the page. None: not
+    read - a go-ahead, Continue, a message at a stop, or a turn run without steps.
     steered_with (plan AN.48, 48c): the advocate's words that make the matter be thought again while it waited - each {"text",
     "documents", "at"}, as a steer is - joining it as their words; the matter is understood again with them (D149's rethink).
     appended (48h, D159): what the advocate added while the matter waited, kept as their own messages after the latest one;
@@ -1160,11 +1187,14 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         raise ConversationRefused("Your message could not be saved, so NM has not started on it. Sending it again is safe.",
                                   status=503, code="message_not_saved", retryable=True) from exc
     report("sent", chat_id=context.chat_id)
+    # Plan AN.58 (D287): a message sent step by step, and not sent before, is read for how it asks to be worked; its step's
+    # tentative time is said once that is known (in the work, below).
+    reads_way = way is not None and same is None and stepwise.opening(go)
     # Plan AN.48 (48e, D140): a step's tentative time, said while it runs and kept beside the time it took.
     began = time.monotonic()
     estimated = (stepwise.estimate(go, None if rethought else resume, tentative.pages_of(context.documents))
                  if gate.stepwise else None)
-    if estimated is not None:
+    if estimated is not None and not reads_way:
         report("tentative", seconds=estimated)
 
     # Plan AN.50 (50c, D189): nothing writes beside the conversation once its final save begins - the save holds the lock each such
@@ -1329,6 +1359,10 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     follow = (follow_up.earlier(context.rows)
               if gate.stepwise and not rethought and not (resume or {}).get("understood") else None)
     try:
+        if reads_way:
+            go = _worked_as_asked(calls, context, go, gate, keeper, report, way)
+            if not gate.end_to_end:
+                report("tentative", seconds=estimated)
         while True:
             try:
                 elements, activity, metrics = prepare(calls, context.payload(), searcher,
@@ -1473,8 +1507,9 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     _reporter(progress)("saving")
     # Plan AN.48 (48b): a matter finished with the analyses of some of its disputes says so above the answer.
     partly = stepwise.unasked(activity["sections"]) if gate.stepwise and "sections" in activity else None
-    if gate.stepwise:
-        # 48e (D140): each step's tentative time beside the time it took, kept with the answer's own record.
+    if gate.stepwise and "way" not in go:
+        # 48e (D140): each step's tentative time beside the time it took, kept with the answer's own record - none for a message
+        # worked straight through as it asked (D287), whose time was never said.
         metrics = {**metrics, "steps_timed": stepwise.timed(go, estimated, time.monotonic() - began)["times"]}
     try:
         records = checklist.records(context.payload(), activity)

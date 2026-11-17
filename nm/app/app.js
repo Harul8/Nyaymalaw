@@ -2921,6 +2921,9 @@ function renderTurn(entry) {
     box.append(now, time);
     if (entry.restartNote) box.appendChild(Object.assign(document.createElement('div'), {
       className: 'progress-note', textContent: entry.restartNote }));
+    // Plan AN.58 (D287): a message worked straight through as it asked - code's words, with NM's reading after them, marked.
+    if (entry.way) box.appendChild(Object.assign(document.createElement('div'), {
+      className: 'progress-note progress-way', textContent: entry.way }));
     // D79: what the advocate added is in the answer being worked on.
     for (const steer of entry.steers || []) box.appendChild(Object.assign(document.createElement('div'), {
       className: 'progress-steer', textContent: `Added while NM worked: ${steer}` }));
@@ -6542,6 +6545,8 @@ function takePending(entry, pending) {
   entry.shownElements = Array.isArray(pending.elements) ? pending.elements : [];
   if (pending.work) entry.work = pending.work;
   entry.steers = Array.isArray(pending.steers) ? pending.steers : [];
+  // Plan AN.58 (D287): a message worked straight through as it asked, in code's words.
+  if (typeof pending.way === 'string') entry.way = pending.way;
   if (pending.state === 'stopped' && pending.stopped) {
     entry.stopped = pending.stopped;
     if (!activeDelivery || activeDelivery.entry !== entry) entry.state = 'stopped';
@@ -6998,6 +7003,7 @@ async function showSoFar(entry, chatId) {
     entry.shownElements = chat.pending.elements;
     if (chat.pending.work) entry.work = chat.pending.work;
     entry.steers = Array.isArray(chat.pending.steers) ? chat.pending.steers : [];
+    if (typeof chat.pending.way === 'string') entry.way = chat.pending.way;
     repaint();
     if (activeIntent && entry.context === activeIntent) loadChatBoard(activeIntent.chatId || chatId);
   } catch (error) {

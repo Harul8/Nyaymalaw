@@ -2742,6 +2742,9 @@ def _pending(advocate_id, held, asked=None):
     if 'steps' in held:
         pending['work'] = _work_of(held)
         pending['steers'] = [steer['text'] for steer in held['steers']]
+        # Plan AN.58 (D287): a message worked straight through as it asked - code's words, said as the work began.
+        if stepwise.way_said(held):
+            pending['way'] = stepwise.way_said(held)
     if not working:
         pending['stopped'] = _stopped_of(held, asked)
     return pending

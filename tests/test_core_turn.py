@@ -31,6 +31,12 @@ class ScriptedModel:
     def context_budget(self, tier): return 100_000
 
     def structured(self, prompt, schema, tier, **kwargs):
+        if prompt.operation == "core_message_way":
+            # Plan AN.58 (D287): how a message sent step by step asks to be worked - step by step unless a test says otherwise;
+            # kept apart from the turn's other calls, as the title is.
+            self.ways = [*getattr(self, "ways", []), json.loads(prompt.user)]
+            return ModelResult(None, {"way": getattr(self, "way", "steps"), "said": getattr(self, "way_reading", "")}, tier,
+                               "synthetic", "fixture", Usage(1, 1, 0), 0, completion=Completion.COMPLETE)
         if prompt.operation == "core_title":
             # Plan AN.43: the conversation's title, on the turn's model port beside the turn - kept apart from the turn's calls.
             self.titled = getattr(self, "titled", 0) + 1

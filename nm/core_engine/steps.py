@@ -39,10 +39,14 @@ FINISHING = frozenset({"core_response_cross_check", "core_response_overview"})
 GOS = ("next", "research", "write", "end_to_end", "done")
 _FIELDS = {"mode", "allowed", "n", "waiting"}
 #: What a go-ahead record may add (48b: the disputes named; 48c: the messages heard while the matter waited; 48e: each step's
-#: tentative time beside the time it took; D175: how a follow-up's turn started).
-_ADDED = ({"disputes"}, {"heard"}, {"times"}, {"recheck"}, {"proposed"}, {"taken"})
+#: tentative time beside the time it took; D175: how a follow-up's turn started; D287: a message worked straight through as it
+#: asked).
+_ADDED = ({"disputes"}, {"heard"}, {"times"}, {"recheck"}, {"proposed"}, {"taken"}, {"way"})
 #: D175: how a follow-up's turn started - from NM's earlier understanding of the matter, or with the whole matter read again.
 TAKEN_ROUTES = ("kept", "afresh")
+#: D287 (plan AN.58, 17 Nov 2026): how a message sent step by step asked, as the model read it, to be worked otherwise - the work
+#: end to end, or one specific thing - and so was worked straight through from its start.
+WAYS = ("end_to_end", "specific")
 #: 48i (D156): at most this many legal questions proposed for what is new wait on a go-ahead record.
 MOST_PROPOSED = 20
 _PROPOSED = {"dispute_id", "question", "why_needed", "law_to_check", "source"}
@@ -98,6 +102,7 @@ def valid(go):
                         and isinstance(entry["law_to_check"], list) and all(isinstance(law, str) for law in entry["law_to_check"])
                         for entry in go.get("proposed", []))
                 and _taken_valid(go.get("taken"))
+                and _way_valid(go.get("way"))
                 and isinstance(heard, list) and len(heard) <= MOST_HEARD
                 and all(isinstance(entry, dict) and set(entry) == _HEARD and all(isinstance(entry[key], str) for key in _HEARD)
                         and entry["text"].strip() for entry in heard)
@@ -117,6 +122,30 @@ def _taken_valid(taken):
     """D175: none, or how a follow-up's turn started - its route and code's words."""
     return taken is None or (isinstance(taken, dict) and set(taken) == {"route", "said"} and taken["route"] in TAKEN_ROUTES
                              and isinstance(taken["said"], str) and bool(taken["said"].strip()))
+
+
+def _way_valid(way):
+    """D287: none, or how a message asked to be worked straight through - its way and code's words."""
+    return way is None or (isinstance(way, dict) and set(way) == {"how", "said"} and way["how"] in WAYS
+                           and isinstance(way["said"], str) and bool(way["said"].strip()))
+
+
+def opening(go):
+    """Whether go is a message's first go-ahead as first() gives it: its first step only, with no way read for it yet (D287)."""
+    return isinstance(go, dict) and go.get("n") == 1 and go.get("allowed") == ["understand"] and "way" not in go
+
+
+def straight(go, how, said):
+    """D287: the first go-ahead of a message that asks to be worked straight through - every step without stopping, as End to end
+    at a stop runs them (D135) - with how it asked and code's words saying so. It is still the first step's (attempt_part)."""
+    if not opening(go) or how not in WAYS or not isinstance(said, str) or not said.strip():
+        raise ValueError("Only a message's first go-ahead is worked straight through, said in code's words")
+    return {**go, "allowed": list(STEPS), "way": {"how": how, "said": said}}
+
+
+def way_said(held):
+    """D287: code's words on how a message being worked straight through asked for it, or None."""
+    return (((held or {}).get("go") or {}).get("way") or {}).get("said")
 
 
 def taking(go, route, said):
@@ -307,6 +336,10 @@ class Gate:
         self.recheck, self.rechecked = go is not None and go.get("recheck") is True, False
         #: 48i (D156): the questions proposed for what is new; a run that researches their disputes adds them to the plan.
         self.proposed = [] if go is None else list(go.get("proposed") or ())
+
+    def through(self, go):
+        """D287: this run, begun on a message's first go-ahead, goes straight through on go (straight's): every step, no stop."""
+        self.go, self.allowed = go, frozenset(go["allowed"])
 
     @property
     def stepwise(self):

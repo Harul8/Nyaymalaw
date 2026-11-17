@@ -154,9 +154,11 @@ const button = (node, text) => (node._text === text ? node : (node.children || [
     continueTurn: (entry, options) => continued.push([entry.turnId, options]) });
   vm.runInContext(fn('takePending') + fn('followAs') + fn('unfollow') + fn('followPending'), context);
   context.followPending(intent, { turn_id: 't1', message: 'Read the deed.', documents: [], elements: [], state: 'working',
-    work: { understood: false } }, 'c1');
+    work: { understood: false }, way: 'NM read your message as asking for one specific thing.' }, 'c1');
   const entry = vm.runInContext('state.turns[0]', context);
   assert.equal(entry.brief, 'Read the deed.');
+  // Plan AN.58 (D287): a message worked straight through as it asked says so, in code's words, while it is worked on.
+  assert.equal(entry.way, 'NM read your message as asking for one specific thing.');
   assert.equal(entry.following, true);
   assert.deepEqual(followed, ['t1']);
   assert.equal(intent.pending[0], entry, 'kept with the conversation\'s unsent work');
