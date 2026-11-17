@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from nm.core_engine import tentative
+from nm.core_engine import search_said, tentative
 
 MODE = "steps"
 #: The steps of a matter, in order.
@@ -35,13 +35,13 @@ WAITS = (*NEXT, ASKED)
 #: analyses, or before the overview where there is nothing to check across (48a contract).
 FINISHING = frozenset({"core_response_cross_check", "core_response_overview"})
 #: What the advocate may give at a stop (48a3, 48b): the next step for every dispute, research or the analyses for the disputes
-#: named, end to end, or done.
-GOS = ("next", "research", "write", "end_to_end", "done")
+#: named, end to end, or done; and (plan AN.52, D282) a dispute's failed searches made again.
+GOS = ("next", "research", "write", "end_to_end", "done", "search_again")
 _FIELDS = {"mode", "allowed", "n", "waiting"}
 #: What a go-ahead record may add (48b: the disputes named; 48c: the messages heard while the matter waited; 48e: each step's
 #: tentative time beside the time it took; D175: how a follow-up's turn started; D287: a message worked straight through as it
-#: asked).
-_ADDED = ({"disputes"}, {"heard"}, {"times"}, {"recheck"}, {"proposed"}, {"taken"}, {"way"})
+#: asked; D282: the dispute whose failed searches are made again).
+_ADDED = ({"disputes"}, {"heard"}, {"times"}, {"recheck"}, {"proposed"}, {"taken"}, {"way"}, {"again"})
 #: D175: how a follow-up's turn started - from NM's earlier understanding of the matter, or with the whole matter read again.
 TAKEN_ROUTES = ("kept", "afresh")
 #: D287 (plan AN.58, 17 Nov 2026): how a message sent step by step asked, as the model read it, to be worked otherwise - the work
@@ -103,6 +103,8 @@ def valid(go):
                         for entry in go.get("proposed", []))
                 and _taken_valid(go.get("taken"))
                 and _way_valid(go.get("way"))
+                and (go.get("again") is None or isinstance(go["again"], list) and len(go["again"]) == 1
+                     and isinstance(go["again"][0], str) and bool(go["again"][0].strip()))
                 and isinstance(heard, list) and len(heard) <= MOST_HEARD
                 and all(isinstance(entry, dict) and set(entry) == _HEARD and all(isinstance(entry[key], str) for key in _HEARD)
                         and entry["text"].strip() for entry in heard)
@@ -128,6 +130,29 @@ def _way_valid(way):
     """D287: none, or how a message asked to be worked straight through - its way and code's words."""
     return way is None or (isinstance(way, dict) and set(way) == {"how", "said"} and way["how"] in WAYS
                            and isinstance(way["said"], str) and bool(way["said"].strip()))
+
+
+#: Plan AN.52 (D282): said at a stop where a dispute's research holds a search that failed, after what failed - code's words on
+#: what Search again does, and that NM never does it by itself.
+AGAIN_SAID = ("NM does not search again by itself. Search again searches only the questions that failed; an analysis already "
+              "written on that research is then written again.")
+
+
+def unsearched(steps):
+    """Plan AN.52 (D282): each of a matter's researched disputes whose saved research holds a search that failed, in the matter's
+    order, with those failures ({work id: failure}) - WHOLE for an answer written as a whole, with every failure of its research."""
+    state = state_of(steps)
+    failed = {}
+    for dispute_id, part in ((steps or {}).get("parts") or {}).items():
+        failures = (part or {}).get("failures") if isinstance(part, dict) else None
+        found = {work: failure for work, failure in (failures or {}).items()
+                 if isinstance(failure, dict) and failure.get("stage") == "search"}
+        if found:
+            failed[dispute_id] = found
+    if state["whole"]:
+        merged = {work: failure for found in failed.values() for work, failure in found.items()}
+        return [(WHOLE, merged)] if merged and WHOLE in state["researched"] else []
+    return [(name, failed[name]) for name in state["order"] if name in failed and name in state["researched"]]
 
 
 def opening(go):
@@ -304,6 +329,22 @@ def given(go, choice, *, held, disputes=None):
     unresearched, unwritten = _open(state, go)
     if disputes is not None and (not isinstance(disputes, list) or not disputes or len(set(disputes)) != len(disputes)):
         raise ValueError("Name each dispute once")
+    if choice == "search_again":
+        # Plan AN.52 (D282): one dispute's questions whose search failed, searched again on the advocate's word - and its analysis,
+        # where one was written on that research, written again once. Never by NM by itself.
+        failing = [name for name, _ in unsearched(held.get("steps"))]
+        if after not in ("researched", "written") or not failing:
+            raise ValueError("No search failed in this matter's research")
+        if state["whole"]:
+            if disputes is not None:
+                raise ValueError("Search again is for the whole answer")
+            name = WHOLE
+        else:
+            if disputes is None or len(disputes) != 1 or disputes[0] not in failing:
+                raise ValueError("Name the one dispute whose failed searches are to be made again")
+            name = disputes[0]
+        return {"mode": MODE, "allowed": ["research", "write"] if name in state["written"] else ["research"], "n": go["n"] + 1,
+                "waiting": None, "disputes": None if state["whole"] else [name], "again": [name], **_carried(go)}
     if choice == "next":
         choice = "research" if unresearched else "write" if unwritten else "done"
     if choice in ("research", "write"):
@@ -336,6 +377,8 @@ class Gate:
         self.recheck, self.rechecked = go is not None and go.get("recheck") is True, False
         #: 48i (D156): the questions proposed for what is new; a run that researches their disputes adds them to the plan.
         self.proposed = [] if go is None else list(go.get("proposed") or ())
+        #: Plan AN.52 (D282): the dispute (WHOLE: the answer written as a whole) whose failed searches this run makes again.
+        self.again = [] if go is None else list(go.get("again") or ())
 
     def through(self, go):
         """D287: this run, begun on a message's first go-ahead, goes straight through on go (straight's): every step, no stop."""
@@ -460,6 +503,10 @@ def card(held, asked=None):
     gos.append({"choice": "done", "disputes": None, "said": (
         "Done: check the analyses against each other and save" if len(written) > 1 else
         "Done: finish and save" if written else "Done: save as it stands")})
+    # Plan AN.52 (D282): beside the go-aheads, after them, Search again for each dispute whose research holds a search that failed.
+    failing = unsearched(steps) if after in ("researched", "written") else []
+    gos += [{"choice": "search_again", "disputes": None if state["whole"] else [name],
+             "said": "Search again" if state["whole"] else f"Search again: {names[name]}"} for name, _ in failing]
     gos = _timed_gos(held, gos)
     if state["whole"]:
         next_said = ("Next: research the law." if unresearched else "Next: write and check the answer." if unwritten
@@ -478,7 +525,10 @@ def card(held, asked=None):
                 {"id": name, "name": names[name], "researched": name in state["researched"],
                  "written": name in state["written"]} for name in state["order"]],
             "noticed": noticed(steps), "at": held["go"]["waiting"]["at"], "questions": questions, "heard": _heard(held),
-            "taken": _taken(held)}
+            "taken": _taken(held),
+            # D282: what could not be searched, dispute by dispute, in 51e's words, and what Search again does.
+            "unsearched": [*(search_said.failed_line(found, None if state["whole"] else names[name]) for name, found in failing),
+                           *([AGAIN_SAID] if failing else [])]}
 
 
 #: What the stop after a follow-up's first step says was done where it started from NM's earlier understanding (D175).

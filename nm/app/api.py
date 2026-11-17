@@ -1954,11 +1954,12 @@ def continue_turn(req: TurnOf, advocate_id: Advocate, request: Request, backgrou
 
 class TurnGo(BaseModel):
     """The advocate's go-ahead at a stop of a matter worked step by step (plan AN.48, 48a3, 48b): the step, and for research or
-    the analyses the disputes it is for (none: every dispute that step can now take)."""
+    the analyses the disputes it is for (none: every dispute that step can now take); Search again (plan AN.52, D282) names the one
+    dispute whose failed searches are made again (none: the answer written as a whole)."""
     model_config = ConfigDict(extra='forbid')
     chat_id: str = Field(min_length=1, max_length=200)
     turn_id: str = Field(min_length=1, max_length=200)
-    choice: Literal['next', 'research', 'write', 'end_to_end', 'done']
+    choice: Literal['next', 'research', 'write', 'end_to_end', 'done', 'search_again']
     disputes: list[Annotated[str, Field(min_length=1, max_length=200)]] | None = Field(default=None, min_length=1, max_length=50)
 
 

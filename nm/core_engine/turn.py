@@ -538,6 +538,10 @@ class _Keeper:
         matter read again - in code's words, kept on the go-ahead record for its stops to say."""
         self.later(lambda held: held.update(go=stepwise.taking(held["go"], route, said)) if held.get("go") else None)
 
+    def searching_again(self, steps):
+        """Plan AN.52 (D282): the research of the dispute searched again dropped, with its case and analysis, to be made again."""
+        self.later(lambda held: held.update(steps={**held["steps"], **{key: steps[key] for key in ("parts", "cases", "answered")}}))
+
     def grown(self, steps, disputes):
         """Plan AN.48 (48i): the plan grown by questions added for what is new, the research kept moved onto it, the grown
         disputes' research, cases and analyses dropped to be made again, and their questions taken off the go-ahead's proposals."""
@@ -630,6 +634,38 @@ def _grown(calls, context, resume, adding, report, keep):
     return steps, started
 
 
+def _searched_again(resume, again, keep):
+    """Plan AN.52 (D282): Search again, on the advocate's word. The dispute named (WHOLE: the answer written as a whole), where its
+    saved research holds a search that failed, has that research dropped, to be made again with the searches that succeeded given
+    back to the search - so that only the questions that failed are searched - and its case and analysis dropped, to be made
+    again once. Returns the steps to resume from and those searches; what it was given where no search failed."""
+    plan = resume["understood"]["plan"]
+    layout = response_writer.parts({"contract": research.CONTRACT, "plan": plan})
+    whole = len(layout) <= 1
+    failing = dict(stepwise.unsearched(resume))
+    if whole:
+        disputes = set(resume.get("parts") or {}) if stepwise.WHOLE in again and stepwise.WHOLE in failing else set()
+    else:
+        disputes = {name for name in again if name in failing}
+    if not disputes:
+        return resume, {}
+    started = {}
+    for dispute_id in disputes:
+        started.update(research.searched_before(plan, resume["parts"][dispute_id]))
+    parts = {dispute_id: part for dispute_id, part in resume["parts"].items() if dispute_id not in disputes}
+    cases = {key: case for key, case in (resume.get("cases") or {}).items()
+             if not whole and int(key) < len(layout) and layout[int(key)]["dispute_id"] not in disputes}
+    answered = resume.get("answered")
+    if answered is not None:
+        kept_sections = [saved for saved in answered["sections"] if not whole and saved.get("dispute_id") not in disputes]
+        if len(kept_sections) != len(answered["sections"]):
+            answered = {"sections": kept_sections, "cross_check": None, "overview": None}
+    steps = {**resume, "parts": parts, "cases": cases, "answered": answered}
+    if keep is not None:
+        keep.searching_again(steps)
+    return steps, started
+
+
 def _prepare(model, context, searcher, *, case_index, provision_reader, progress, held_acts, shown, ask, keep, resume,
              steered, on_understood, settle=None, gate=None, follow=None):
     report = _reporter(progress)
@@ -640,6 +676,10 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
     adding = gate.adding() if resume and not steered and resume.get("understood") else []
     if adding:
         resume, started = _grown(calls, context, resume, adding, report, keep)
+    # Plan AN.52 (D282): a dispute's failed searches made again, on the advocate's Search again.
+    if gate.again and resume and not steered and resume.get("understood") and not adding:
+        resume, again = _searched_again(resume, gate.again, keep)
+        started.update(again)
     kept = _kept(resume, context, report) if resume and not steered else _NOTHING_KEPT
     # Plan AN.48 (48h; D161-D162): the analyses written before the advocate's later messages are reviewed again from their own words
     # against everything said, and written again only where the review finds them wanting - in the next run that writes or

@@ -21,12 +21,26 @@ from nm.shared.sqlite_creation import create_if_absent, why
 
 _log = logging.getLogger("nm.steps")
 
-VERSION = 2
+VERSION = 3
 #: Plan AN.53 (D241, with the turns' attempts): a step's record is kept at most this many days from when the step was taken.
 TAKEN_KEPT_DAYS = 90
 ROUTES = ("send", "continue", "go", "answers", "message")
-CHOICES = ("next", "research", "write", "end_to_end", "done")
+#: The go-aheads a step may record (nm/core_engine/steps.GOS; plan AN.52, D282 added search_again in version 3).
+CHOICES = ("next", "research", "write", "end_to_end", "done", "search_again")
 _SQL = """CREATE TABLE steps (
+    advocate_id TEXT NOT NULL CHECK(length(advocate_id) BETWEEN 1 AND 320),
+    turn_id TEXT NOT NULL CHECK(length(turn_id) BETWEEN 1 AND 200),
+    chat_id TEXT CHECK(chat_id IS NULL OR length(chat_id) BETWEEN 1 AND 200),
+    route TEXT NOT NULL CHECK(route IN ('send','continue','go','answers','message')),
+    choice TEXT CHECK(choice IS NULL OR choice IN ('next','research','write','end_to_end','done','search_again')),
+    disputes TEXT,
+    session TEXT CHECK(session IS NULL OR length(session)=64),
+    begun INTEGER NOT NULL CHECK(begun IN (0,1)),
+    taken_at TEXT NOT NULL,
+    PRIMARY KEY (advocate_id, turn_id)
+)"""
+#: Version 2: version 3 without Search again's choice (D282). Carried over with every record as it was.
+_SQL_V2 = """CREATE TABLE steps (
     advocate_id TEXT NOT NULL CHECK(length(advocate_id) BETWEEN 1 AND 320),
     turn_id TEXT NOT NULL CHECK(length(turn_id) BETWEEN 1 AND 200),
     chat_id TEXT CHECK(chat_id IS NULL OR length(chat_id) BETWEEN 1 AND 200),
@@ -71,11 +85,13 @@ class FileStepRecords:
             create_if_absent(self.path, self._build)
             with closing(sqlite3.connect(self.path, timeout=10)) as db, db:
                 db.execute("BEGIN IMMEDIATE")
-                if db.execute("PRAGMA user_version").fetchone()[0] == 1 and self._is(db, _SQL_V1):
+                earlier = db.execute("PRAGMA user_version").fetchone()[0]
+                if earlier == 1 and self._is(db, _SQL_V1) or earlier == 2 and self._is(db, _SQL_V2):
                     db.execute("ALTER TABLE steps RENAME TO steps_earlier")
                     db.execute(_SQL)
+                    # Version 1 kept no time: each record is taken as at the carrying over; version 2's keep their own.
                     db.execute(f"INSERT INTO steps ({_FIELDS}) SELECT advocate_id,turn_id,chat_id,route,choice,disputes,session,"
-                               "begun,? FROM steps_earlier", (_now(),))
+                               f"begun,{'?' if earlier == 1 else 'taken_at'} FROM steps_earlier", (_now(),) if earlier == 1 else ())
                     db.execute("DROP TABLE steps_earlier")
                     db.execute(f"PRAGMA user_version={VERSION}")
                 self._schema(db)

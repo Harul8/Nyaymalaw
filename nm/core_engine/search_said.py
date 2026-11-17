@@ -59,13 +59,20 @@ def said(activities) -> dict | None:
         lines.append(f"For {_count(partial, 'question', 'questions')} the search was incomplete: part of what it found could "
                      "not be read. What could be read was used, and may not be all there is.")
     if failed:
-        reasons = list(dict.fromkeys(str(failure.get("reason") or "").strip() for failure in failed.values()))
-        why = " ".join(reason if reason.endswith(".") else reason + "." for reason in reasons if reason)
-        lines.append(f"For {_count(len(failed), 'question', 'questions')} the held law could not be searched, and nothing was "
-                     f"taken for {'it' if len(failed) == 1 else 'them'}. {why}".rstrip())
+        lines.append(failed_line(failed))
     lines.extend(_named(searches))
     lines.append(CURRENCY)
     return {"summary": SCOPE, "lines": lines}
+
+
+def failed_line(failed, of: str | None = None) -> str:
+    """The sentence for the questions whose search failed - failed: {work id: failure} - of the dispute named, where one is
+    (plan AN.52, D282: said at the stop that offers to search them again); the answer's, under it, where none is."""
+    reasons = list(dict.fromkeys(str(failure.get("reason") or "").strip() for failure in failed.values()))
+    why = " ".join(reason if reason.endswith(".") else reason + "." for reason in reasons if reason)
+    whose = f" of {of}" if of else ""
+    return (f"For {_count(len(failed), 'question', 'questions')}{whose} the held law could not be searched, and nothing was "
+            f"taken for {'it' if len(failed) == 1 else 'them'}. {why}").rstrip()
 
 
 def _named(searches) -> list[str]:

@@ -5873,6 +5873,10 @@ function renderWaiting(entry) {
   }
   box.appendChild(make('p', 'waiting-head', card.done_said));
   box.appendChild(make('p', 'waiting-next', card.next_said));
+  // Plan AN.52 (D282): what could not be searched, in code's words, and what Search again does - offered, never done by itself.
+  for (const line of Array.isArray(card.unsearched) ? card.unsearched : []) {
+    box.appendChild(make('p', 'waiting-next waiting-unsearched', line));
+  }
   // Plan AN.48 (48d; D142): NM's questions wait for the advocate's answers - no default - answered here.
   const asked = Array.isArray(card.questions) ? card.questions : [];
   const open = asked.filter((question) => !question.answer);

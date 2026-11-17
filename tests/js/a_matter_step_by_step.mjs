@@ -133,6 +133,15 @@ const button = (node, text) => (node._text === text ? node : (node.children || [
   assert.equal(followed.children[0].className, 'waiting-taken');
   assert.deepEqual(texts(followed).slice(0, 2), ['NM kept its understanding of the matter and its reading of your papers.', 'Done.']);
   assert.ok(!texts(card).some((text) => text.startsWith('NM kept')), 'no line where nothing was taken');
+  // Plan AN.52 (D282): what could not be searched, in code's words, after what comes next, with Search again among the go-aheads.
+  const unsearched = page.renderWaiting({ turnId: 't3', stopped: { code: 'waiting', waiting: { done_said: 'Done.', next_said: 'Next.',
+    noticed: [], heard: [], unsearched: ['For 1 question of Dispute 1 the held law could not be searched.', 'NM does not search again by itself.'],
+    gos: [{ choice: 'done', disputes: null, said: 'Done: save as it stands' },
+      { choice: 'search_again', disputes: ['D1'], said: 'Search again: Dispute 1' }] } } });
+  assert.deepEqual(texts(unsearched).slice(0, 4), ['Done.', 'Next.', 'For 1 question of Dispute 1 the held law could not be searched.',
+    'NM does not search again by itself.']);
+  assert.ok(texts(unsearched).includes('Search again: Dispute 1'));
+  assert.ok(!texts(card).some((text) => text.startsWith('For 1 question')), 'no line where every search was made');
 }
 
 // --- NM's questions wait for the advocate's answers, answered at the stop (48d) ----------------------------------------------------

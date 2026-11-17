@@ -29,8 +29,8 @@ log = logging.getLogger(__name__)
 OPERATION = "core_message_reader"
 #: What a message is (48c).
 KINDS = ("go", "information", "correction", "rethink", "question", "unclear")
-#: The go-aheads the reader may give, as a stop offers them (steps.GOS).
-CHOICES = ("research", "write", "next", "end_to_end", "done")
+#: The go-aheads the reader may give, as a stop offers them (steps.GOS; plan AN.52, D282: a dispute's failed searches made again).
+CHOICES = ("research", "write", "next", "end_to_end", "done", "search_again")
 #: The words NM says of a message where the reader gave none code can show, by kind.
 SAID = {"go": "Taken as your go-ahead.", "information": "Taken as new information for the matter.",
         "correction": "Taken as a correction of what NM read.", "rethink": "Taken as a request to rethink the matter.",
@@ -42,7 +42,7 @@ PROMPT = """You are an Indian advocate's junior, working through a matter with t
 
 Purpose: take the message the way the advocate meant it, so that the work goes on as they want and nothing they said is lost.
 
-Outcome: kind - what the message is: go (a go-ahead for the work: research or the analysis for disputes it names, the next step, everything remaining end to end, or that the matter is done); information (facts or papers added to the matter); correction (it corrects something we read from the papers or understood of the matter); rethink (it asks us to understand the matter again, or changes what is asked); question (a new question that is not about this matter); or unclear, where you cannot tell. For a go-ahead, the choice and the disputes it names, by their ids, from what can be asked for next. For information or a correction, the disputes it touches by their ids (none where it touches the matter as a whole), whether it is critical - whether work already done or about to be done would be wrong or incomplete without it - and for a correction what it corrects, in a few words, and new_questions - the legal questions it raises that a dispute's research has not asked (each with the dispute's id, the question as a lawyer would put it, why it is needed and the law to check first), none where it raises none - with item - the id of what we read that it corrects, from what we read
+Outcome: kind - what the message is: go (a go-ahead for the work: research or the analysis for disputes it names, the next step, everything remaining end to end, a search that failed made again for the dispute it names, or that the matter is done); information (facts or papers added to the matter); correction (it corrects something we read from the papers or understood of the matter); rethink (it asks us to understand the matter again, or changes what is asked); question (a new question that is not about this matter); or unclear, where you cannot tell. For a go-ahead, the choice and the disputes it names, by their ids, from what can be asked for next. For information or a correction, the disputes it touches by their ids (none where it touches the matter as a whole), whether it is critical - whether work already done or about to be done would be wrong or incomplete without it - and for a correction what it corrects, in a few words, and new_questions - the legal questions it raises that a dispute's research has not asked (each with the dispute's id, the question as a lawyer would put it, why it is needed and the law to check first), none where it raises none - with item - the id of what we read that it corrects, from what we read
 of the matter (a fact or an event of the papers' timeline), or empty where it corrects none of them - and value, the corrected
 value in the advocate's words. Then said: in a sentence or two, to the advocate, how you took the message, so that they can correct you. Where it is unclear, ask: the one short question that would settle it.
 
@@ -123,7 +123,7 @@ def admitted(data, held):
     if kind == "go":
         choice = data.get("choice")
         disputes = [name for name in named if name in state["order"]] or None
-        if state["whole"] or choice not in ("research", "write"):
+        if state["whole"] or choice not in ("research", "write", "search_again"):
             disputes = None
         try:
             go = stepwise.given(held["go"], choice, held=held, disputes=disputes)
