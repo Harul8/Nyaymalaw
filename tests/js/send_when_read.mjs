@@ -47,7 +47,7 @@ function harness() {
   const delivered = [];
   const intent = { text: '', pending: [] };
   const context = vm.createContext({
-    $: get, document: { createElement: (tag) => new Element(tag) }, encodeURIComponent, JSON, Set, Boolean, Math,
+    $: get, document: { createElement: (tag) => new Element(tag), querySelectorAll: () => [] }, encodeURIComponent, JSON, Set, Boolean, Math,
     setPlusMenu() {}, loadUsage() {}, sizeComposer() {}, repaint() {},
     setTimeout: (callback) => { callback(); return 0; },
     api: async () => { const reply = replies.shift(); if (reply instanceof Error) throw reply; return typeof reply === 'function' ? reply() : reply; },

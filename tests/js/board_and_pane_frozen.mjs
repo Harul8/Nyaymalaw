@@ -33,6 +33,7 @@ function el(tag) {
     replaceChildren(...kids) { this.children = kids; this._text = ''; },
     addEventListener(name, handler) { this.handlers[name] = handler; },
     setAttribute(name, value) { this.attributes[name] = String(value); },
+    getAttribute(name) { return name in this.attributes ? this.attributes[name] : null; },
     removeAttribute() {}, focus() {}, show() { this.open = true; }, showModal() { this.open = true; }, close() { this.open = false; },
     dispatchEvent() {}, querySelector() { return null; }, querySelectorAll() { return []; }, closest() { return null; },
   };
@@ -70,6 +71,8 @@ const context = {
   reconcileIntent() {}, sizeComposer() {}, Event: class { constructor(type) { this.type = type; } },
   // Plan AN.49 (49f): the answers window that a dispute's 'Tell NM about these' opens reads the files under the message box.
   attachments: [],
+  // Plan AN.48 (D301): that window lists the files and says what the page says of them; it is not part of the board or the pane.
+  renderAttachments() {}, MutationObserver: class { observe() {} disconnect() {} },
 };
 context.globalThis = context;
 vm.createContext(context);

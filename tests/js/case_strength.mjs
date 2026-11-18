@@ -39,6 +39,7 @@ function el(tag) {
     querySelector() { return el('span'); },
     querySelectorAll() { return []; },
     setAttribute(name, value) { this.attributes[name] = String(value); },
+    getAttribute(name) { return name in this.attributes ? this.attributes[name] : null; },
     removeAttribute() {},
     closest() { return null; },
     focus() {},
@@ -439,7 +440,9 @@ assert.ok(none.textContent.includes('NM could not set out what would make this c
 {
   const sent = [];
   Object.assign(context, { attachments: [], usageUsedUp: () => false, attachmentsBlockSend: () => '', heldSend: null,
-    activeDelivery: null, send: (message) => sent.push(message), repaint() {} });
+    activeDelivery: null, send: (message) => sent.push(message), repaint() {},
+    // Plan AN.48 (D301): the window lists the files and says what the page says of them.
+    renderAttachments() {}, MutationObserver: class { observe() {} disconnect() {} } });
   const dialogs = [];
   const create = document.createElement;
   document.createElement = (tag) => {

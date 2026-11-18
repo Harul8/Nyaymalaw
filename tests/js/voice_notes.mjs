@@ -38,7 +38,7 @@ function harness(replies, { seconds = 2 } = {}) {
     async startRendering() { const samples = new Float32Array(this.length); return { getChannelData: () => samples }; }
   }
   const context = vm.createContext({
-    $: (id) => (elements[id] ||= new Element()), document: { createElement: () => new Element() },
+    $: (id) => (elements[id] ||= new Element()), document: { createElement: () => new Element(), querySelectorAll: () => [] },
     encodeURIComponent, Blob, File, setPlusMenu() {}, loadUsage() {}, heldSend: null,
     // Plan AN.42: no answer is being worked on and nothing waits above the box.
     activeDelivery: null, state: { matterId: null }, usageUsedUp: () => false, renderQueued() {},

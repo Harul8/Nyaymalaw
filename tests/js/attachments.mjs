@@ -34,7 +34,7 @@ function harness(replies) {
   const requests = [];
   const delays = [];
   const context = vm.createContext({
-    $: get, document: { createElement: (tag) => new Element(tag) }, encodeURIComponent,
+    $: get, document: { createElement: (tag) => new Element(tag), querySelectorAll: () => [] }, encodeURIComponent,
     setPlusMenu() {}, loadUsage() {},
     // Plan AN.40: no message waits for its files here (tests/js/send_when_read.mjs covers that); plan AN.42: no answer is being
     // worked on and nothing waits above the box (tests/js/send_ring_and_queue.mjs covers those).

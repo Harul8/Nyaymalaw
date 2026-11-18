@@ -3761,9 +3761,38 @@ function openNeedAnswers(entry, questions, {
     dialog.append(label, box);
     return box;
   });
-  if (attachments.length) {
-    dialog.appendChild(make('p', 'quiet', 'The documents attached under the message box go with your answers.'));
-  }
+  // FILES WITH WHAT IS WRITTEN (plan AN.48, D301; the owner, 18 Nov 2026: "an option to upload files, same formats NM supports"). The
+  // files attached here are the next message's, as those attached under the message box are: the same kinds of file (the message
+  // box's own chooser says which), read and limited the same way, and listed here as they are read. They go with what is written,
+  // and stay under the message box if the window closes unsent.
+  const chooser = make('input');
+  chooser.type = 'file';
+  chooser.multiple = true;
+  chooser.hidden = true;
+  chooser.accept = $('attach-files').accept;
+  chooser.setAttribute('aria-label', $('attach-files').getAttribute('aria-label') || 'Choose files to attach');
+  chooser.addEventListener('change', () => {
+    const chosen = [...chooser.files];
+    chooser.value = '';
+    for (const file of chosen) attachFile(file);
+  });
+  const attach = make('button', 'ghost need-attach', 'Attach files');
+  attach.type = 'button';
+  attach.addEventListener('click', () => chooser.click());
+  const files = make('ul', 'attachments need-attachments');
+  files.setAttribute('aria-label', 'Files going with this message');
+  const filesSaid = make('p', 'attachments-status');
+  filesSaid.setAttribute('role', 'status');
+  filesSaid.setAttribute('aria-live', 'polite');
+  // What the page says of the files - a limit reached, a file that could not be used - is said here too.
+  const pageSaid = $('attachments-status');
+  const echo = new MutationObserver(() => { filesSaid.textContent = pageSaid.textContent; });
+  echo.observe(pageSaid, { childList: true, characterData: true, subtree: true });
+  const filesPart = make('div', 'need-files');
+  filesPart.style.marginTop = '1rem';
+  filesPart.append(make('p', 'quiet', 'Documents, photos or recordings attached here go with what you write.'), attach, chooser,
+    files, filesSaid);
+  dialog.appendChild(filesPart);
   const status = make('p', '');
   status.setAttribute('role', 'status');
   status.setAttribute('aria-live', 'polite');
@@ -3804,8 +3833,9 @@ function openNeedAnswers(entry, questions, {
   actions.style.marginTop = '1rem';
   actions.append(sendAnswers, cancel);
   dialog.append(status, actions);
-  dialog.addEventListener('close', () => dialog.remove());
+  dialog.addEventListener('close', () => { echo.disconnect(); dialog.remove(); });
   document.body.appendChild(dialog);
+  renderAttachments();
   dialog.showModal();
   if (boxes.length) boxes[0].focus();
 }
@@ -7254,55 +7284,60 @@ function documentStatus(item) {
   return reasons.length ? `${text}: ${reasons.join('; ')}` : text;
 }
 
+// The files of the next message are listed under the message box and, while one is open, in the answers window too (plan AN.48,
+// D301: 'Tell NM about these' attaches files) - one set of files, each list drawn afresh from it.
 function renderAttachments() {
-  const host = $('attachments');
-  host.hidden = !attachments.length;
-  host.replaceChildren(...attachments.map((item) => {
-    const chip = document.createElement('li');
-    chip.className = `attachment ${item.status}`;
-    const name = document.createElement('span');
-    name.className = 'attachment-name';
-    name.textContent = item.name;
-    const status = document.createElement('span');
-    status.className = 'attachment-status';
-    status.textContent = chipStatus(item);
-    chip.append(name, status);
-    if (item.status === 'recording') {
-      const stop = document.createElement('button');
-      stop.type = 'button';
-      stop.className = 'ghost attachment-stop';
-      stop.textContent = 'Stop';
-      stop.setAttribute('aria-label', 'Stop recording the voice note and attach it');
-      stop.addEventListener('click', () => stopVoiceNote());
-      chip.appendChild(stop);
-    }
-    if (item.status === 'ready' && item.summary && item.summary.waiting_for_ai > 0) {
-      const again = document.createElement('button');
-      again.type = 'button';
-      again.className = 'ghost attachment-again';
-      again.textContent = item.summary.recording ? 'Transcribe again' : 'Read again';
-      again.setAttribute('aria-label', item.summary.recording
-        ? `Ask the AI to transcribe ${item.name} again` : `Ask the AI to read the unread pages of ${item.name} again`);
-      again.addEventListener('click', () => readWaiting(item));
-      chip.appendChild(again);
-    }
-    const remove = document.createElement('button');
-    remove.type = 'button';
-    remove.className = 'ghost attachment-remove';
-    remove.textContent = '×';
-    remove.setAttribute('aria-label', item.status === 'recording'
-      ? 'Discard this voice note recording' : `Remove ${item.name} from this message`);
-    remove.addEventListener('click', () => {
-      if (item.status === 'recording') stopVoiceNote({ discard: true });
-      attachments = attachments.filter((other) => other !== item);
-      renderAttachments();
-      releaseHeld();
-    });
-    chip.appendChild(remove);
-    return chip;
-  }));
+  for (const host of [$('attachments'), ...document.querySelectorAll('.need-attachments')]) {
+    host.hidden = !attachments.length;
+    host.replaceChildren(...attachments.map(attachmentChip));
+  }
   if (!attachments.length) $('attachments-status').textContent = '';
   paintSend();
+}
+
+function attachmentChip(item) {
+  const chip = document.createElement('li');
+  chip.className = `attachment ${item.status}`;
+  const name = document.createElement('span');
+  name.className = 'attachment-name';
+  name.textContent = item.name;
+  const status = document.createElement('span');
+  status.className = 'attachment-status';
+  status.textContent = chipStatus(item);
+  chip.append(name, status);
+  if (item.status === 'recording') {
+    const stop = document.createElement('button');
+    stop.type = 'button';
+    stop.className = 'ghost attachment-stop';
+    stop.textContent = 'Stop';
+    stop.setAttribute('aria-label', 'Stop recording the voice note and attach it');
+    stop.addEventListener('click', () => stopVoiceNote());
+    chip.appendChild(stop);
+  }
+  if (item.status === 'ready' && item.summary && item.summary.waiting_for_ai > 0) {
+    const again = document.createElement('button');
+    again.type = 'button';
+    again.className = 'ghost attachment-again';
+    again.textContent = item.summary.recording ? 'Transcribe again' : 'Read again';
+    again.setAttribute('aria-label', item.summary.recording
+      ? `Ask the AI to transcribe ${item.name} again` : `Ask the AI to read the unread pages of ${item.name} again`);
+    again.addEventListener('click', () => readWaiting(item));
+    chip.appendChild(again);
+  }
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'ghost attachment-remove';
+  remove.textContent = '×';
+  remove.setAttribute('aria-label', item.status === 'recording'
+    ? 'Discard this voice note recording' : `Remove ${item.name} from this message`);
+  remove.addEventListener('click', () => {
+    if (item.status === 'recording') stopVoiceNote({ discard: true });
+    attachments = attachments.filter((other) => other !== item);
+    renderAttachments();
+    releaseHeld();
+  });
+  chip.appendChild(remove);
+  return chip;
 }
 
 async function attachFile(file) {
