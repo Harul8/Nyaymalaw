@@ -31,6 +31,8 @@ PLANNED 17 Nov 2026 at the owner's instruction (column 3). BUILT and pushed 17 N
 18 Nov 2026: 57f part one BUILT in the build copy, not applied - the Legal library, Home and Preparation deleted with their checks (column 7); part two, the earlier-matter screens, next; all of it goes on the owner's server only at the owner's word.
 18 Nov 2026 (later): 57f part two BUILT in the build copy, not applied - the screens of a matter saved before conversations deleted with their checks (column 7). D292 is now built whole. It goes on the owner's server with D297, D298, D299, D301, D302 and D303, only at the owner's word. D300 is not built: it has had no answer.
 18 Nov 2026 (evening): 57f APPLIED with D297-D303 by the owner's word (D304; AN.48 columns 10 and 12): the owner's checkout at cad508e7, both servers running it; the original-material window's files are no longer served. Not yet seen in a browser.
+18 Nov 2026 (evening, later): D306 (the journey finder finds the two journeys it missed) and D307 (what D292 left on the server and in the page removed) BUILT in the build copy (AN.48 column 12); applied with D305 under D308.
+18 Nov 2026 (late evening): D306 and D307 APPLIED with D305 by the owner's word (D308; AN.48 column 12): the owner's checkout at 2abeb974, both servers running it; the earlier-matter addresses answer 'not found'. Not yet seen in a browser.
 
 ## Notes
 

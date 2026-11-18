@@ -5,7 +5,7 @@ that change - the branch, the models, the spending limits and the state of the b
 that do not date. Correct it in the same commit as the change it records; the Advocate build plan stays the record of decisions
 and evidence (P7), and where the two disagree the plan is checked first.*
 
-As of 18 Nov 2026, evening.
+As of 18 Nov 2026, late evening.
 
 ## Branches and checkouts
 
@@ -13,21 +13,21 @@ As of 18 Nov 2026, evening.
 |---|---|
 | Working branch | `redesigned-architecture` (the AN.48 redesign, from 9 Nov 2026). Every piece is committed and pushed here. `s0-foundations`, origin's default, is an ancestor of it and has not moved since; nothing has been merged back. |
 | Hosting branch | `nyaymalaw-aws` (from 11 Nov 2026): the move to hosted machines, committed from a copy. The live checkout has never been switched to it. |
-| Live checkout | `C:\Users\rahul\Nyaymalaw`, on `redesigned-architecture` at the branch's tip - the code applied on 18 Nov 2026, evening, by the owner's word (D304), at `cad508e7`; later commits change only the plan and these drafts. Never checked out, stashed or reset over a live file; new code reaches it only by the owner's word. |
+| Live checkout | `C:\Users\rahul\Nyaymalaw`, on `redesigned-architecture` at the branch's tip - the code applied on 18 Nov 2026, late evening, by the owner's word (D308), at `2abeb974`; later commits change only the plan and these drafts. Never checked out, stashed or reset over a live file; new code reaches it only by the owner's word. |
 | Build copy | `docs\NM-forensic-review` inside the live checkout: a checkout of its own on the same branch, where pieces are built and replayed before they are applied. |
 
 ## Servers
 
 | Server | State |
 |---|---|
-| Pilot | Port 8000, `nm.app.main` from the live checkout without following code (`operations/pilot.ps1`, run by the scheduled tasks `NM pilot server` and `NM pilot tunnel`). Started on the morning of 18 Nov 2026 by the owner's word (D296); restarted once on the applied build at 18:27 that evening (D304). |
-| Development server | Port 8071 (`start.ps1`), following the code. Started on the morning of 18 Nov 2026 (D296); it took up the applied build by itself at 18:27 that evening. |
+| Pilot | Port 8000, `nm.app.main` from the live checkout without following code (`operations/pilot.ps1`, run by the scheduled tasks `NM pilot server` and `NM pilot tunnel`). Started on the morning of 18 Nov 2026 by the owner's word (D296); restarted once on the applied build at 18:27 that evening (D304) and again at 19:40 (D308). |
+| Development server | Port 8071 (`start.ps1`), following the code. Started on the morning of 18 Nov 2026 (D296); it took up each applied build by itself (D304, D308). |
 
 A copy of both stores from before each apply is kept in `.nm/backups` (never committed).
 
 ## Models
 
-| Step | Applied (`cad508e7`) |
+| Step | Applied (`2abeb974`) |
 |---|---|
 | Writing the turn | Two choices in plain words: 6 Luna for routine work (the default) and 6.1 Terra for complex matters (D270 as the owner decided it, D288); turns saved with Auto or Sol are shown as saved |
 | Independent review | The model the turn is written on: Luna unless the advocate chose Terra (D294, which withdrew D289's fixed Terra reviewer on the live run's cost; the owner: "lets use Luna only, and use Terra sparringly in complex situtations that Luna may not handle properly") |
@@ -50,20 +50,22 @@ Luna $0.10/$0.50, Terra $1.00/$5.00, Sol $2.00/$10.00.
 What follows is a summary; each row of the plan holds the record, and `docs/proposed/D231/PIECES.md` lists every piece with a
 status proposed from git.
 
-- **Applied:** everything up to `cad508e7` - AN.1-AN.47, AN.48's pieces 48a-48i, AN.49 (49d corrected and wired: new answers
+- **Applied:** everything up to `2abeb974` - AN.1-AN.47, AN.48's pieces 48a-48i, AN.49 (49d corrected and wired: new answers
   gather the case under headings, D285, D286, D291; a requirement's law a list of passages, D293), AN.50-AN.54 as built, AN.51's
   D290 (the case account through the independent review), D201 and D294 (Luna only), AN.52's D282 (Search again offered at the
   stop, never by itself), AN.57 57a, AN.58 58a, D287 (step by step unless a message asks otherwise) and D288 (two models);
   and, applied 18 Nov 2026 (D304): D292 (AN.57 57f - the Legal library, Home, Preparation and the screens of a matter saved
   before conversations deleted), D297 (a question not yet searched is not researched), D298 (a step's progress after a
   go-ahead), D299 (each dispute's case in an answer of several), D301 (the Tell NM window attaches files), D302 (the other
-  side's points a checklist on the board) and D303 (what to get is on the board, not repeated in the answer).
+  side's points a checklist on the board) and D303 (what to get is on the board, not repeated in the answer); and, applied
+  later that evening (D308): D305 (a reload reopens the conversation in progress, named in the page's address), D306 (the
+  journey finder finds the two journeys it missed) and D307 (the server lists conversations only and no longer opens an
+  earlier matter; the page's leftovers of the deleted screens removed).
 - **Built, not applied:** nothing.
 - **Decided, not built:** nothing.
-- **Waiting on the owner:** D300 (a reload reopens the conversation in progress); the journey finder that misses the AI
-  permission journey (AN.57); the server's routes and listing that only the deleted screens used (AN.57's dependent work); D259 (the contact details the public pages give); D232 (the engineer who
+- **Waiting on the owner:** D259 (the contact details the public pages give); D232 (the engineer who
   reviews before launch, and the person to call when the server is down); D281 (the ten-matter run, once everything is ready);
   D229 and D231 themselves (these drafts).
-- **Open:** browser acceptance of the redesign (D141), and of D292 and D297-D303 since they were applied; live semantic acceptance - no served turn has yet made a gathered case,
+- **Open:** browser acceptance of the redesign (D141), and of D292, D297-D303 and D305-D307 since they were applied; live semantic acceptance - no served turn has yet made a gathered case,
   and whether the model splits a requirement's law into its passages under D293 is measured only by a live run; the hosting
   itself (`nyaymalaw-aws`).
