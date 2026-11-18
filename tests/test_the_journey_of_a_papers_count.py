@@ -17,7 +17,9 @@ journey, page = _journey, _page
 
 
 def _told_of_the_server(page):
-    page.wait_for_function("!document.getElementById('health').textContent.trim().startsWith('Checking')", timeout=15000)
+    """This server's model is a stand-in, so the page puts up its rehearsal line once the server has answered (the library's
+    line, which this waited on, went with the Legal library: plan AN.57, D292)."""
+    page.wait_for_selector("#rehearsal-warning:not([hidden])", timeout=15000)
 
 
 def test_a_paper_attached_from_nine_in_ten_says_how_many_are_kept_on_its_line(page, journey, tmp_path, monkeypatch):

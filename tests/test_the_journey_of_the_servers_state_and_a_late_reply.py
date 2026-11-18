@@ -31,8 +31,9 @@ def _api_requests(page, journey):
 
 
 def _told_of_the_server(page):
-    """Wait until the page has drawn the library's line from the server's answer (it says 'Checking...' until then)."""
-    page.wait_for_function("!document.getElementById('health').textContent.trim().startsWith('Checking')", timeout=15000)
+    """Wait until the page has drawn the server's answer: this server's model is a stand-in, so the page puts up its rehearsal
+    line once told. (The library's line, which this waited on, went with the Legal library: plan AN.57, D292.)"""
+    page.wait_for_selector("#rehearsal-warning:not([hidden])", timeout=15000)
 
 
 def _json(route, body, status=200):
@@ -53,8 +54,7 @@ def test_a_visitor_is_asked_nothing_of_the_server_and_a_signed_in_advocate_is_to
     _told_of_the_server(page)
     asked = [address for _method, address in seen if "/api/health" in address]
     assert asked == ["/api/health/detail"], f"asked once, of the signed-in address: {asked}"
-    # This server's library is an empty folder and its model a stand-in: both are said, from the server's own words for them.
-    assert page.inner_text("#health").startswith(("Legal library unavailable", "Chat available"))
+    # This server's model is a stand-in, and that is said from the server's own word for it.
     assert page.is_visible("#rehearsal-warning")
     assert page.is_hidden("#build-warning"), "the server runs the code on disk: no banner"
     assert not page.errors
@@ -82,7 +82,6 @@ def test_a_health_asking_that_fails_is_not_an_all_clear(page, journey):
     _sign_in(page, journey)
     page.wait_for_selector("#build-warning:not([hidden])", timeout=15000)
     assert page.inner_text("#build-warning").startswith("The build could not be identified: ")
-    assert page.inner_text("#health").startswith("Not ready")
 
 
 # ------------------------------------------------------------- 53i: a late reply ---

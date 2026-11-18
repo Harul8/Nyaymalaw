@@ -4,7 +4,8 @@
 is a stand-in, whether the running code is the code on disk - behind sign-in. The page asked the public address in two places:
 once signed in, for the library's line, and at its start, before anyone had signed in, for the build. It now asks the signed-in
 address once, after sign-in, and draws both from that one answer; at its start it asks nothing about the code, and the banner
-about the code is taken down with the workspace when the sign-in screen is shown.
+about the code is taken down with the workspace when the sign-in screen is shown. The library's line went with the Legal library,
+the one screen that showed it (plan AN.57, D292): the page asks the same once and shows the rest.
 
 The shipped script's own functions run in Node, with the server and the screen stood in for. Not a browser check.
 """
@@ -52,7 +53,7 @@ async function shown(said) {
   };
   vm.runInNewContext(`${shipped}\nthis.loadHealth = loadHealth;`, sandbox);
   await sandbox.loadHealth();
-  return { asked, line: elements.health, rehearsal: sandbox.$('rehearsal-warning'), build: sandbox.$('build-warning') };
+  return { asked, elements, rehearsal: sandbox.$('rehearsal-warning'), build: sandbox.$('build-warning') };
 }
 const well = { runtime: 'ready', corpus: 'readable', rehearsal: false, code_state: 'current', steps: {}, readiness: {} };
 """
@@ -62,22 +63,9 @@ _CASES = {
 (async () => {
   const page = await shown(well);
   assert.deepEqual(page.asked, ['/api/health/detail']);
-  assert.match(page.line.textContent, /^Legal library available/);
-  assert.equal(page.line.classes.has('bad'), false);
+  assert.deepEqual(Object.keys(page.elements).sort(), ['build-warning', 'rehearsal-warning'], 'no library line: D292');
   assert.equal(page.rehearsal.hidden, true);
   assert.equal(page.build.hidden, true, 'code that is the code on disk shows no banner');
-})().catch((error) => { console.error(error); process.exit(1); });
-""",
-    "the_librarys_line_is_what_readiness_measured": r"""
-(async () => {
-  for (const corpus of ['NOT READABLE', 'configured_unverified']) {
-    const page = await shown({ ...well, corpus });
-    assert.match(page.line.textContent, /^Legal library unavailable/, corpus);
-    assert.equal(page.line.classes.has('bad'), true);
-  }
-  const chat = await shown({ ...well, corpus: 'not_connected' });
-  assert.match(chat.line.textContent, /^Chat available/);
-  assert.equal(chat.line.classes.has('bad'), false);
 })().catch((error) => { console.error(error); process.exit(1); });
 """,
     "a_stand_in_model_is_said_from_the_servers_word_for_it": r"""
@@ -108,14 +96,11 @@ _CASES = {
     "an_asking_that_fails_is_not_an_all_clear_either": r"""
 (async () => {
   const page = await shown(Object.assign(new Error('HTTP 503'), { status: 503 }));
-  assert.match(page.line.textContent, /^Not ready/);
-  assert.equal(page.line.classes.has('bad'), true);
   assert.equal(page.build.hidden, false);
   assert.equal(page.build.className, 'build-warning unknown');
   assert.match(page.build.textContent, /^The build could not be identified: HTTP 503/);
   // An asking this page abandoned (the session ended meanwhile) draws nothing.
   const left = await shown(Object.assign(new Error('obsolete'), { obsolete: true }));
-  assert.equal(left.line.textContent, '');
   assert.equal(left.build.hidden, true);
 })().catch((error) => { console.error(error); process.exit(1); });
 """,

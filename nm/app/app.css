@@ -1037,75 +1037,12 @@ main > * { min-width: 0; }
  * The real fixes are above and they are enough: `overflow-wrap: anywhere` on
  * the locator, and `max-width: 100%; min-width: 0` on the containers. */
 
-/* ============================ THE TABS ============================ */
-
-/* THE STRIP. P36, F-A-17.
- *
- * A fifth tab once took the row to 400px inside a 390px viewport and the whole
- * document scrolled sideways. There are four tabs now. On a phone they stay on
- * ONE ROW THAT SCROLLS INSIDE ITSELF (the phone rules below), as the product
- * owner chose; the old objection to a scroller -- a last tab a keyboard user
- * cannot reach -- does not hold, because a focused button scrolls its own
- * container into view, and the document itself still never scrolls sideways.
- * `min-width: 0` is what lets the flex row shrink at all.
- */
-.tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-left: 0;
-  min-width: 0;
-}
-
-.tabs .tab {
-  background: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  color: var(--ink-3);
-  cursor: pointer;
-  font: inherit;
-  font-size: 13px;
-  letter-spacing: .01em;
-  padding: 8px 14px 7px;
-}
-
-.tabs .tab:hover { color: var(--ink); }
-
-.tabs .tab.is-on {
-  border-bottom-color: var(--accent);
-  color: var(--ink);
-  font-weight: 600;
-}
-
 main.single {
   display: block;
   max-width: 1080px;
   margin: 0 auto;
   padding: 24px 28px 64px;
   width: 100%; overflow-y: auto;
-}
-
-/* ====================== A4 — SEARCH THE CORPUS ==================== */
-
-.search-bar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 190px 96px 96px auto;
-  gap: 8px;
-  align-items: center;
-}
-
-.search-bar input {
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: 3px;
-  font: inherit;
-  font-size: 14px;
-  padding: 9px 11px;
-}
-
-.search-bar input:focus {
-  border-color: var(--accent);
-  outline: none;
 }
 
 /* WHAT WAS SEARCHED. Never hidden behind a disclosure control: a zero is
@@ -1118,12 +1055,6 @@ main.single {
   padding-bottom: 10px;
   border-bottom: 1px solid var(--rule);
 }
-
-.index-detail { opacity: .85; }
-
-.search-diagnostic { color: var(--ink-2); margin-block: .75rem; font-size: .85rem; }
-.search-diagnostic summary { cursor: pointer; text-decoration: underline; text-underline-offset: .2em; }
-.search-diagnostic p { overflow-wrap: anywhere; line-height: 1.6; }
 
 .result-count {
   color: var(--ink-3);
@@ -1144,17 +1075,6 @@ main.single {
   flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 6px;
-}
-
-.hit-name { font-weight: 600; font-size: 14px; }
-
-.hit-meta { color: var(--ink-3); font-size: 12px; }
-
-.hit-text {
-  color: var(--ink-2);
-  font-size: 14px;
-  line-height: 1.66;
-  margin: 0;
 }
 
 /* PROVENANCE IS NOT DECORATION. `searched` must never be able to pass for
@@ -1227,10 +1147,6 @@ main.single {
   font-size: 12px;
 }
 
-@media (max-width: 860px) {
-  .search-bar { grid-template-columns: 1fr; }
-}
-
 /* ========================= A1 — THE GATE =========================
  *
  * BY ID, AND THAT IS THE WHOLE FIX FOR A SEVERE DEFECT.
@@ -1291,7 +1207,6 @@ main.single {
   padding: 36px;
   width: 100%;
 }
-
 
 .login-lede {
   color: var(--ink-2);
@@ -1558,7 +1473,6 @@ main.single {
   margin: 0 0 20px;
 }
 
-
 .login-foot {
   border-top: 1px solid var(--rule);
   color: var(--ink-3);
@@ -1608,7 +1522,6 @@ main.single {
 .usage.out { background: var(--brass-w); border-color: #dccb98; color: #6b5018; }
 .usage.out .usage-meter { border-color: #dccb98; }
 
-
 /* ===================== B3-B5 — THE INTAKE FORM ===================== */
 
 .intake {
@@ -1646,7 +1559,6 @@ main.single {
 }
 .intake button.primary { align-self: flex-start; margin-top: 0.9rem; }
 
-
 /* ============ BK-37 — THE BRIEF'S SECTIONS ============ */
 
 h3.section {
@@ -1667,11 +1579,9 @@ h3.section:first-of-type { margin-top: 0.4rem; }
   font-size: 0.62rem; letter-spacing: 0.04em; margin-top: 0.2rem;
 }
 
-
 /* BK-41. CANCEL sits beside Send while a turn is in flight. Quiet, because
    it is an escape and not an action an advocate should be drawn to. */
 button.ghost.cancel { margin-right: 0.6rem; }
-
 
 /* BK-42. A NAME FOR A SCREEN READER AND NOTHING FOR A SCREEN.
    `display:none` and `visibility:hidden` remove an element from the
@@ -1688,7 +1598,6 @@ button.ghost.cancel { margin-right: 0.6rem; }
   white-space: nowrap;
   width: 1px;
 }
-
 
 /* ============ BK-42, F-A-17 — THE RIBBON ON A PHONE ============
  *
@@ -1707,8 +1616,6 @@ button.ghost.cancel { margin-right: 0.6rem; }
   /* On a phone the chip keeps its mark and the percentage in words. */
   .usage { gap: 0.4rem; padding: 0 0.7rem 0 0.6rem; }
   .usage-plan, .usage-meter { display: none; }
-  .tabs { flex-wrap: nowrap; gap: 2px; overflow-x: auto; scrollbar-width: none; }
-  .tabs .tab { flex: none; padding: 8px 10px 7px; }
 }
 
 /* Workspace surfaces share existing tokens and keep their own semantic owner. */
@@ -1750,11 +1657,6 @@ button.ghost.cancel { margin-right: 0.6rem; }
   border: 1px solid var(--amber); border-radius: 8px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18); }
 /* F-A-18. HOME: two lines and one button. Centred with auto margins, so a short
    window scrolls to the top of it rather than cutting it off. */
-main.home { display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 2rem 1.75rem; }
-.home-intro { align-items: flex-start; display: flex; flex-direction: column; gap: 1rem; margin-block: auto; max-width: 44rem; }
-.home-intro h1 { font: 400 clamp(1.7rem, 3.2vw, 2.6rem)/1.22 var(--f-serif); letter-spacing: -0.025em; margin: 0; text-wrap: balance; }
-.home-lede { color: var(--ink-2); font-size: 1.05rem; line-height: 1.7; margin: 0; }
-.home-intro .primary { margin-top: 0.8rem; min-height: 45px; padding-inline: 1.4rem; }
 /* F-B-04. The open matter's one header control: its files. */
 .workspace-actions { align-items: center; display: flex; flex: none; gap: .5rem; justify-content: flex-end; }
 .matter-files { position: relative; }
@@ -1825,7 +1727,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
   .intake { width: calc(100% - 1.5rem); padding: 1.3rem; }
   .history-head { align-items: stretch; flex-direction: column; }
   .history-head select { min-width: 0; width: 100%; }
-  .tabs .tab { min-height: 42px; }
 }
 
 /* `body { overflow-x: hidden }` WAS HERE FOR TEN MINUTES AND WAS REMOVED --
@@ -1916,52 +1817,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 }
 .correction input:focus { border-color: var(--accent); outline: none; }
 
-/* ===================== P21 -- RESEARCH ON THE MATTER ===================== */
-
-.research-bar { margin: 0.6rem 0 0.4rem; }
-.research-bar label.check {
-  align-items: center; display: flex; gap: 0.5rem;
-  font-size: 0.85rem; color: var(--ink-2);
-}
-.research-fields {
-  background: var(--paper); border: 1px solid var(--rule); border-radius: 4px;
-  display: flex; flex-direction: column; gap: 0.3rem;
-  margin-top: 0.5rem; padding: 0.7rem 0.9rem;
-}
-.research-fields label {
-  color: var(--ink-3); font-size: 0.68rem; letter-spacing: 0.07em;
-  margin-top: 0.3rem; text-transform: uppercase;
-}
-.research-fields label .opt { letter-spacing: 0; text-transform: none; font-size: 0.72rem; }
-.research-fields input {
-  background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
-  font: inherit; font-size: 0.9rem; padding: 0.45rem 0.6rem;
-}
-
-/* A case, and the paragraphs it opens to. */
-.cases { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.6rem; }
-.case { border: 1px solid var(--rule); border-radius: 4px; padding: 0.7rem 0.9rem; }
-.case header { display: flex; flex-wrap: wrap; gap: 0.5rem 0.8rem; align-items: baseline; }
-.case .hit-name { font-weight: 600; }
-.case .hit-meta { color: var(--ink-3); font-size: 0.78rem; }
-.case-cover { color: var(--ink-2); font-size: 0.82rem; margin: 0.5rem 0 0.3rem; }
-.para { border-top: 1px solid var(--rule); padding: 0.5rem 0; }
-.para-meta { color: var(--ink-3); font-size: 0.72rem; }
-.para-text { margin: 0.25rem 0 0.4rem; font-size: 0.9rem; }
-.verdict-list { margin-top: 0.4rem; }
-.verdict-note { color: var(--ink-2); font-size: 0.8rem; margin: 0.3rem 0 0; }
-
-/* The record. */
-.research-record {
-  border: 1px solid var(--rule); border-radius: 4px; margin-top: 1rem;
-  padding: 0.8rem 1rem; font-size: 0.85rem;
-}
-.research-record h3 { font-family: var(--f-serif); font-size: 1rem; font-weight: 500; margin: 0 0 0.4rem; }
-.research-record .consulted, .research-record .adverse, .research-record .attached {
-  color: var(--ink-2); padding: 0.2rem 0;
-}
-.research-record .attached { border-left: 3px solid var(--good); padding-left: 0.6rem; }
-
 /* ===================== P22 -- THE LEGAL PREMISES ===================== */
 .premises { border: 1px solid var(--rule); border-radius: 4px; padding: 0.8rem 1rem; margin-top: 1rem; }
 .premises h3 { margin-top: 0; }
@@ -1996,7 +1851,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 .briefing-need.paused { color: var(--ink-3); }
 .briefing-need button.ghost { background: transparent; border: 1px solid var(--rule); border-radius: 3px; font: inherit; font-size: 0.78rem; padding: 0.15rem 0.5rem; cursor: pointer; }
 
-
 /* P33 / P25 / P27 -- custody, attribution and decisions on the case file. */
 .governance { margin-top: 1.5rem; }
 .governance h4 { margin: 1rem 0 .35rem; font-size: .95rem; }
@@ -2021,7 +1875,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 }
 .binding-out, .decision-out { flex: 1 1 100%; }
 
-/* ===================== P36 — THE PREPARATION PANE ======================
+/* ===================== P36 — THE FORMS OF A MATTER'S RECORDS ======================
  *
  * NO FIXED WIDTHS AND NO HORIZONTAL SCROLLER. The pane is a single column
  * that reflows; at 390px the labels sit above their inputs and nothing is
@@ -2033,30 +1887,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
  * overflow.py` refuses it at the document level. Long content -- a filename,
  * a citation, an email address -- wraps instead.
  */
-.prepare { display: flex; flex-direction: column; gap: 1.25rem; }
-.prepare-head { display: flex; gap: 0.5rem; align-items: center; }
-.prepare-head select { max-width: 100%; }
-.prep-block {
-  border: 1px solid var(--rule);
-  border-radius: 6px;
-  padding: 1rem;
-}
-.prep-block h2 { margin: 0 0 0.35rem; font-size: 1.05rem; }
 .prep-form { display: flex; flex-direction: column; gap: 0.35rem; margin: 0.75rem 0; }
 .prep-form label { font-size: 0.82rem; font-weight: 600; }
 .prep-form input, .prep-form select { max-width: 100%; }
 .prep-form button { align-self: flex-start; margin-top: 0.5rem; }
-.prep-block > button { margin-top: 0.5rem; }
-/* LONG WORDS BREAK RATHER THAN PUSH. An email address, a filename or a
- * neutral citation is one unbreakable token, and one of them at 390px is the
- * whole of a horizontal scrollbar. */
-.prep-said, .prep-list li {
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-.prep-said { font-size: 0.86rem; color: var(--ink-2); margin: 0.4rem 0; }
-.prep-list { margin: 0.25rem 0 0.75rem; padding-left: 1.1rem; }
-.prep-list li { font-size: 0.86rem; margin-bottom: 0.25rem; }
 .state.problem { color: var(--signal); border-color: var(--signal); }
 /* Protected local drafts use the same restrained account-state vocabulary. */
 .draft-recovery:empty, .draft-status:empty { display: none; }

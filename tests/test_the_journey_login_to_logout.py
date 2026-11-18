@@ -225,16 +225,6 @@ def _start_matter(page):
     page.wait_for_selector("#message", state="visible", timeout=15000)
 
 
-#: Surfaces the owner's decisions of 15 and 16 Oct 2026 left in the page unreached ("The four places stay in the page, unreached,
-#: until their surfaces are retired", nm/app/index.html): a phase that needs one is skipped with that reason, never failed.
-RETIRED_SURFACES = {"home": "Home", "search": "the Legal library", "prepare": "Preparation"}
-
-
-def _retired(name):
-    pytest.skip(f"{RETIRED_SURFACES[name]} is not reached from the page since the owner's decisions of 15 and 16 Oct 2026 "
-                "(no tabs; the top bar holds a new matter and the conversation history)")
-
-
 def _advise(page, message: str):
     """Send a brief and WAIT FOR THE TURN TO FINISH DRAWING.
 
@@ -343,11 +333,9 @@ def _tab(page, name: str):
     -- reached there, opening the first matter on the list when none is open,
     as an advocate would have to. The ribbon's tabs (F-A-17) are gone since the
     owner's decisions of 15 and 16 Oct 2026: My work is the top bar's
-    conversation history, and Home, the Legal library and Preparation are not
-    reached, so a phase that needs one is skipped with that reason.
+    conversation history, and Home, the Legal library and Preparation were
+    deleted with their phases (plan AN.57, D292).
     """
-    if name in RETIRED_SURFACES:
-        _retired(name)
     if name in ("casefile", "history"):
         if not page.is_visible("#files-toggle"):
             _reach_rail(page, page.viewport_size["width"])
@@ -405,9 +393,8 @@ def test_phase_2_the_landing_is_not_blank_but_authenticated(page, journey):
     shown = _visible_text(page).strip()
 
     assert len(shown) > 40, f"the landing shows almost nothing: {shown!r}"
-    # F-A-18: the landing is Home, and its one button starts a matter.
-    assert page.is_visible("#home-start") or page.is_visible("#message"), (
-        "nothing on the landing lets the advocate begin")
+    # The landing is the conversation window, whose message box starts a matter (Home, F-A-18, was deleted: plan AN.57, D292).
+    assert page.is_visible("#message"), "nothing on the landing lets the advocate begin"
 
 
 # ============================================ 3. the navigator, three widths ==
@@ -595,36 +582,18 @@ def test_phase_5d_the_masthead_is_not_a_configuration_dump(page, journey):
     with page.expect_response(lambda reply: reply.url.endswith("/api/health/detail")
                               and reply.request.method == "GET", timeout=30000) as checked:
         _sign_in(page, journey)
-    # WAIT FOR THE LINE TO RESOLVE. `loadHealth()` is async and the field
-    # reads `checking…` until it lands -- so reading immediately after
-    # sign-in asserts against a placeholder, which contains none of the
-    # tokens this phase is about and would pass on any product at all.
+    # The masthead is read once the page has the server's state, so what it would show of it is on the page. (The library's
+    # line went with the Legal library, the one screen that showed it: plan AN.57, D292.)
     response = checked.value
     assert response.status == 200, response.text()
     health = response.json()
     assert health["corpus"] in ("readable", "NOT READABLE", "configured_unverified")
-    expected = ("Legal library available · check the scope of each result"
-                if health["corpus"] == "readable" else
-                "Legal library unavailable · authority-backed research is limited")
-    page.wait_for_function(
-        "expected => document.querySelector('#health').textContent.trim() === expected",
-        arg=expected, timeout=30000)
     masthead = page.inner_text("#masthead")
 
     for token in ("fernet", "gpt-", "scripted-1", "not configured",
                   "manifest:"):
         assert token not in masthead, (
             f"{token!r} is in the masthead on every screen")
-    # THE LINE ITSELF. F-A-17 put it on the Legal library page, which the owner's decisions of 15 and 16 Oct 2026 took off the
-    # page; it is checked where it is shown.
-    line = page.inner_text("#health")
-    for token in ("fernet", "gpt-", "scripted-1", "not configured",
-                  "manifest:"):
-        assert token not in line, f"{token!r} is on the library line"
-    assert page.get_attribute("#health", "title") == (
-        "Library availability does not establish legal coverage or currency.")
-    assert ("bad" in (page.get_attribute("#health", "class") or "").split()) is (
-        health["corpus"] != "readable")
 
 
 def test_phase_6b_an_expired_period_is_never_a_window_to_act_within(
@@ -664,65 +633,6 @@ def test_phase_6b_an_expired_period_is_never_a_window_to_act_within(
 
 
 # ========================================================== 7-8. the panes ===
-
-def test_phase_7_search_answers_or_says_why(page, journey):
-    """A search that returns nothing must say whether it RAN. Zero results and
-    an index that was never built read identically otherwise -- defect shape
-    S3, and this product has three measured instances against the corpus."""
-    _sign_in(page, journey)
-    _tab(page, "search")
-
-    # NOTHING IS CLAIMED BEFORE THE SEARCH RUNS. BK-45.
-    #
-    # This waited on `#pane-search` innerText being non-empty and then
-    # asserted it was non-empty. The pane holds the search FORM, whose
-    # `sr-only` labels are `clip-path: inset(50%)` and therefore in
-    # `innerText` -- so the condition was already true before Enter was
-    # handled, and the phase passed against a submit button wired to nothing.
-    #
-    # The two elements the renderer actually writes into start empty, so
-    # asserting on THEM is a check that can fail.
-    for empty in ("#search-state", "#search-results"):
-        assert not page.inner_text(empty).strip(), (
-            f"{empty} already has content before the search ran, so this "
-            f"phase cannot tell a completed search from a dead button")
-
-    page.fill("#q", "adverse possession")
-    page.press("#q", "Enter")
-
-    # WAITING FOR RESULTS WOULD HANG on the honest answer "the index is not
-    # built", which is the answer this phase most wants to see rendered. So
-    # wait for either half of the renderer to speak.
-    page.wait_for_function(
-        "() => ['#search-state', '#search-results'].some(s => {"
-        "  const el = document.querySelector(s);"
-        "  return el && el.innerText.trim().length > 0; })",
-        timeout=30000)
-
-    said = page.inner_text("#search-state").strip()
-    results = page.inner_text("#search-results").strip()
-
-    # AND IT IS ONE OF THE THREE NAMED STATES. A search that returns nothing
-    # must say WHETHER IT RAN: zero results and an index that was never built
-    # read identically otherwise -- defect shape S3, and this product has
-    # three measured instances of it against the corpus.
-    ran_and_found = bool(page.locator("#search-results .hit").count())
-    not_searched = "NOT SEARCHED" in said.upper()
-    searched_and_empty = bool(said) and not not_searched
-
-    assert ran_and_found or not_searched or searched_and_empty, (
-        "the search pane rendered neither results, nor a NOT SEARCHED state, "
-        "nor a named zero -- so the advocate cannot tell whether the corpus "
-        "was asked:\n"
-        f"  #search-state:   {said[:200]!r}\n"
-        f"  #search-results: {results[:200]!r}")
-
-    if ran_and_found:
-        assert page.locator("#search-results .result-count").count() == 1, (
-            "hits were rendered with no count, so the advocate cannot tell "
-            "whether they are looking at all of them")
-    assert not page.errors, f"the page threw: {page.errors}"
-
 
 def test_phase_8_history_shows_the_turn_that_was_served(page, journey):
     """The advocate's own record. A History that cannot show what was served

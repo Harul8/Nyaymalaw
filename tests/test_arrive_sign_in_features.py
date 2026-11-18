@@ -1060,8 +1060,11 @@ def sidebar_names_the_advocate(app_page):
 
 @then("no Home, My work, Legal library or Preparation tab is shown after a sign-in")
 def no_top_tabs(app_page, page_script):
-    assert re.search(r'<nav class="tabs" id="tabs"[^>]*\bhidden>', app_page)
-    assert "$('tabs').hidden" not in page_script and "tabs.hidden" not in page_script
+    # The hidden tab bar and the screens it led to were deleted (plan AN.57, D292): the page has no tab bar and no Home,
+    # Legal library or Preparation screen to show.
+    for gone in ('id="tabs"', 'id="pane-home"', 'id="pane-search"', 'id="pane-prepare"'):
+        assert gone not in app_page, gone
+    assert "$('tabs')" not in page_script
     show = _function(page_script, "showApplication")
     assert "showTab('advise');" in show and "showTab('home')" not in show
 
@@ -1080,7 +1083,8 @@ def person_menu_profile(app_page, page_script):
 
 @then("the person menu has Usage and plan, Signed-in devices, AI data sharing, Dictation and Sign out")
 def person_menu_actions(app_page):
-    panel = app_page[app_page.index('<div id="account-panel"'):app_page.index('<nav class="tabs"')]
+    start = app_page.index('<div id="account-panel"')
+    panel = app_page[start:app_page.index("</header>", start)]
     # Any further attributes are allowed (Usage and plan says it opens a dialog), so no button is
     # passed over for having one more than the others.
     buttons = re.findall(r'<button id="([a-z-]+)" type="button" class="ghost"[^>]*>([^<]+)</button>', panel)

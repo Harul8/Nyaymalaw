@@ -393,8 +393,8 @@ def _assert_no_overflow(page):
 
 def _assert_protected_dom_cleared(page):
     assert page.is_visible("#gate") and page.is_hidden("#masthead")
+    # The Legal library's search went with that screen (plan AN.57, D292).
     for selector in ("#thread", "#rail-body", "#history-body", "#history-state",
-                     "#search-results", "#search-state", "#search-index",
                      "#sessions-body", "#sessions-action-state"):
         assert not page.text_content(selector).strip(), (
             f"late reply repopulated protected DOM, including hidden content: {selector}"
@@ -542,14 +542,14 @@ def test_repeated_enter_while_a_turn_is_pending_dispatches_only_once(page, journ
     assert not page.errors, page.errors
 
 
-@pytest.mark.parametrize("surface", ["history_list", "history", "search", "sessions"])
+@pytest.mark.parametrize("surface", ["history_list", "history", "sessions"])
 def test_late_authenticated_responses_cannot_repopulate_dom_after_logout(
     page, journey, surface,
 ):
     _sign_in(page, journey)
     matter_id = _new_matter(page, f"Protected {surface} workspace")
-    if surface in ("history", "search"):
-        pytest.skip("a matter's History and the Legal library are not reached since the owner's decisions of 15-17 Oct 2026")
+    if surface == "history":
+        pytest.skip("a matter's History is not reached since the owner's decisions of 15-17 Oct 2026")
     if surface == "history_list":
         held = _HeldReply(page, "**/api/work?*")  # the conversation history's own list
         _all_matters(page)
@@ -563,12 +563,6 @@ def test_late_authenticated_responses_cannot_repopulate_dom_after_logout(
         held = _HeldReply(page, f"**/api/matters/{matter_id}/transcript")
         page.select_option("#history-matter", value=matter_id)
         assert held.wait()["turn_count"] > 0
-    elif surface == "search":
-        _tab(page, "search")
-        held = _HeldReply(page, "**/api/search?**")
-        page.fill("#q", "possession")
-        page.click("#search-form button[type='submit']")
-        assert held.wait()["coverage"], "the server must have assessed a search state"
     else:
         held = _HeldReply(page, "**/api/sessions")
         _open_account_menu(page)
