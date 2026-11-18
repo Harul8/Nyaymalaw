@@ -18,15 +18,11 @@ const state = {
    * editable text box, which was the whole of authentication (B-082). */
   advocate: null,
   workspace: null,
-  matterId: null,
   // BK-36. THE VERSION THIS TAB LAST SAW, sent with every brief so the server
   // can refuse a write built on a file this tab has never read.
+  // Plan AN.48 (D307): the open matter's id, its loading and the opening form's intake answers went with the screens of a matter
+  // saved before conversations (AN.57, D292); a conversation is named by its chat id alone.
   matterVersion: null,
-  matterReady: false,
-  disputeFocus: null,
-  // B3-B5. The intake answers, held from the form until the first brief
-  // carries them onto the file.
-  intake: null,
   turns: [],
   // `none` | `signing_out` | `unconfirmed`. A logout the server did not
   // confirm is its own state, because the alternative is showing an ordinary
@@ -69,7 +65,7 @@ const intentContexts = new Map();
 let activeIntent = null;
 window.NmBrainSources?.configure({request:api, scope:() => ({
   advocate:state.advocate, session:state.sessionGeneration,
-  matter:state.matterId, chat:activeIntent?.chatId || null,
+  chat:activeIntent?.chatId || null,
 }), openAsk:(answer, element, ask, opener) => openAskedItem(answer, ask, opener)});
 let draftVault = null;
 let draftWrite = 0;
@@ -88,16 +84,16 @@ try { draftVault = new NMDraftVault(window.localStorage, window.crypto); }
 catch { /* Unavailable storage is reported before any durable-save claim. */ }
 
 function draftHasWork(intent) {
-  return Boolean(intent && ((intent.chatId && !intent.matterId)
-    || intent.text.trim() || intent.pending.length || intent.intake));
+  return Boolean(intent && (intent.chatId || intent.text.trim() || intent.pending.length));
 }
 
 // WHAT IS TRULY UNSENT: words typed, or a message waiting to be sent or confirmed. An open conversation alone is kept as a draft
 // (draftHasWork), so the page can find its way back to it, but it is nothing unsent: Sign out asks about unsent drafts only where
 // there are some (found mending the browser journeys, 15 Nov 2026 - it asked after every conversation). The opening form's fields
-// went with the form (plan AN.57, D292): a draft kept from before holding only those is nothing the page can show.
+// went with the form (plan AN.57, D292): a draft kept from before holding only those is nothing the page can show, and the page no
+// longer keeps them (plan AN.48, D307).
 function draftHasUnsentWork(intent) {
-  return Boolean(intent && (intent.text.trim() || intent.pending.length || intent.intake));
+  return Boolean(intent && (intent.text.trim() || intent.pending.length));
 }
 
 async function saveProtectedDraft({previousKey = null} = {}) {
@@ -125,8 +121,7 @@ async function saveProtectedDraft({previousKey = null} = {}) {
     }
     const snapshot = {
       key:held.key, advocate:held.advocate, workspace:held.workspace,
-      matterId:held.matterId, chatId:held.chatId, text:held.text, intake:held.intake,
-      opening:held.opening || null,
+      chatId:held.chatId, text:held.text,
       editedAt:held.editedAt || Date.now(),
       pending:held.pending.map(entry=>({turnId:entry.turnId, brief:entry.brief,
         documents:entry.documents || [],
@@ -204,9 +199,9 @@ window.addEventListener('storage', (event) => {
   }
 });
 
-function intentKey(matterId, chatId = null) {
-  return JSON.stringify([state.advocate, state.workspace,
-    matterId || chatId || 'unsaved-opening']);
+// A conversation's words are kept under its chat id; a new matter's under 'unsaved-opening' until its first message is saved.
+function intentKey(chatId = null) {
+  return JSON.stringify([state.advocate, state.workspace, chatId || 'unsaved-opening']);
 }
 
 function ownsIntent(intent) {
@@ -214,16 +209,9 @@ function ownsIntent(intent) {
     && intent.workspace === state.workspace;
 }
 
-function matchesIntake(entry, intake) {
-  return JSON.stringify(entry.request.parties) === JSON.stringify((intake && intake.parties) || {})
-    && JSON.stringify(entry.request.release) === JSON.stringify((intake && intake.release) || {})
-    && JSON.stringify(entry.request.capacity || null) === JSON.stringify((intake && intake.capacity) || null);
-}
-
 function snapshotIntent({ edited = false } = {}) {
   if (!ownsIntent(activeIntent)) return;
   activeIntent.text = $('message').value;
-  activeIntent.intake = state.intake;
   if (edited) { activeIntent.editedAt = Date.now(); saveProtectedDraft(); }
 }
 
@@ -231,18 +219,17 @@ function restoreIntent() {
   const intent = activeIntent;
   $('message').value = intent ? intent.text : '';
   sizeComposer();
-  state.intake = intent ? intent.intake : null;
 }
 
-function selectIntent(matterId, { opening = false, chatId = null } = {}) {
+// The intent of the conversation opened (chatId) or of a new matter (opening alone); none while the history is shown.
+function selectIntent({ opening = false, chatId = null } = {}) {
   snapshotIntent();
   clearDraftNotices();
-  if (!state.advocate || (!matterId && !opening)) activeIntent = null;
+  if (!state.advocate || !opening) activeIntent = null;
   else {
-    const key = intentKey(matterId, chatId);
+    const key = intentKey(chatId);
     if (!intentContexts.has(key)) intentContexts.set(key, {
-      key, advocate: state.advocate, workspace: state.workspace,
-      matterId: matterId || null, chatId, text: '', intake: null, pending: [],
+      key, advocate: state.advocate, workspace: state.workspace, chatId, text: '', pending: [],
     });
     activeIntent = intentContexts.get(key);
   }
@@ -256,14 +243,9 @@ function reconcileIntent(transcript) {
   snapshotIntent();
   const recorded = new Set(transcript.filter(turn => turn.committed === true
     && turn.release_state === 'released').map(turn => turn.turn_id).filter(Boolean));
-  activeIntent.pending = activeIntent.pending.filter((entry) => {
-    if (!recorded.has(entry.turnId)) return true;
-    // The protected receipt and the current typing draft are independent.
-    // Reconciliation must not consume a follow-up merely because its words
-    // happen to match the acknowledged message.
-    if (matchesIntake(entry, activeIntent.intake)) activeIntent.intake = null;
-    return false;
-  });
+  // The protected receipt and the current typing draft are independent. Reconciliation must not consume a follow-up merely because
+  // its words happen to match the acknowledged message.
+  activeIntent.pending = activeIntent.pending.filter((entry) => !recorded.has(entry.turnId));
   restoreIntent();
   state.turns.push(...activeIntent.pending);
   saveProtectedDraft();
@@ -339,7 +321,6 @@ function clearPrivileged() {
   state.matterListGeneration += 1;
   state.advocate = null;
   state.workspace = null;
-  state.matterId = null;
   state.turns = [];
   ['thread', 'rail-body', 'rail-meta', 'matter-board-body', 'matter-board-meta',
    'who-name', 'account-initials', 'profile-name', 'profile-email', 'profile-workspace', 'who-detail']
@@ -348,8 +329,6 @@ function clearPrivileged() {
   $('matter-heading').textContent = 'My work';
   $('matter-heading').removeAttribute('title');
   state.matterVersion = null;
-  state.matterReady = false;
-  state.intake = null;
   // THE RIBBON AND THE PERSON MENU FORGET WHO WAS HERE (F-A-17).
   ['who-name', 'profile-name', 'profile-email', 'profile-workspace']
     .forEach((id) => { const el = $(id); if (el) el.textContent = '—'; });
@@ -685,9 +664,7 @@ function closeOpenMatter() {
   window.NmBrainSources.close(false);
   state.railGeneration += 1;
   state.boardGeneration = (state.boardGeneration || 0) + 1;
-  state.matterId = null;
   state.matterVersion = null;
-  state.matterReady = false;
   state.turns = [];
   $('thread').textContent = '';
   $('matter-board-body').replaceChildren();
@@ -739,6 +716,7 @@ async function takeBackSavedWords(chatId) {
     if (!vault?.key || !mine()) return;
     const drafts = await vault.list();
     if (!mine()) return;
+    // A draft kept before plan AN.48 (D307) may name a matter saved before conversations: it is never this conversation's.
     const saved = drafts
       .filter((kept) => kept.intent.advocate === state.advocate && kept.intent.workspace === state.workspace
         && kept.intent.chatId === chatId && !kept.intent.matterId && String(kept.intent.text || '').trim()
@@ -773,8 +751,7 @@ function followPending(intent, pending, chatId) {
   let entry = state.turns.find((item) => item.turnId === pending.turn_id && !item.answer);
   if (!entry) {
     entry = { brief: pending.message, documents: pending.documents || [], turnId: pending.turn_id, context: intent,
-      state: 'sending', chatId,
-      request: { matter_id: null, chat_id: chatId, parties: {}, release: {}, capacity: null } };
+      state: 'sending', chatId, request: { chat_id: chatId } };
     intent.pending.push(entry);
     state.turns.push(entry);
   }
@@ -798,7 +775,7 @@ function followPending(intent, pending, chatId) {
 
 // CONVERSATION HISTORY (owner, 16 Oct 2026): its own view, read fresh each time.
 async function showMatterList({ preserveIntent = false } = {}) {
-  if (!preserveIntent) selectIntent(null);
+  if (!preserveIntent) selectIntent();
   closeOpenMatter();
   setWorkView('list');
   $('rail-title').textContent = 'Conversation history';
@@ -1013,43 +990,15 @@ function restoredTurn(turn) {
         not_established: turn.not_established || [] } };
   }
   return { brief: turn.message || turn.asked || '', briefMissing, documents, answer: {
-    matter_id: turn.matter_id, chat_id: turn.chat_id, turn_id: turn.turn_id,
+    chat_id: turn.chat_id, turn_id: turn.turn_id,
     elements: turn.elements || [], blocked: turn.blocked,
     blocked_reason: turn.blocked_reason, metrics: null, restored: true,
     service_status: typeof turn.service_status === 'string' ? turn.service_status : null,
     // Plan AN.37: what NM asked while it worked, and how each answer came to stand.
     questions_asked: turn.questions_asked && typeof turn.questions_asked === 'object' ? turn.questions_asked : null,
     at: turn.at || '',
-    board_changes: Array.isArray(turn.board_changes) ? turn.board_changes : [],
     composed: Array.isArray(turn.composed) ? turn.composed : [],
-    // LB-83. The rating last saved on this reply, shown on its thumb.
-    rating: typeof turn.rating === 'string' ? turn.rating : 'none',
   } };
-}
-
-// F-B-02. A CORRECTION OF THE OPENING DETAILS, in the conversation where it
-// was made, so the record shows what changed and when. Not a turn: nothing
-// was asked and nothing was answered.
-function renderOpeningNote(note) {
-  const wrap = document.createElement('div');
-  wrap.className = 'turn opening-note';
-  const head = document.createElement('p');
-  head.className = 'opening-note-head';
-  const when = Date.parse(note.at || '');
-  head.textContent = 'You updated the matter details'
-    + (Number.isNaN(when) ? '' : ` · ${new Date(when).toLocaleString()}`);
-  const list = document.createElement('ul');
-  for (const line of note.changes) {
-    const item = document.createElement('li');
-    item.textContent = line;
-    list.appendChild(item);
-  }
-  const foot = document.createElement('p');
-  foot.className = 'hint';
-  foot.textContent = 'Kept beside the original details. The next reply works from these, '
-    + 'and the parties are checked for conflicts again on your next message.';
-  wrap.append(head, list, foot);
-  return wrap;
 }
 
 // LB-83. WHEN THE ANSWER WAS SAVED, said quietly under it (owner, 28 September
@@ -1119,8 +1068,6 @@ function replyText(answer, shown) {
 const REPLY_ICONS = {
   copy: 'M7.5 6.5h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1z'
     + 'M13.5 6.5v-2a1 1 0 0 0-1-1h-8a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h2',
-  up: 'M6 9.5v7.5H3.5V9.5z M6 9.5l3.2-6c1.1 0 1.9.9 1.9 2v2.7h4.1c.9 0 1.6.8 1.4 1.7'
-    + 'l-1.1 5.9c-.1.7-.7 1.2-1.4 1.2H6',
 };
 
 function replyIcon(name, { filled = false } = {}) {
@@ -1130,8 +1077,7 @@ function replyIcon(name, { filled = false } = {}) {
   svg.setAttribute('width', '16'); svg.setAttribute('height', '16');
   svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('focusable', 'false');
   const path = document.createElementNS(NS, 'path');
-  path.setAttribute('d', REPLY_ICONS[name === 'down' ? 'up' : name]);
-  if (name === 'down') path.setAttribute('transform', 'rotate(180 10 10)');
+  path.setAttribute('d', REPLY_ICONS[name]);
   path.setAttribute('fill', filled ? 'currentColor' : 'none');
   path.setAttribute('stroke', 'currentColor'); path.setAttribute('stroke-width', '1.5');
   path.setAttribute('stroke-linejoin', 'round'); path.setAttribute('stroke-linecap', 'round');
@@ -1147,91 +1093,8 @@ function replyIconButton(name, label) {
   return button;
 }
 
-function closeRatePops(except = null) {
-  for (const pop of document.querySelectorAll('.rate-pop:not([hidden])')) {
-    if (pop === except) continue;
-    pop.hidden = true;
-    pop.parentElement.querySelector('.rate-toggle')?.setAttribute('aria-expanded', 'false');
-  }
-}
-
-// LB-56, LB-83. THE RATING: one icon, and a pop-up holding a thumbs-up and a
-// thumbs-down. Choosing the chosen thumb again withdraws it. The thumb shown
-// as chosen is the rating the SERVER READ BACK after saving it, never the one
-// merely clicked: a save that failed must not look like one that landed.
-function rateControl(answer, status) {
-  const box = document.createElement('div');
-  box.className = 'rate';
-  const toggle = replyIconButton('up', 'Rate this reply');
-  toggle.classList.add('rate-toggle');
-  toggle.setAttribute('aria-haspopup', 'true');
-  toggle.setAttribute('aria-expanded', 'false');
-  const pop = document.createElement('div');
-  pop.className = 'rate-pop'; pop.hidden = true;
-  pop.setAttribute('role', 'group'); pop.setAttribute('aria-label', 'Rate this reply');
-  const up = replyIconButton('up', 'Good reply');
-  const down = replyIconButton('down', 'Not a good reply');
-  pop.append(up, down);
-
-  const show = (rating) => {
-    answer.rating = rating;
-    up.setAttribute('aria-pressed', String(rating === 'up'));
-    down.setAttribute('aria-pressed', String(rating === 'down'));
-    up.replaceChildren(replyIcon('up', { filled: rating === 'up' }));
-    down.replaceChildren(replyIcon('down', { filled: rating === 'down' }));
-    const chosen = rating === 'up' || rating === 'down';
-    toggle.dataset.rating = rating;
-    toggle.replaceChildren(replyIcon(rating === 'down' ? 'down' : 'up', { filled: chosen }));
-    const said = rating === 'up' ? 'You rated this reply good'
-      : rating === 'down' ? 'You rated this reply not good'
-      : rating === 'unknown' ? 'Your last rating of this reply could not be read back'
-      : 'Rate this reply';
-    toggle.title = said; toggle.setAttribute('aria-label', said);
-  };
-  show(answer.rating || 'none');
-
-  const close = () => { pop.hidden = true; toggle.setAttribute('aria-expanded', 'false'); };
-  toggle.addEventListener('click', () => {
-    if (!pop.hidden) { close(); return; }
-    closeRatePops(pop);
-    pop.hidden = false;
-    toggle.setAttribute('aria-expanded', 'true');
-    (answer.rating === 'down' ? down : up).focus();
-  });
-  box.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !pop.hidden) {
-      event.stopPropagation();
-      close();
-      toggle.focus();
-    }
-  });
-  const choose = async (want) => {
-    const rating = answer.rating === want ? 'none' : want;
-    up.disabled = true; down.disabled = true;
-    status.textContent = '';
-    try {
-      const saved = await api(`/api/matters/${encodeURIComponent(answer.matter_id)}`
-        + `/turns/${encodeURIComponent(answer.turn_id)}/feedback`, {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ rating }) });
-      show(saved.rating);
-      if (saved.rating === 'unknown') status.textContent = 'Your rating could not be read back.';
-      close();
-      toggle.focus();
-    } catch (e) {
-      if (e.obsolete) return;
-      status.textContent = e.status === 404
-        ? 'This reply cannot be rated: it is not saved as an answer on the file.'
-        : 'Your rating was not saved. Try again.';
-    } finally {
-      up.disabled = false; down.disabled = false;
-    }
-  };
-  up.addEventListener('click', () => choose('up'));
-  down.addEventListener('click', () => choose('down'));
-  box.append(toggle, pop);
-  return box;
-}
+// LB-56, LB-83. The rating of a reply was drawn only under an answer with a matter id and saved to that matter's address. No
+// conversation's answer has one, and the server has no such address, so it went with the earlier matter's screens (plan AN.48, D307).
 
 // LB-83, LB-98. THE FOOT OF EVERY REPLY (owner, 28 September 2026): at its left
 // corner, copy, then rate, then the date and time. 'Copied' is said only once
@@ -1257,7 +1120,6 @@ function replyFooter(entry, copyText) {
     }
   });
   foot.appendChild(copy);
-  if (answer.matter_id && answer.turn_id) foot.appendChild(rateControl(answer, status));
   // THE NOTE OFFERED PLAINLY (plan AN.49, D186): the conversation shows the advice with the detail folded; the note holds
   // all of it opened out, with every source, so the foot of every answer says so.
   if (noteAvailable(answer)) foot.appendChild(noteControl(answer, status, 'The full note, with every source:'));
@@ -1491,153 +1353,10 @@ function searchSaid(answer) {
   return fold;
 }
 
-// LB-90. WHAT THIS MESSAGE CHANGED ON THE BOARD, and what waits for you
-// (owner, 28 September 2026). Applied lines come from the saved file; a
-// proposal changed nothing, and its button goes through the same attributed,
-// version-checked owner every other correction uses.
-const BOARD_APPLIED = new Set(['dispute_opened', 'statements_added', 'dated_event', 'corrected',
-  'question_answered', 'party_added', 'side_recorded', 'kept_apart']);
-
-function renderBoardNote(entry) {
-  const changes = Array.isArray(entry.answer?.board_changes) ? entry.answer.board_changes : [];
-  if (!changes.length) return null;
-  const box = document.createElement('div');
-  box.className = 'board-note';
-  const applied = changes.filter((c) => BOARD_APPLIED.has(c.kind));
-  const waiting = changes.filter((c) => !BOARD_APPLIED.has(c.kind));
-  const section = (title, rows) => {
-    if (!rows.length) return;
-    const head = document.createElement('p');
-    head.className = 'board-note-head';
-    head.textContent = title;
-    const list = document.createElement('ul');
-    for (const change of rows) {
-      const item = document.createElement('li');
-      const text = document.createElement('span');
-      text.textContent = change.text;
-      item.appendChild(text);
-      const act = boardAction(entry, change);
-      if (act) item.appendChild(act);
-      list.appendChild(item);
-    }
-    box.append(head, list);
-  };
-  section('On the matter board', applied);
-  section('Waiting for you', waiting);
-  return box;
-}
-
-function boardAction(entry, change) {
-  const matterId = entry.answer?.matter_id || state.matterId;
-  const button = (label, run) => {
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'ghost board-act'; b.textContent = label;
-    b.addEventListener('click', async () => {
-      if (b.disabled) return;
-      b.disabled = true;
-      const said = document.createElement('span');
-      said.className = 'board-act-state';
-      said.textContent = ' Saving…';
-      b.after(said);
-      try {
-        said.textContent = ` ${await run()}`;
-      } catch (e) {
-        if (e.obsolete) return;
-        b.disabled = false;
-        said.textContent = e.status === 409
-          ? ' Not changed: the file has moved or this entry was already changed. The board shows it as it is now.'
-          : ` Not changed: ${e.message}`;
-      }
-    });
-    return b;
-  };
-  // THE VERSION IS READ FROM THE SERVER, not from this page: the note may be
-  // in History, or on a reply older than the file the board now shows.
-  const version = async () => {
-    const current = await api(`/api/matters/${encodeURIComponent(matterId)}`);
-    if (!Number.isInteger(current?.version)) throw new Error('the matter could not be read');
-    return current;
-  };
-  const correct = async (factId, body) => {
-    const current = await version();
-    const out = await api(`/api/matters/${encodeURIComponent(matterId)}/facts/`
-      + `${encodeURIComponent(factId)}/corrections`, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ...body, expected_version: current.version }),
-    });
-    if (matterId === state.matterId && Number.isInteger(out?.version)) {
-      state.matterVersion = out.version;
-    }
-    return out;
-  };
-  const parties = async (change) => {
-    const current = await version();
-    const form = current.opening_form;
-    if (!form) throw new Error('the matter details could not be read');
-    const next = { ...(form.parties || {}) };
-    if (change.kind === 'proposed_party_removal') delete next[change.target];
-    else next[change.target] = change.value;
-    // The recorded other-party state follows the parties, exactly as the form
-    // requires: removing the last named other party leaves them unknown.
-    const brief = { ...(form.brief || {}) };
-    const others = Object.values(next).some((side) => side !== 'client');
-    if (others) brief.other_party_state = 'identified';
-    else if (brief.other_party_state === 'identified') brief.other_party_state = 'not_known';
-    const out = await api(`/api/matters/${encodeURIComponent(matterId)}/opening`, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ request_key: `opening_${newTurnId().slice(5)}`,
-        expected_version: current.version, title: form.title, parties: next, brief }),
-    });
-    if (matterId !== state.matterId) return 'Done. The matter details now show it.';
-    if (Number.isInteger(out?.version)) state.matterVersion = out.version;
-    if (out?.state === 'opening_corrected' && Array.isArray(out.changes) && out.changes.length) {
-      state.turns.push({ note: { at: new Date().toISOString(), changes: out.changes.map(String) } });
-      repaint();
-    }
-    return 'Done. The matter details now show it, and the history keeps the change.';
-  };
-  if (!matterId) return null;
-  if (change.kind === 'corrected' && change.target && change.was) {
-    return button('Undo', async () => {
-      await correct(change.target, { statement: change.was,
-        ...(change.was_date ? { date: change.was_date } : {}),
-        reason: 'Undo: the earlier entry was right' });
-      return 'Undone. The earlier entry is back, and both remain in the history.';
-    });
-  }
-  if (change.kind === 'proposed_withdrawal' && change.target) {
-    return button('Withdraw it', async () => {
-      await correct(change.target, { withdraw: true,
-        reason: 'Withdrawn at the advocate’s request in the conversation' });
-      return 'Withdrawn. It stays in the history, and nothing runs from it now.';
-    });
-  }
-  if (['proposed_party_removal', 'proposed_party_move'].includes(change.kind) && change.target) {
-    return button('Confirm', () => parties(change));
-  }
-  if (change.kind === 'held_other_matter') {
-    const span = document.createElement('span');
-    // Only on the open matter's own conversation, where the words are held and
-    // a resend lands on this file.
-    if (entry.brief && matterId === state.matterId
-        && document.body.dataset.pane === 'advise') {
-      span.appendChild(button('Keep it in this matter', async () => {
-        await send(entry.brief, { keepInMatter: true });
-        return 'Sent again, kept in this matter.';
-      }));
-    }
-    const fresh = document.createElement('button');
-    fresh.type = 'button'; fresh.className = 'ghost board-act';
-    fresh.textContent = 'Start a new matter';
-    fresh.addEventListener('click', startMatter);
-    span.appendChild(fresh);
-    return span;
-  }
-  return null;
-}
+// LB-90. What a message changed on an earlier matter's board, with its Undo, Withdraw and Confirm, went with that matter's screens
+// (plan AN.48, D307): a conversation's answer carries no such changes, and those buttons called addresses the server no longer has.
 
 function renderTurn(entry) {
-  if (entry.note) return renderOpeningNote(entry.note);
   const wrap = document.createElement('div');
   wrap.className = 'turn';
 
@@ -1754,9 +1473,6 @@ function renderTurn(entry) {
     const SAID = {
       not_committed: 'Your brief was NOT saved. Nothing was recorded on the '
                    + 'file, so sending it again adds it once.',
-      input_only: 'Your brief is saved. The proposed answer was withheld and no '
-                + 'new conclusions were saved. Review the recorded file, then '
-                + 'tell NM how you would like to continue.',
       stale: 'This matter moved while you were writing. I have re-read it — '
            + 'check the answer above, then send again if it still applies.',
       unknown: 'I could not tell whether your brief was saved. Sending again '
@@ -2504,8 +2220,7 @@ function renderTurn(entry) {
   // manufactured for a source the answer does not hold.
   function inlineCitation(el, label) {
     const bound = el && el.source && el.refs.includes(el.source.locator)
-      && (entry.answer.matter_id || (el.source.brain && entry.answer.chat_id))
-      && entry.answer.turn_id;
+      && el.source.brain && entry.answer.chat_id && entry.answer.turn_id;
     if (!bound || !el.source.brain || !window.NmBrainSources) {
       return document.createTextNode(label);
     }
@@ -2573,8 +2288,6 @@ function renderTurn(entry) {
   // September 2026, LB-166): the matter board's per-dispute view carries what
   // each dispute needs. The served `briefing` field is unchanged.
 
-  const note = renderBoardNote(entry);
-  if (note) wrap.appendChild(note);
   // The copy is built when the icon is pressed, from exactly what is shown.
   const shown = [
     ...rows.map(({ el }) => ({ text: el.text, step: el, refs: el.refs })),
@@ -2731,9 +2444,6 @@ function openNeedAnswers(entry, questions, {
       const intent = entry.context;
       if (!Array.isArray(intent.queued)) intent.queued = [];
       intent.queued.push(message);
-    } else if (state.matterId && !state.matterReady) {
-      status.textContent = 'This conversation is still loading. Try again in a moment.';
-      return;
     }
     entry.needDrafts[key] = questions.map(() => '');
     dialog.close();
@@ -5165,7 +4875,7 @@ function sizeComposer() {
 function updateWorkspace() {
   $('composer').hidden = $('pane-advise').dataset.view === 'list';
   // The board's file icon is the conversation's.
-  $('board-files').hidden = Boolean(state.matterId);
+  $('board-files').hidden = false;
   // With the count of the files sent in this conversation (the design of 17 Oct 2026).
   const sent = state.turns.reduce((count, entry) => count + (Array.isArray(entry.documents) ? entry.documents.length : 0), 0);
   $('board-files-count').textContent = sent ? `Files · ${sent}` : 'Files';
@@ -5206,16 +4916,14 @@ function consumeComposer(entry) {
 }
 
 // fromBox (plan AN.40, D62): the message is the message box's, so that if it waits for its files what goes is what the box holds then.
-async function send(message, { workProduct, keepInMatter = false, fromBox = false } = {}) {
-  if (activeDelivery || (state.matterId && !state.matterReady)) return;
+async function send(message, { fromBox = false } = {}) {
+  if (activeDelivery) return;
   // One message waits for the files at a time; it goes as soon as they are read.
   if (heldSend) { $('attachments-status').textContent = HOLD_SAID; return; }
-  if (!activeIntent) selectIntent(state.matterId, { opening: !state.matterId });
+  if (!activeIntent) selectIntent({ opening: true });
   snapshotIntent();
   // Re-entering Send with an unresolved identical intent is also a retry.
   const pending = activeIntent.pending.find((entry) => entry.brief === message
-    && (entry.request.thread_id || null) === (state.disputeFocus || null)
-    && entry.request.work_product === workProduct && matchesIntake(entry, state.intake)
     && ['unknown', 'not_committed', 'sending'].includes(entry.state)
     && entry.refusal?.retryable !== false);
   if (pending) { consumeComposer(pending); await deliver(pending); return; }
@@ -5223,7 +4931,7 @@ async function send(message, { workProduct, keepInMatter = false, fromBox = fals
   const blocked = attachmentsBlockSend({ reading: false });
   if (blocked) { $('attachments-status').textContent = blocked; return; }
   // Plan AN.40 (D61): a file still being uploaded or read holds the message, which goes by itself once it is read.
-  if (attachmentsReading()) { holdSend(message, { workProduct, keepInMatter, fromBox }); return; }
+  if (attachmentsReading()) { holdSend(message, { fromBox }); return; }
   if (attachments.length > 1) await relookAttachments();
   // Plan AN.48 (48c; D146): while a matter waits for the advocate, a message belongs to it - NM reads how it was meant.
   const waitingEntry = activeIntent.pending.find((entry) => entry.state === 'stopped' && entry.stopped
@@ -5234,23 +4942,14 @@ async function send(message, { workProduct, keepInMatter = false, fromBox = fals
     pages_read_by_ai: item.summary.pages_read_by_ai, pages_unread: item.summary.unread.length }));
   const entry = { brief: message, turnId: newTurnId(), state: 'sending',
     context: activeIntent, documents,
-    request: { matter_id: state.matterId, chat_id: activeIntent.chatId || null,
-      thread_id: state.disputeFocus, expected_version: state.matterVersion,
-      parties: { ...((state.intake && state.intake.parties) || {}) },
-      release: { ...((state.intake && state.intake.release) || {}) },
-      capacity: state.intake && state.intake.capacity ? { ...state.intake.capacity } : null,
-      work_product: workProduct } };
+    request: { chat_id: activeIntent.chatId || null, expected_version: state.matterVersion } };
   // This serialized envelope never changes across navigation, reauthentication
-  // or retry. Only the rendering attempt receives a fresh lifetime.
+  // or retry. Only the rendering attempt receives a fresh lifetime. Plan AN.48 (D307): the opening form's parties, release and
+  // capacity, the dispute focus, the work product and 'keep in this matter' no longer travel - all empty or unset since the screens
+  // that set them were deleted (AN.57, D292); the server still refuses any of them sent filled in.
   entry.envelope = JSON.stringify({
-    message: entry.brief, matter_id: entry.request.matter_id,
-    chat_id: entry.request.chat_id, thread_id: entry.request.thread_id, turn_id: entry.turnId,
-    parties: entry.request.parties, release: entry.request.release,
-    capacity: entry.request.capacity,
-    expected_version: entry.request.expected_version, work_product: entry.request.work_product,
-    // F-C-04. Only the advocate's explicit choice travels; its absence is the
-    // ordinary offer, spelled as it always was.
-    ...(keepInMatter ? { keep_in_matter: true } : {}),
+    message: entry.brief, chat_id: entry.request.chat_id, turn_id: entry.turnId,
+    expected_version: entry.request.expected_version,
     ...(documents.length ? { document_refs: documents.map((document) => document.document_ref) } : {}),
     // Plan AN.33 (D23): the model and the effort chosen for this message travel where they are not the defaults.
     ...(state.turnChoice || {}),
@@ -5312,22 +5011,15 @@ async function deliver(entry) {
     entry.stopped = null;
     entry.endpoint = null;
     intent.pending = intent.pending.filter((item) => item !== entry);
-    if (matchesIntake(entry, intent.intake)) intent.intake = null;
-    // A saved opening acquires a file identity, but its original turn envelope
-    // keeps matter_id:null for idempotent replay if this acknowledgement is lost.
+    // A saved opening acquires its conversation's identity, but its original turn envelope keeps chat_id:null for idempotent replay
+    // if this acknowledgement is lost.
     const previousKey = intent.key;
     if (answer.chat_id && !intent.chatId) {
       intentContexts.delete(intent.key);
       intent.chatId = answer.chat_id;
-      intent.key = intentKey(intent.matterId, intent.chatId);
+      intent.key = intentKey(intent.chatId);
       intentContexts.set(intent.key, intent);
       // Saved, it is in the conversation history, which is read each time it opens.
-    }
-    if (answer.matter_id && !intent.matterId) {
-      intentContexts.delete(intent.key);
-      intent.matterId = answer.matter_id;
-      intent.key = intentKey(intent.matterId, intent.chatId);
-      intentContexts.set(intent.key, intent);
     }
     if (!current()) return;
     restoreIntent();
@@ -5335,7 +5027,6 @@ async function deliver(entry) {
     // Plan AN.53 (53i, D224): A LATE REPLY ACTS ONLY ON ITS OWN CONVERSATION. Saving the draft is a wait; an advocate who opened
     // another conversation meanwhile stays in it - this answer is read from its own conversation when that is opened again.
     if (!current()) return;
-    state.matterId = intent.matterId;
     if (Number.isInteger(answer.matter_version)) state.matterVersion = answer.matter_version;
     repaint();
     // The board is read again after every answer (owner, 16 Oct 2026).
@@ -5350,7 +5041,6 @@ async function deliver(entry) {
     entry.refusal = (e.detail && typeof e.detail === 'object') ? e.detail : null;
     const said = entry.refusal && entry.refusal.committed;
     entry.state = said === 'not_committed' ? 'not_committed' : 'unknown';
-    if (said === 'input_only') entry.state = 'input_only';
     if (said === 'previously_committed' && entry.refusal.release_state === 'replay_refused') {
       entry.state = 'replay_refused';
     }
@@ -6451,17 +6141,15 @@ const SEND_LOOKS = {
   queue: 'Send: it waits until this answer is ready',
   working: 'Stop this answer',
   waiting: 'Do not send: keep the words and files',
-  loading: 'Loading file…',
 };
 function paintSend() {
   const button = $('send');
   const writing = Boolean($('message').value.trim()) || attachments.length > 0;
-  const look = heldSend ? 'waiting' : activeDelivery ? (writing ? 'queue' : 'working')
-    : state.matterId && !state.matterReady ? 'loading' : 'send';
-  button.dataset.state = look === 'queue' || look === 'loading' ? 'send' : look;
+  const look = heldSend ? 'waiting' : activeDelivery ? (writing ? 'queue' : 'working') : 'send';
+  button.dataset.state = look === 'queue' ? 'send' : look;
   button.setAttribute('aria-label', SEND_LOOKS[look]);
   button.title = SEND_LOOKS[look];
-  button.disabled = look === 'loading' || (look === 'send' && usageUsedUp());
+  button.disabled = look === 'send' && usageUsedUp();
   renderQueued();
 }
 
@@ -6860,9 +6548,7 @@ function startMatter(chatId = null) {
   resetTurnChoice();
   showTab('advise');
   setWorkView('opening');
-  selectIntent(null, { opening: true, chatId });
-  activeIntent.intake = null;
-  state.intake = null;
+  selectIntent({ opening: true, chatId });
   closeOpenMatter();
   state.turns = [...activeIntent.pending];
   repaint();

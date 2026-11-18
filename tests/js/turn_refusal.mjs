@@ -67,8 +67,7 @@ async function composed(text) {
   const intent = {pending: [], text, chatId: null};
   const context = vm.createContext({
     window: {crypto: null}, activeDelivery: null, activeIntent: intent,
-    state: {matterId: null, matterReady: false, disputeFocus: null,
-      matterVersion: null, intake: {}, turns: []},
+    state: {matterVersion: null, turns: []},
     $: (id) => id === 'message' ? box : {
       addEventListener: (event, handler) => handlers.set(event, handler),
     },

@@ -51,9 +51,9 @@ function harness() {
     setPlusMenu() {}, loadUsage() {}, sizeComposer() {}, repaint() {},
     setTimeout: (callback) => { callback(); return 0; },
     api: async () => { const reply = replies.shift(); if (reply instanceof Error) throw reply; return typeof reply === 'function' ? reply() : reply; },
-    state: { matterId: null, matterReady: true, turns: [], intake: null, disputeFocus: null, matterVersion: 0, turnChoice: null },
+    state: { turns: [], matterVersion: 0, turnChoice: null },
     activeDelivery: null, activeIntent: intent, heldSend: null, usage: null, renderQueued() {},
-    usageUsedUp: () => false, selectIntent() {}, snapshotIntent() {}, matchesIntake: () => true, newTurnId: () => 'turn_1',
+    usageUsedUp: () => false, selectIntent() {}, snapshotIntent() {}, newTurnId: () => 'turn_1',
     consumeComposer: (entry) => { if (get('message').value === entry.brief) get('message').value = ''; },
     deliver: async (entry) => { delivered.push(entry); },
   });

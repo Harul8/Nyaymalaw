@@ -892,43 +892,18 @@ button.wide { margin: 0.5rem 0.6rem 0.8rem; }
 #pane-advise[data-view="opening"].empty-chat .conversation { justify-content: center; }
 /* A new matter's first message box stays a centred box of its own width. */
 #pane-advise[data-view="opening"].empty-chat .composer { margin: 0 auto; width: min(52rem, calc(100% - 2rem)); }
-/* F-B-02. A correction of the details, in the conversation where it was made. */
-.opening-note {
-  border-left: 2px solid var(--accent); padding: 0.4rem 0.8rem; margin: 0.6rem 0;
-  font-size: 0.84rem; color: var(--ink-2);
-}
-.opening-note-head { margin: 0 0 0.2rem; font-weight: 600; color: var(--ink); }
-.opening-note ul { margin: 0.2rem 0 0.3rem; padding-left: 1.1rem; }
-.opening-note .hint { margin: 0; }
 /* A read-back turn whose own words no record holds says so, quietly. */
 .brief.brief-missing { font-style: italic; color: var(--ink-3); }
-/* LB-90. What this message changed on the board, and what waits for you. */
-.board-note {
-  border-left: 2px solid var(--rule); padding: 0.35rem 0.8rem; margin: 0.8rem 0 0.2rem;
-  font-size: 0.82rem; color: var(--ink-2);
-}
-.board-note-head { margin: 0.2rem 0 0.1rem; font-weight: 600; color: var(--ink); font-size: 0.78rem; }
-.board-note ul { margin: 0.1rem 0 0.3rem; padding-left: 1.1rem; }
-.board-note li { margin: 0.15rem 0; overflow-wrap: anywhere; }
-.board-note .board-act { margin-left: 0.5rem; padding: 0.1rem 0.55rem; font-size: 0.76rem; }
-.board-act-state { color: var(--ink-3); }
-/* LB-83. The foot of every reply, at its left: copy, rate, then when the
-   answer was saved, quietly. */
+/* LB-83. The foot of every reply, at its left: copy, then when the answer was saved, quietly. */
 .reply-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 0.1rem; margin: 0.35rem 0 0 -0.45rem; }
 .answered-at { margin: 0 0 0 0.35rem; font-size: 0.7rem; color: var(--ink-3); }
 .icon-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 36px;
   min-height: 36px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--ink-3);
   cursor: pointer; }
-.icon-btn:hover, .icon-btn[aria-expanded="true"], .icon-btn[aria-pressed="true"],
-.rate-toggle[data-rating="up"], .rate-toggle[data-rating="down"] { color: var(--accent); }
+.icon-btn:hover, .icon-btn[aria-expanded="true"], .icon-btn[aria-pressed="true"] { color: var(--accent); }
 .icon-btn:hover, .icon-btn[aria-expanded="true"] { background: var(--accent-w, rgba(0,0,0,.04)); }
 .icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .icon-btn:disabled { cursor: default; opacity: 0.5; }
-.rate { position: relative; display: inline-flex; }
-.rate-pop { position: absolute; left: 0; bottom: 100%; z-index: 40; display: flex; gap: 0.2rem;
-  margin-bottom: 0.25rem; padding: 0.25rem; border: 1px solid var(--rule); border-radius: 10px;
-  background: var(--surface); box-shadow: 0 4px 15px rgba(0,0,0,.08); }
-.rate-pop[hidden] { display: none; }
 .reply-status { margin-left: 0.35rem; font-size: 0.72rem; color: var(--ink-3); }
 @media (prefers-reduced-motion: no-preference) { .icon-btn { transition: color .12s, background .12s; } }
 /* LB-82. While a reply is prepared: one legal word alone; a stop replaces it
@@ -1382,39 +1357,6 @@ main > * { min-width: 0; }
 .usage.crit .usage-meter i { background: var(--brass); }
 .usage.out { background: var(--brass-w); border-color: #dccb98; color: #6b5018; }
 .usage.out .usage-meter { border-color: #dccb98; }
-
-/* ===================== B3-B5 — THE INTAKE FORM ===================== */
-
-.intake {
-  border-bottom: 1px solid var(--rule);
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  padding: 2rem 2.2rem 2.2rem;
-  margin: 1.3rem auto; width: calc(100% - 3rem); max-width: 44rem;
-  background: var(--surface); border: 1px solid var(--rule-2); border-radius: 14px;
-  flex: none;
-}
-.intake h2 {
-  font-family: var(--f-serif); font-size: 2rem; font-weight: 600; letter-spacing: -0.01em;
-  margin: 0;
-}
-/* Labels in sentence case at reading size (the signed-off design). */
-.intake label {
-  color: var(--ink); font-size: 0.9rem; font-weight: 600; letter-spacing: 0;
-  margin-top: 0.75rem; text-transform: none;
-}
-.intake input[type="text"], .intake input:not([type]) {
-  background: var(--surface); border: 1px solid var(--field); border-radius: 6px;
-  font: inherit; font-size: 1rem; padding: 0.55rem 0.75rem; min-height: 44px;
-}
-.intake input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-w); outline: none; }
-.intake label.check {
-  align-items: center; display: flex; gap: 0.5rem;
-  font-size: 0.85rem; letter-spacing: 0; text-transform: none;
-  color: var(--ink-2); margin-top: 0.9rem;
-}
-.intake button.primary { align-self: flex-start; margin-top: 0.9rem; }
 
 /* ============ BK-37 — THE BRIEF'S SECTIONS ============ */
 

@@ -35,7 +35,7 @@ function slice(from, to) {
   return source.slice(start, end);
 }
 const shipped = [
-  slice('function ownsIntent(intent) {', 'function matchesIntake('),
+  slice('function ownsIntent(intent) {', 'function snapshotIntent('),
   slice('function followPending(intent, pending, chatId) {', '// CONVERSATION HISTORY (owner, 16 Oct 2026)'),
   slice('async function deliver(entry) {', '// PLAN AN.48 (48f1, D167): A STEP THAT WENT ON BY ITSELF'),
   slice('const RECONNECT_EVERY_MS = ', '// CONTINUE (D70; D73 by itself after a restart)'),
@@ -60,9 +60,8 @@ function page() {
     restorePendingChat: (chatId) => { did.push(`opened conversation ${chatId}`); return Promise.resolve(); },
     takeTitle: (chatId) => { did.push(`took the title of ${chatId}`); },
     watchProgress: (entry, finished, stopped) => { sandbox.watch = { entry, finished, stopped }; return { stop() {} }; },
-    intentKey: (matterId, chatId) => `key:${matterId || chatId || 'new'}`,
+    intentKey: (chatId) => `key:${chatId || 'new'}`,
     intentContexts: new Map(),
-    matchesIntake: () => false,
     COMPOSER_WAITING: 'waiting', COMPOSER_PROMPT: 'prompt',
   };
   for (const name of ['checkIdle', 'paintSend', 'repaint', 'snapshotIntent', 'restoreIntent', 'loadChatBoard', 'refreshTitle',
@@ -72,29 +71,31 @@ function page() {
     let activeDelivery = null;
     let activeIntent = null;
     const state = { advocate: 'a@example.test', workspace: 'w', sessionGeneration: 1, ended: false, turns: [],
-      matterId: null, matterVersion: null };
+      matterVersion: null };
     ${shipped}
     this.page = { deliver, reconnect, followPending, discardTurn, showSoFar, state,
-      open(intent) { activeIntent = intent; state.matterId = intent.matterId; state.matterVersion = intent.version; },
+      open(intent) { activeIntent = intent; state.matterVersion = intent.version; },
+      current() { return activeIntent; },
       delivering() { return activeDelivery; } };
   `, sandbox);
-  const intent = (chatId, matterId, version) => ({ advocate: 'a@example.test', workspace: 'w', chatId, matterId, version,
-    key: `key:${matterId || chatId || 'new'}`, pending: [], queued: [], intake: null });
+  // A conversation is named by its chat id alone since plan AN.48 (D307): the page keeps no matter id.
+  const intent = (chatId, version) => ({ advocate: 'a@example.test', workspace: 'w', chatId, version,
+    key: `key:${chatId || 'new'}`, pending: [], queued: [] });
   return { ...sandbox.page, did, waits, sandbox, intent };
 }
 const turns = async () => { for (let i = 0; i < 20; i += 1) await Promise.resolve(); };
-const entryOf = (context, more = {}) => ({ context, turnId: 't-1', request: { matter_id: context.matterId, chat_id: context.chatId },
+const entryOf = (context, more = {}) => ({ context, turnId: 't-1', request: { chat_id: context.chatId },
   envelope: '{}', ...more });
 
 // Each case: the advocate is in the first conversation; `leaves` says whether another is opened during the wait.
 async function answered(leaves) {
   const p = page();
-  const first = p.intent(null, null, null);   // an opening not yet saved: the answer names its conversation and its matter
-  const other = p.intent('c-other', 'm-other', 3);
+  const first = p.intent(null, null);   // an opening not yet saved: the answer names its conversation
+  const other = p.intent('c-other', 3);
   p.open(first);
   const done = p.deliver(entryOf(first));
   await turns();
-  p.waits.api.shift().resolve({ chat_id: 'c-first', matter_id: 'm-first', matter_version: 7 });
+  p.waits.api.shift().resolve({ chat_id: 'c-first', matter_version: 7 });
   await turns();
   assert.equal(p.waits.draft.length, 1, 'the page saves the draft under its new name before it acts on the answer');
   if (leaves) p.open(other);
@@ -108,8 +109,8 @@ async function answered(leaves) {
 
 async function afterARestart(leaves) {
   const p = page();
-  const first = p.intent('c-first', null, 5);
-  const other = p.intent('c-other', 'm-other', 3);
+  const first = p.intent('c-first', 5);
+  const other = p.intent('c-other', 3);
   p.open(first);
   const done = p.reconnect(entryOf(first, { chatId: 'c-first' }));
   await turns();
@@ -122,8 +123,8 @@ async function afterARestart(leaves) {
 
 async function followed(leaves) {
   const p = page();
-  const first = p.intent('c-first', null, 5);
-  const other = p.intent('c-other', 'm-other', 3);
+  const first = p.intent('c-first', 5);
+  const other = p.intent('c-other', 3);
   p.open(first);
   p.followPending(first, { turn_id: 't-1', state: 'working', message: 'm' }, 'c-first');
   assert.ok(p.sandbox.watch, 'a turn worked on elsewhere is watched');
@@ -135,8 +136,8 @@ async function followed(leaves) {
 
 async function discarded(leaves) {
   const p = page();
-  const first = p.intent('c-first', null, 5);
-  const other = p.intent('c-other', 'm-other', 3);
+  const first = p.intent('c-first', 5);
+  const other = p.intent('c-other', 3);
   p.open(first);
   const done = p.discardTurn(entryOf(first, { chatId: 'c-first' }));
   await turns();
@@ -148,8 +149,8 @@ async function discarded(leaves) {
 
 async function workSoFar(leaves) {
   const p = page();
-  const first = p.intent('c-first', null, 5);
-  const other = p.intent('c-other', 'm-other', 3);
+  const first = p.intent('c-first', 5);
+  const other = p.intent('c-other', 3);
   p.open(first);
   const done = p.showSoFar(entryOf(first, { chatId: 'c-first' }), 'c-first');
   await turns();
@@ -161,7 +162,7 @@ async function workSoFar(leaves) {
 
 const untouched = (p, what) => {
   assert.deepEqual(p.did, [], `${what}: nothing is opened over the conversation the advocate is now in`);
-  assert.equal(p.state.matterId, 'm-other', `${what}: the next message still goes to the open conversation`);
+  assert.equal(p.current().chatId, 'c-other', `${what}: the next message still goes to the open conversation`);
   assert.equal(p.state.matterVersion, 3, `${what}: the open conversation keeps its own version`);
 };
 """
@@ -172,7 +173,7 @@ _CASES = {
   const stayed = await answered(false);
   // The answer takes effect in its own conversation; no earlier matter record is opened over it (plan AN.57, D292).
   assert.deepEqual(stayed.did, []);
-  assert.equal(stayed.state.matterId, 'm-first');
+  assert.equal(stayed.current().chatId, 'c-first');
   assert.equal(stayed.state.matterVersion, 7);
   untouched(await answered(true), 'an answer that came after the advocate left');
 })().catch((error) => { console.error(error); process.exit(1); });

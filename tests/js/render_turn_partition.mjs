@@ -261,15 +261,9 @@ let bubble = false;
 })(turn);
 if (!bubble) fails.push("the advocate's own words are not set apart");
 
-const inputOnly = context.renderTurn({
-  brief: 'Saved instructions', state: 'input_only', turnId: 'withheld-input',
-  error: 'Answer withheld', refusal: {withheld_by: ['G-QUOTE'], why: 'Unsupported quotation'}
-});
-if (!inputOnly.textContent.includes('Your brief is saved.')
-    || !inputOnly.textContent.includes('no new conclusions were saved')
-    || inputOnly.textContent.includes('brief was NOT saved')) {
-  fails.push('input-only persistence is presented as either a full save or a lost brief');
-}
+// The input-only state (a brief saved with its answer withheld) went with the earlier matter's screens (plan AN.57, D307): no
+// server path gives it - a refusal says not_committed, previously_committed, committed or unconfirmed - and the page has no words
+// for it. Its case is no longer run here.
 
 // A structured turn failure still drives recovery, but its object must never
 // be serialized into the advocate-facing message. The unsaved brief and the

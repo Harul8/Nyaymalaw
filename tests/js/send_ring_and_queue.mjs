@@ -110,14 +110,12 @@ const pressed = () => {
   assert.equal(looks().state, 'send');
 }
 
-// The file still loading, and nothing left of the allowance: the arrow, greyed.
+// Nothing left of the allowance: the arrow, greyed. (An earlier matter's file still loading greyed it too; there is no such file to
+// load since plan AN.48, D307.)
 {
   const { context, looks } = harness();
-  context.state.matterId = 'synthetic';
-  context.state.matterReady = false;
   context.paintSend();
-  assert.deepEqual(looks(), { state: 'send', label: 'Loading file…', disabled: true });
-  context.state.matterReady = true;
+  assert.deepEqual(looks(), { state: 'send', label: 'Send', disabled: false });
   context.usageUsedUp = () => true;
   context.paintSend();
   assert.deepEqual(looks(), { state: 'send', label: 'Send', disabled: true });

@@ -46,7 +46,7 @@ function fixture() {
   };
   const requests = [], starts = [], boardToggles = [], sent = [], boards = [];
   const state = { railGeneration: 0, matterListGeneration: 0, sessionGeneration: 1,
-    matterId: null, matterVersion: null, turns: [] };
+    matterVersion: null, turns: [] };
   const context = { state, activeIntent: null, activeDelivery: null, heldSend: null, $: get,
     document: { createElement: () => new Element() },
     window: { dispatchEvent() {}, NmBrainSources: { close() {} } }, Event: class {},
@@ -54,13 +54,13 @@ function fixture() {
     stateBlock: (_kind, text) => { const block = new Element(); block.textContent = text; return block; },
     restoredTurn: turn => turn,
     reconcileIntent() {}, repaint() {},
-    selectIntent: (matterId, { chatId = null } = {}) => {
-      context.activeIntent = { matterId, chatId, pending: [] };
+    selectIntent: ({ chatId = null } = {}) => {
+      context.activeIntent = { chatId, pending: [] };
     },
     showTab() {}, snapshotIntent() {}, consumeComposer() {},
     // Plan AN.43 (D84): the title a reopened conversation shows at its beginning is tests/js/history_titles.mjs's.
     takeTitle() {},
-    matchesIntake: () => false, newTurnId: () => 'new-turn',
+    newTurnId: () => 'new-turn',
     attachments: [], attachmentsBlockSend: () => null, renderAttachments() {},
     attachmentsReading: () => false,
     deliver: async entry => { sent.push(JSON.parse(entry.envelope)); },
@@ -76,12 +76,11 @@ function fixture() {
   return { context, state, get, requests, starts, boardToggles, sent, boards };
 }
 
-const matter = { matter_id: 'matter-current', matter: 'Saved matter heading' };
+// The server lists conversations only (plan AN.48, D307).
 const chats = ['chat-first', 'chat-latest'].map(chat_id => ({ chat_id, preview: chat_id, turn_count: 1 }));
-function resolveList(f, offset, matters = [matter], pending = chats) {
+function resolveList(f, offset, pending = chats) {
   assert.equal(f.requests[offset].url, '/api/work?limit=10&offset=0');   // ten at a time (O29)
-  f.requests[offset].resolve({ state: 'ok', row_count: matters.length, matters,
-    chat_count: pending.length, chats: pending });
+  f.requests[offset].resolve({ state: 'ok', chat_count: pending.length, total: pending.length, chats: pending });
 }
 function resolveChat(request, chatId, version = 3) {
   assert.equal(request.url, `/api/chats/${chatId}`);
@@ -121,11 +120,10 @@ async function loaded() {
   assert.equal(f.sent[1].expected_version, null);
 }
 
-// The history lists conversations only: an earlier matter record the server still lists is no row (plan AN.57, D292).
+// The history lists conversations (plan AN.57, D292; the server lists nothing else since AN.48, D307).
 {
   const f = await loaded();
   assert.deepEqual(f.get('rail-body').children.map(row => row.dataset.chatId), ['chat-first', 'chat-latest']);
-  assert.ok(!f.get('rail-body').textContent.includes(matter.matter));
   assert.equal(f.get('rail-meta').textContent, '2 conversations');
 }
 
@@ -166,14 +164,13 @@ for (const failure of [false, true]) {
   const earlier = f.context.loadMatterList();
   const current = f.context.loadMatterList();
   f.context.activeIntent = { chatId: 'chat-current', pending: [] };
-  resolveList(f, 1, [matter], [{ chat_id: 'chat-current', preview: 'Current conversation', turn_count: 1 }]);
+  resolveList(f, 1, [{ chat_id: 'chat-current', preview: 'Current conversation', turn_count: 1 }]);
   await current;
   if (failure) f.requests[0].reject(new Error('Earlier read failed'));
-  else resolveList(f, 0, [], [{ chat_id: 'chat-old', preview: 'Obsolete conversation', turn_count: 1 }]);
+  else resolveList(f, 0, [{ chat_id: 'chat-old', preview: 'Obsolete conversation', turn_count: 1 }]);
   await earlier;
   assert.equal(f.get('rail-body').children.length, 1);
   assert.equal(f.get('rail-body').children[0].querySelector().textContent, 'Current conversation');
-  assert.ok(!f.get('rail-body').textContent.includes('Earlier matter record'));
   assert.equal(f.get('rail-body').children[0].attributes['aria-pressed'], 'true');
   assert.equal(f.get('rail-meta').textContent, '1 conversation');
 }
