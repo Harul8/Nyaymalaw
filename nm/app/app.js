@@ -6977,8 +6977,17 @@ function watchProgress(entry, onFinished, onStopped = null) {
     const chatId = entry.chatId || (entry.context && entry.context.chatId) || null;
     return `turn_id=${encodeURIComponent(entry.turnId)}` + (chatId ? `&chat_id=${encodeURIComponent(chatId)}` : '');
   };
+  // D298 (plan AN.48): a go-ahead of a matter worked step by step continues the turn where it stopped, so the watch of the step
+  // just sent (no onFinished) first hears the step before's last word - its stop, or its finish. Until this watch has heard the
+  // turn at work, a stop or a finish is not this step's: it is not taken in, and the stream is let open again rather than ended.
+  // The step's own answer still comes with the request that sent it.
+  let atWork = false;
+  let reopen = false;
+  const earlier = (seen) => !onFinished && !atWork && ['finished', 'stopped'].includes(seen.state);
   // What the turn is doing, taken in - asked for, or told by the server (plan AN.48, 48f5). True once the watch has ended.
   function heard(seen) {
+    if (earlier(seen)) return false;
+    if (seen.state === 'working') atWork = true;
     entry.progress = seen;
     if (seen.chat_id) entry.chatId = seen.chat_id;
     // Plan AN.41 (D68): the work finished has been saved again: read it from the conversation (D77: and what waits goes with it).
@@ -7022,12 +7031,18 @@ function watchProgress(entry, onFinished, onStopped = null) {
         let seen = null;
         try { seen = JSON.parse(event.data); } catch (error) { return; }
         if (!seen || typeof seen !== 'object') return;
+        // D298: the step before's last word - the server ends this stream after it, and the browser opens it again (2 s).
+        if (earlier(seen)) { reopen = true; return; }
+        reopen = false;
         // The stream has said its last word: it is closed here, not opened again by the browser.
         if (['finished', 'stopped'].includes(seen.state) && stream) { stream.close(); stream = null; }
         heard(seen);
       };
       stream.onerror = () => {
         if (!stream) return;
+        // D298: ended after the step before's last word, the browser is opening it again: once for each such word, so a stream
+        // that cannot be had still falls back to asking.
+        if (reopen && stream.readyState !== EventSource.CLOSED) { reopen = false; return; }
         stream.close();
         stream = null;
         if (!stopped) timer = setTimeout(poll, 0);
