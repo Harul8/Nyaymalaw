@@ -113,7 +113,7 @@ def test_permission_refusal_keeps_the_matter_and_offers_the_actual_settings(page
     page.get_by_role("button", name="Review AI data sharing", exact=True).click()
     page.wait_for_selector("#ai-sharing-dialog[open]")
     assert "outside India" in page.inner_text("#ai-sharing-dialog")
-    assert page.is_hidden("#intake")
+    # It once also checked that the refusal did not bring back the opening form, deleted since (plan AN.57, D292).
     assert page.evaluate("() => shownChatId()") == mid, "the refusal keeps the conversation it was sent in"
     page.click("#ai-sharing-close")
     assert page.is_visible("#message")

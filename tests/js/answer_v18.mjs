@@ -18,8 +18,7 @@ const between = (start, end) => {
   return app.slice(a, b);
 };
 const rendererSource = between('function appendReplyBody(', 'const REPLY_ICONS')
-  + '\n' + between('function renderTurn(entry) {', 'function showConversationFromStart()')
-  + '\n' + between('function showConversationFromStart()', 'function repaint()');
+  + '\n' + between('function renderTurn(entry) {', 'function repaint()');
 
 function el(tag) {
   const node = {

@@ -1,6 +1,6 @@
 """Real-browser context ownership witnesses; approval-only, synthetic and local.
 
-The shared journey owns composition, sign-in, intake and ordinary sending.
+The shared journey owns composition, sign-in and ordinary sending.
 These tests hold genuine HTTP replies, not fabricated inter-stage matters.
 Deliberate response mutations cover incomplete boards, an explicitly unconfirmed
 logout and unavailable transcript read-back. None claims legal-quality or release evidence.
@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import timedelta
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -24,7 +23,6 @@ from tests.test_the_journey_login_to_logout import (
     _sign_in,
     _sign_out,
     _start_matter,
-    _tab,
     playwright_api,
 )
 from tests.test_the_journey_login_to_logout import (
@@ -393,13 +391,11 @@ def _assert_no_overflow(page):
 
 def _assert_protected_dom_cleared(page):
     assert page.is_visible("#gate") and page.is_hidden("#masthead")
-    # The Legal library's search went with that screen (plan AN.57, D292).
-    for selector in ("#thread", "#rail-body", "#history-body", "#history-state",
-                     "#sessions-body", "#sessions-action-state"):
+    # The Legal library's search, and a matter's History pane, went with those screens (plan AN.57, D292).
+    for selector in ("#thread", "#rail-body", "#sessions-body", "#sessions-action-state"):
         assert not page.text_content(selector).strip(), (
             f"late reply repopulated protected DOM, including hidden content: {selector}"
         )
-    assert page.locator("#history-matter option:not([value=''])").count() == 0
     assert not page.locator("#sessions-dialog").evaluate("el => el.open")
     assert not page.errors, page.errors
 
@@ -542,27 +538,17 @@ def test_repeated_enter_while_a_turn_is_pending_dispatches_only_once(page, journ
     assert not page.errors, page.errors
 
 
-@pytest.mark.parametrize("surface", ["history_list", "history", "sessions"])
+# A matter's History pane, a third surface here, went with the screens of a matter saved before conversations (plan AN.57, D292).
+@pytest.mark.parametrize("surface", ["history_list", "sessions"])
 def test_late_authenticated_responses_cannot_repopulate_dom_after_logout(
     page, journey, surface,
 ):
     _sign_in(page, journey)
-    matter_id = _new_matter(page, f"Protected {surface} workspace")
-    if surface == "history":
-        pytest.skip("a matter's History is not reached since the owner's decisions of 15-17 Oct 2026")
+    _new_matter(page, f"Protected {surface} workspace")
     if surface == "history_list":
         held = _HeldReply(page, "**/api/work?*")  # the conversation history's own list
         _all_matters(page)
         assert held.wait()["chat_count"] > 0
-    elif surface == "history":
-        _tab(page, "history")
-        page.wait_for_selector(f"#history-matter option[value='{matter_id}']", state="attached")
-        # Entering History also loads the selected file. Finish that initial
-        # render before isolating the next response across logout.
-        page.wait_for_selector("#history-body .recorded-turn")
-        held = _HeldReply(page, f"**/api/matters/{matter_id}/transcript")
-        page.select_option("#history-matter", value=matter_id)
-        assert held.wait()["turn_count"] > 0
     else:
         held = _HeldReply(page, "**/api/sessions")
         _open_account_menu(page)
@@ -609,40 +595,7 @@ def _sign_in_without_reloading(page, journey):
     page.wait_for_selector("#masthead:not([hidden])", timeout=15000)
 
 
-def test_opening_waits_for_its_device_draft_key_before_sending(page, journey):
-    pytest.skip("the opening form is not shown since the owner's decisions of 15 and 16 Oct 2026: a conversation opens on its message box and is saved with its first message")
-    page.goto(journey["base"] + "/app")
-    page.wait_for_selector("#login-go")
-    held = _HeldReply(page, "**/api/drafts/key")
-    _sign_in_without_reloading(page, journey)
-    held.wait()
-    _start_matter(page)
-    page.click("#in-go")
-    page.wait_for_selector("#in-go[disabled]")
-    _rendered(page)
-    assert not any(row["path"] == "/api/matters/intake" for row in page.request_identities)
-    assert "Draft protection is not available" not in page.locator("#intake-state").inner_text()
-    held.release()
-    page.wait_for_function("document.activeElement.id === 'message'")
-    openings = [row for row in page.request_identities if row["path"] == "/api/matters/intake"]
-    assert len(openings) == 1
-    mid = page.get_attribute("#pane-advise", "data-matter-id")
-    record = page.request.get(journey["base"] + f"/api/matters/{mid}").json()
-    assert record["opening_brief"]["state"] == "recorded"
-    assert not page.errors, page.errors
-
-
-def test_failed_draft_protection_never_sends_an_unrecoverable_opening(page, journey):
-    pytest.skip("the opening form is not shown since the owner's decisions of 15 and 16 Oct 2026: a conversation opens on its message box and is saved with its first message")
-    page.route("**/api/drafts/key", lambda route: route.fulfill(
-        status=503, json={"detail": "Synthetic draft-key service unavailable"}))
-    _sign_in(page, journey)
-    _start_matter(page)
-    page.click("#in-go")
-    page.get_by_text("no request was sent", exact=False).wait_for()
-    assert not any(row["path"] == "/api/matters/intake" for row in page.request_identities)
-    assert "server may have saved" not in page.locator("#intake-state").inner_text()
-    assert not page.errors, page.errors
+# The opening form's draft-key waits went with that form (plan AN.57, D292).
 
 
 def test_drafts_and_unsubmitted_intake_belong_to_the_selected_file(page, journey):
@@ -670,81 +623,9 @@ def test_drafts_and_unsubmitted_intake_belong_to_the_selected_file(page, journey
     assert not page.errors, page.errors
 
 
-@pytest.mark.parametrize("readback", ["unavailable", "withheld"])
-def test_lost_acknowledgement_and_expired_session_keep_the_exact_turn_envelope(
-    page, journey, readback,
-):
-    pytest.skip("written for a matter's transcript read-back and the History pane's recorded turns; its rule - an expired session keeps a message's exact envelope for one retry - is driven for the conversation window by tests/test_the_journey_of_a_lost_reply_across_an_expired_session.py")
-    _sign_in(page, journey)
-    matter_id = _new_matter(page, "Lost acknowledgement reauthentication")
-    held = _HeldReply(page, "**/api/turn")
-    brief = "Preserve this exact instruction once across a lost acknowledgement."
-    page.fill("#message", brief)
-    page.press("#message", "Enter")
-    answer = held.wait()
-    assert answer["matter_id"] == matter_id
-    original = [r for r in page.request_identities if r["path"] == "/api/turn"][-1]
-    assert original["turn_id"] and original["envelope"]
-    # End the real local session; let the ordinary protected-read 401 perform
-    # the application's expiry transition without replacing this document.
-    page.evaluate("""async () => {
-      await api('/api/logout', {method: 'POST'});
-      try { await api('/api/session'); } catch (_) { /* observed expiry */ }
-    }""")
-    _assert_protected_dom_cleared(page)
-    transcript_pattern = f"**/api/matters/{matter_id}/transcript"
-
-    def unavailable(route):
-        if readback == "unavailable":
-            route.fulfill(status=503, json={"detail": "Temporary transcript read failure"})
-            return
-        response = route.fetch()
-        assert response.status == 200
-        body = response.json()
-        matching = [row for row in body["turns"] if row["turn_id"] == original["turn_id"]]
-        assert len(matching) == 1, "the mutation must target the real held instruction"
-        matching[0].update({"release_state": "withheld", "committed": False,
-                            "withheld_by": ["G-GROUND"],
-                            "blocked_reason": "The archived answer was withheld.",
-                            "elements": [{"kind": "action", "text": "UNRELEASED ADVICE"}]})
-        route.fulfill(status=200, json=body)
-
-    page.route(transcript_pattern, unavailable)
-    _sign_in_without_reloading(page, journey)
-    retry = page.get_by_role("button", name="Send this brief again", exact=True)
-    retry.wait_for(state="visible")
-    assert page.input_value("#message") == ""
-    assert brief in page.locator('#thread .brief').all_text_contents()
-    disclosure = page.inner_text("#thread")
-    if readback == "unavailable":
-        assert "cannot verify the conversation's completeness" in disclosure
-    else:
-        assert "archived answer was withheld" in disclosure
-        assert "UNRELEASED ADVICE" not in disclosure
-        _tab(page, "history")
-        page.wait_for_selector(f"#history-matter option[value='{matter_id}']", state="attached")
-        page.select_option("#history-matter", value=matter_id)
-        page.wait_for_selector("#history-body .recorded-turn")
-        assert "archived answer was withheld" in page.inner_text("#history-body")
-        assert "UNRELEASED ADVICE" not in page.inner_text("#history-body")
-        _tab(page, "advise")
-        _open_by_keyboard(page, matter_id)
-    assert "file itself is intact" not in disclosure
-    held.release()
-    assert retry.is_visible()
-    assert page.input_value("#message") == ""
-    assert brief in page.locator('#thread .brief').all_text_contents()
-    page.unroute(transcript_pattern, unavailable)
-    retry.click()
-    page.wait_for_selector("#send:not([disabled])", timeout=60000)
-    requests = [r for r in page.request_identities if r["path"] == "/api/turn"]
-    assert requests[-1]["envelope"] == original["envelope"]
-    assert sum(r["turn_id"] == original["turn_id"] for r in requests) == 2
-    transcript = page.request.get(
-        journey["base"] + f"/api/matters/{matter_id}/transcript").json()
-    assert sum(row.get("message") == brief for row in transcript["turns"]) == 1
-    assert page.input_value("#message") == ""
-    assert not page.errors, page.errors
+# A matter's transcript read-back and History pane went with its screens (plan AN.57, D292); an expired session keeping a
+# message's exact envelope for one retry is driven for the conversation by
+# tests/test_the_journey_of_a_lost_reply_across_an_expired_session.py.
 
 
 @pytest.mark.parametrize("retry_in_flight", [False, True])
@@ -806,55 +687,5 @@ def test_http_success_without_revocation_confirmation_stays_unconfirmed(page, jo
     assert page.request.get(journey["base"] + "/api/session").status == 401
 
 
-def test_a_protective_retry_discloses_saved_history_without_releasing_expired_permission(
-    page, journey, monkeypatch,
-):
-    pytest.skip("a protective (emergency) declaration is a matter's record, reached only from a matter saved before conversations")
-    from nm.arrive.advocate_contracts import utcnow
-    from tests.test_professional_approval_is_separate_from_account_access import (
-        approve_fixture_account,
-    )
-
-    _sign_in(page, journey)
-    matter_id = _new_matter(page, "Protective receipt expiry")
-    approve_fixture_account(journey["box"].application.directory, journey["advocate"])
-    declared = page.evaluate("""async id => api(`/api/matters/${id}/emergency`, {
-      method: 'POST', headers: {'content-type': 'application/json'},
-      body: JSON.stringify({request_key: 'browser-protective-expiry',
-        basis: 'A supplied urgent protective need', hours: 1})
-    })""", matter_id)
-    assert declared["state"] == "emergency_declared"
-    # Reopen the real current version before starting the protected instruction.
-    _open_by_keyboard(page, matter_id)
-    clock = [utcnow()]
-    monkeypatch.setattr(journey["box"].application.engine, "_clock", lambda: clock[0])
-    committed = []
-
-    def lose_acknowledgement(route):
-        response = route.fetch()
-        assert response.status == 200
-        committed.append(response.json())
-        assert committed[-1]["blocked"] is False
-        route.fulfill(status=503, json={"detail": "Controlled response loss after commitment"})
-
-    page.route("**/api/turn", lose_acknowledgement)
-    brief = "Keep this private protective request unadmitted."
-    page.fill("#message", brief)
-    page.evaluate("text => { send(text, {workProduct: 'protective_triage'}); }", brief)
-    retry = page.get_by_role("button", name="Send this brief again", exact=True)
-    retry.wait_for(state="visible")
-    assert len(committed) == 1 and committed[0]["committed"] == "committed"
-    before = journey["box"].application.store.load(matter_id)
-    clock[0] += timedelta(hours=2)
-    page.unroute("**/api/turn", lose_acknowledgement)
-    retry.click()
-    page.get_by_text("The earlier response remains saved", exact=False).wait_for(state="visible")
-    assert "No new answer was saved or released" in page.inner_text("#thread")
-    assert "Your brief was NOT saved" not in page.inner_text("#thread")
-    assert retry.count() == 0
-    assert page.input_value("#message") == ""
-    assert brief in page.locator('#thread .brief').all_text_contents()
-    assert journey["box"].application.store.load(matter_id) == before
-    requests = [row for row in page.request_identities if row["path"] == "/api/turn"]
-    assert requests[-1]["envelope"] == requests[-2]["envelope"]
-    assert not page.errors, page.errors
+# A protective (emergency) declaration was a matter's record, deleted with the screens of a matter saved before
+# conversations (plan AN.57, D292).

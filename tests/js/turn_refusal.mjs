@@ -33,6 +33,8 @@ async function refused(code, expectedState, expectedReloads) {
     checkIdle() {}, nmFinished() {},
     saveProtectedDraft: async () => true,
     api: async () => { throw Object.assign(new Error(friendly), {status: 409, detail}); },
+    // A matter saved before conversations was opened again here on a stale refusal; the page no longer opens one (plan AN.57,
+    // D292), so this counts any such reopening: there is none.
     showThreadBoard: async () => { reloads += 1; },
   });
   vm.runInContext(app.slice(start, end), context);
@@ -48,7 +50,7 @@ async function refused(code, expectedState, expectedReloads) {
 }
 
 await refused('brain_refused', 'not_committed', 0);
-await refused('stale_version', 'stale', 1);
+await refused('stale_version', 'stale', 0);
 await refused(undefined, 'not_committed', 0);
 
 // Run the shipped composer and send functions through their actual envelope
@@ -128,7 +130,7 @@ for (const text of ['', ' \t\r\n', '\u2003\u00a0',
   const texts = (n) => [n._text, ...(n.children || []).flatMap(texts)].filter(Boolean);
   const find = (n, test) => (test(n) ? n : (n.children || []).map((c) => find(c, test)).find(Boolean));
   const renderStart = app.indexOf('function renderTurn(entry) {');
-  const renderEnd = app.indexOf('function showConversationFromStart()', renderStart);
+  const renderEnd = app.indexOf('function syncBoardStatus()', renderStart);
   assert.ok(renderStart >= 0 && renderEnd > renderStart, 'The shipped turn renderer must be available');
   const render = vm.createContext({document: {createElement: el}, Number, Math, Array,
     deliver() {}, openAiSharing() {}, repaint() {}});

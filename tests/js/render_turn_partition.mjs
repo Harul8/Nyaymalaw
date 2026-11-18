@@ -32,10 +32,10 @@ const between = (start, end) => {
   return app.slice(a, b);
 };
 const rendererSource = between("function appendReplyBody(", "const REPLY_ICONS")
-  + "\n" + between("async function restoreConversation(", "function restoredTurn(")
-  + "\n" + between("function restoredTurn(turn) {", "function renderBriefing(")
-  + "\n" + between("function renderTurn(entry) {", "function showConversationFromStart()")
-  + "\n" + between("function showConversationFromStart()", "function repaint()");
+  // The matter re-entry that restored an earlier matter's turns was deleted with its screens (plan AN.57, D292); a
+  // conversation's saved turns come back through restoredTurn alone.
+  + "\n" + between("function restoredTurn(turn) {", "function appendReplyBody(")
+  + "\n" + between("function renderTurn(entry) {", "function repaint()");
 
 // ---------------------------------------------------------- the stub DOM ---
 function el(tag) {
@@ -452,24 +452,9 @@ if (!soFar || !soFar.textContent.includes('File by Tuesday.')
   fails.push('what the answer has shown so far is not drawn, in the open, while it is written');
 }
 
-// Reopening a saved matter restores the whole transcript in record order and
-// starts at the first turn, even when the conversation is taller than its pane.
-const thread = document.getElementById('thread');
-thread.scrollHeight = 900; thread.clientHeight = 200; thread.scrollTop = 700;
-context.state.railGeneration = 1;
-context.repaint = () => thread.replaceChildren(...context.state.turns.map(context.renderTurn));
-const second = { ...saved, message: 'The next instruction.', turn_id: 'turn_b',
-  composed: [{ text: 'The second reply.', passage: null, carries: null, cites: [] }] };
-context.api = async path => {
-  if (path !== '/api/matters/matter_a/transcript') throw Error(`wrong transcript: ${path}`);
-  return { turns: [saved, second], opening_changes: [] };
-};
-await context.restoreConversation('matter_a', 1);
-const bubbles = flat(thread).filter(node => node.className === 'brief').map(node => node.textContent);
-if (JSON.stringify(bubbles) !== JSON.stringify([saved.message, second.message])
-    || thread.scrollTop !== 0 || document.getElementById('jump-latest').hidden) {
-  fails.push('reopening the matter did not show its saved conversation from first to last');
-}
+// Reopening a saved matter, which restored its whole transcript from the first turn, was deleted with the screens of a
+// matter saved before conversations (plan AN.57, D292); a conversation reopens through restorePendingChat
+// (tests/js/my_work_navigation.mjs).
 
 if (fails.length) {
   console.error("FAIL\n  " + fails.join("\n  "));

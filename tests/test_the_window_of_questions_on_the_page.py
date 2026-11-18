@@ -20,7 +20,7 @@ const vm = require('node:vm');
 
 const source = fs.readFileSync('nm/app/app.js', 'utf8');
 const start = source.indexOf('function needQuestions(');
-const end = source.indexOf('function showConversationFromStart()', start);
+const end = source.indexOf('function syncBoardStatus()', start);
 assert.ok(start >= 0 && end > start, 'the shipped functions must be present');
 function el(tag) {
   return { tagName: tag, className: '', children: [], text: '', attributes: {},
@@ -69,7 +69,7 @@ def test_the_progress_opens_the_window_once_and_offers_it_while_it_is_open():
     assert "seen.asking === true && !entry.questionsOpen" in poll
     # Plan AN.37 (D87): opened by itself once, and again when code adds a question to it while the turn works.
     assert "(!entry.questionsSeen || (seen.asked || 0) > (entry.questionsSeenCount || 0))" in poll
-    working = script[script.index("function renderTurn(entry) {"):script.index("function showConversationFromStart()")]
+    working = script[script.index("function renderTurn(entry) {"):script.index("function syncBoardStatus()")]
     assert "if (progress.asking)" in working and "openTurnQuestions(entry)" in working
     window = script[script.index("async function openTurnQuestions("):script.index("function renderQuestionsAsked(")]
     # The answers go to the turn; once it has finished, as the next message - never to another conversation's message.

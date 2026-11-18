@@ -10,7 +10,7 @@ function between(start, end) {
   return app.slice(first, last);
 }
 const source = between('async function restorePendingChat(', 'async function showMatterList(')
-  + between('function selectMatterRow(', 'function requirementsFor(')
+  + between('function selectMatterRow(', 'function restoredTurn(')
   + between('function closeOpenMatter()', 'async function restorePendingChat(')
   + between('function startMatter(', '// F-A-18,')
   + between('function fitBoard(', 'async function loadChatBoard(')
@@ -34,7 +34,7 @@ class Element {
   removeAttribute(name) { delete this.attributes[name]; }
   addEventListener() {}
   focus() {}
-  querySelectorAll() { return this.children.filter(child => child.dataset.matterId); }
+  querySelectorAll() { return this.children.filter(child => child.dataset.chatId); }
   querySelector() { return this.children.find(child => child.className === 'r-title'); }
 }
 
@@ -53,11 +53,11 @@ function fixture() {
     api: url => new Promise((resolve, reject) => requests.push({ url, resolve, reject })),
     stateBlock: (_kind, text) => { const block = new Element(); block.textContent = text; return block; },
     restoredTurn: turn => turn,
-    reconcileIntent() {}, repaint() {}, closeDisputeReader() {},
+    reconcileIntent() {}, repaint() {},
     selectIntent: (matterId, { chatId = null } = {}) => {
       context.activeIntent = { matterId, chatId, pending: [] };
     },
-    showTab() {}, showIntake() {}, snapshotIntent() {}, consumeComposer() {},
+    showTab() {}, snapshotIntent() {}, consumeComposer() {},
     // Plan AN.43 (D84): the title a reopened conversation shows at its beginning is tests/js/history_titles.mjs's.
     takeTitle() {},
     matchesIntake: () => false, newTurnId: () => 'new-turn',
@@ -66,11 +66,9 @@ function fixture() {
     deliver: async entry => { sent.push(JSON.parse(entry.envelope)); },
     toggleMatters() {}, toggleMatterBoard: open => boardToggles.push(open),
     setWorkView: view => { get('pane-advise').dataset.view = view; },
-    updateWorkspace() {}, closeFilesMenu() {},
+    updateWorkspace() {},
     // The board beside the conversation is read for the conversation now open (16 Oct 2026).
     loadChatBoard: () => boards.push(context.activeIntent && context.activeIntent.chatId),
-    restoreConversation: async matterId => { state.turns = [{ matterId }]; return true; },
-    renderDisputeBoard: body => { body.textContent = 'Current dispute board'; },
   };
   vm.runInNewContext(source, context, { filename: 'nm/app/app.js' });
   const startMatter = context.startMatter;
@@ -123,28 +121,12 @@ async function loaded() {
   assert.equal(f.sent[1].expected_version, null);
 }
 
+// The history lists conversations only: an earlier matter record the server still lists is no row (plan AN.57, D292).
 {
   const f = await loaded();
-  const [chat, , row] = f.get('rail-body').children;
-  const earlier = chat.onclick();
-  const current = row.onclick();
-  resolveChat(f.requests[1], 'chat-first');
-  await earlier;
-  assert.equal(f.state.matterId, matter.matter_id);
-  assert.deepEqual(f.starts, []);
-  assert.equal(f.requests[2].url, `/api/matters/${matter.matter_id}`);
-  f.requests[2].resolve({ version: 1, title: matter.matter });
-  await current;
-  assert.equal(f.context.activeIntent.matterId, matter.matter_id);
-  assert.equal(f.state.turns[0].matterId, matter.matter_id);
-  assert.equal(f.state.matterVersion, 1);
-  assert.equal(row.attributes['aria-pressed'], 'true');
-  assert.equal(f.get('matter-heading').textContent, matter.matter);
-  const toggles = f.boardToggles.length;
-  const refresh = f.context.showThreadBoard(matter.matter_id, { restore: false, closeNavigator: false });
-  f.requests[3].resolve({ version: 2, title: matter.matter });
-  await refresh;
-  assert.equal(f.boardToggles.length, toggles);
+  assert.deepEqual(f.get('rail-body').children.map(row => row.dataset.chatId), ['chat-first', 'chat-latest']);
+  assert.ok(!f.get('rail-body').textContent.includes(matter.matter));
+  assert.equal(f.get('rail-meta').textContent, '2 conversations');
 }
 
 {
@@ -183,17 +165,17 @@ for (const failure of [false, true]) {
   const f = fixture();
   const earlier = f.context.loadMatterList();
   const current = f.context.loadMatterList();
-  f.state.matterId = matter.matter_id;
-  resolveList(f, 1, [matter], []);
+  f.context.activeIntent = { chatId: 'chat-current', pending: [] };
+  resolveList(f, 1, [matter], [{ chat_id: 'chat-current', preview: 'Current conversation', turn_count: 1 }]);
   await current;
   if (failure) f.requests[0].reject(new Error('Earlier read failed'));
-  else resolveList(f, 0, [{ matter_id: 'matter-old', matter: 'Obsolete heading' }], []);
+  else resolveList(f, 0, [], [{ chat_id: 'chat-old', preview: 'Obsolete conversation', turn_count: 1 }]);
   await earlier;
   assert.equal(f.get('rail-body').children.length, 1);
-  assert.equal(f.get('rail-body').children[0].querySelector().textContent, matter.matter);
-  assert.ok(f.get('rail-body').textContent.includes('Earlier matter record'));
+  assert.equal(f.get('rail-body').children[0].querySelector().textContent, 'Current conversation');
+  assert.ok(!f.get('rail-body').textContent.includes('Earlier matter record'));
   assert.equal(f.get('rail-body').children[0].attributes['aria-pressed'], 'true');
-  assert.equal(f.get('rail-meta').textContent, '0 conversations · 1 earlier matter record');
+  assert.equal(f.get('rail-meta').textContent, '1 conversation');
 }
 
 for (const failure of [false, true]) {
@@ -228,7 +210,7 @@ for (const change of ['selection', 'session', 'list']) {
   f.requests[1].reject(new Error('Current chat failed'));
   await pending;
   assert.match(f.get('rail-body').textContent, /The chat could not be read/);
-  assert.match(f.get('rail-body').textContent, /Saved matter heading/);
+  assert.match(f.get('rail-body').textContent, /chat-latest/);
 }
 
 console.log('PASS My work navigation ownership');

@@ -24,8 +24,9 @@ def test_a_file_that_uses_the_browser_and_those_that_borrow_from_it_are_found(tm
 
 def test_the_shipped_journeys_are_found_and_the_runner_asks_the_tool():
     names = {path.name for path in journey_files(ROOT / "tests")}
-    assert {"test_the_journey_login_to_logout.py", "test_opening_journey.py",
+    assert {"test_the_journey_login_to_logout.py", "test_conversation_recovery_journey.py",
             "test_required_browser_assets_are_observed.py"} <= names
-    assert "test_core_turn.py" not in names and len(names) >= 19
+    # Six journeys of a matter saved before conversations were retired with its screens (plan AN.57, D292).
+    assert "test_core_turn.py" not in names and len(names) >= 14
     workflow = (ROOT / ".github/workflows/offline-tests.yml").read_text(encoding="utf8")
     assert "journey_files.py" in workflow and "playwright install" in workflow

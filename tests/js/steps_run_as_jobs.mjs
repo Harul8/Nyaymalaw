@@ -35,6 +35,8 @@ async function delivered(replies) {
     snapshotIntent() {}, restoreIntent() {}, matchesIntake: () => false, intentKey: (matter, chat) => `${matter}|${chat}`,
     loadChatBoard() {}, refreshTitle() {},
     saveProtectedDraft: async () => true,
+    // A matter saved before conversations was opened again on a stale refusal; the page no longer opens one (plan AN.57, D292),
+    // so this counts any such reopening: there is none.
     showThreadBoard: async () => { reloads += 1; },
     api: async (path) => {
       asked.push(path);

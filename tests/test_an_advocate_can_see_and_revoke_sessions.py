@@ -139,5 +139,8 @@ def test_registration_does_not_promise_a_firm_wide_conflict_registry():
         assert claim not in html, (
             f"the sign-in page still promises {claim!r}, and there is no "
             f"firm-wide registry behind it")
-    assert "not a firm-wide registry" in html, (
-        "registration does not say what the conflict check actually covers")
+    # The sentence saying what the check covers stood beside the opening form's parties, deleted with the screens of a matter
+    # saved before conversations (plan AN.57, D292); wherever the page speaks of a conflict check, it says what it covers.
+    if "conflict check" in html.lower():
+        assert "not a firm-wide registry" in html, (
+            "the page speaks of a conflict check without saying what it actually covers")

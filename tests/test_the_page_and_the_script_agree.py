@@ -172,17 +172,21 @@ def test_the_scan_would_catch_a_missing_element():
 def test_late_rail_work_cannot_overwrite_newer_navigation():
     """BK-72's cheap guard; the real counterexample remains browser evidence.
 
-    Every rail request takes a generation, checks it after awaiting the wire,
-    and the automatic post-send refresh is expressly denied authority to close
-    a navigator the advocate opened. Matter ids on rows and the pane make a
-    distinct-file switch observable to the journey rather than inferred from
-    a title both files share.
+    Opening a conversation takes a generation and checks it after awaiting the
+    wire; a failed opening speaks only while its own selection is current. The
+    conversation's id on its row makes a distinct-conversation switch
+    observable to the journey rather than inferred from a title both share.
+    The earlier matters' re-entry, which held five more such checks, its
+    post-send refresh and the matter ids on rows and the pane were deleted with
+    their screens (plan AN.57, D292).
     """
-    assert "const generation = ++state.railGeneration" in SCRIPT
-    assert SCRIPT.count("generation !== state.railGeneration") >= 6
-    assert "closeNavigator: false" in SCRIPT
-    assert "row.dataset.matterId = m.matter_id" in SCRIPT
-    assert "$('pane-advise').dataset.matterId = matterId" in SCRIPT
+    opening = SCRIPT[SCRIPT.index("async function restorePendingChat("):]
+    opening = opening[:opening.index("\n}\n")]
+    assert "const generation = ++state.railGeneration" in opening
+    assert "generation !== state.railGeneration" in opening
+    assert "selectedGeneration !== state.railGeneration" in SCRIPT
+    assert "row.dataset.chatId = chat.chat_id" in SCRIPT
+    assert "dataset.matterId" not in SCRIPT
 
 
 def registration_surface_problems(page: str, script: str) -> list[str]:

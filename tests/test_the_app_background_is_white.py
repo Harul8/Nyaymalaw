@@ -21,7 +21,7 @@ pytestmark = pytest.mark.class_a
 #: The ivory paper, the sunken beige, the hover ivory and the ivory on the sign-in story panel.
 BEIGE = ("#fbf8f1", "#f4f0e6", "#fdfcf8", "#f3efe4")
 #: Everything the app's own style comes from.
-SHEETS = ("app.css", "intake-materials.css")
+SHEETS = ("app.css",)
 #: What the owner sees as the app's background, by the rule that paints it.
 PAINTED = ("body", ".conversation", ".matter-board", ".rail", "#gate", ".workspace-heading", ".masthead")
 

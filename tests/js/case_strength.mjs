@@ -18,8 +18,7 @@ const between = (start, end) => {
   return app.slice(a, b);
 };
 const rendererSource = between('function appendReplyBody(', 'const REPLY_ICONS')
-  + '\n' + between('function renderTurn(entry) {', 'function showConversationFromStart()')
-  + '\n' + between('function showConversationFromStart()', 'function repaint()');
+  + '\n' + between('function renderTurn(entry) {', 'function repaint()');
 for (const name of ['function renderCaseBlock(', 'function renderDisputeCard(', 'function renderDisputeDetail(']) {
   if (!rendererSource.includes(name)) throw new Error(`renderer boundary moved: ${name}`);
 }

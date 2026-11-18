@@ -27,7 +27,5 @@ This index follows the shipped [source-layout manifest](../source_layout.json). 
 ### Browser assets
 
 - [dictation-worklet.js](dictation-worklet.js) — Captures microphone audio for local live dictation.
-- [intake-materials.css](intake-materials.css) — Intake media controls, upload progress and permission-state presentation.
-- [intake-materials.js](intake-materials.js) — Original receipt is not permission to read, and never establishes a fact.
 
 Only the exact declared `/static/<name>` URLs are public; Python and private files in the same folders are never a static population.

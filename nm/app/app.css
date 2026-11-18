@@ -160,7 +160,6 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 #pane-advise[data-view="list"] > .rail .rail-head,
 #pane-advise[data-view="list"] > .rail .rail-meta,
 #pane-advise[data-view="list"] #rail-body { width: min(52rem, 100%); margin-inline: auto; }
-.matter-list-row.selected { background: var(--accent-w); border-color: var(--accent); }
 /* LOAD MORE under the conversation history (owner decision O29; plan AN.23): a line saying how many are shown of
    how many, and the button that adds the next ten. */
 .rail-more { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem 1rem; padding: 0.3rem 0.2rem 1.4rem; }
@@ -180,27 +179,10 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 .row:hover { border-color: var(--accent); }
 .row.static { cursor: default; }
 .row .r-title { font-weight: 600; font-size: 1rem; }
-.row .r-fields {
-  display: grid; grid-template-columns: 5.4rem 1fr; gap: 0.1rem 0.5rem;
-  font-size: 0.78rem; color: var(--ink-2);
-}
-.row .r-fields dt {
-  font-family: var(--f-mono); font-size: 0.62rem; text-transform: uppercase;
-  letter-spacing: 0.07em; color: var(--ink-3); padding-top: 0.12rem;
-}
-.row .r-fields dd { margin: 0; }
 
 /* A loud row is loud. It is never collapsed and never quietly styled. */
 .row.loud { border-left: 3px solid var(--signal); }
 .row.loud .r-title { color: var(--signal); }
-.pill {
-  display: inline-block; font-family: var(--f-mono); font-size: 0.6rem;
-  font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase;
-  padding: 0.12rem 0.35rem; border-radius: 2px;
-}
-.pill.unknown { color: var(--signal); border: 1px solid var(--signal); }
-.pill.ok      { color: var(--good);   border: 1px solid var(--good); }
-.pill.blocked { color: var(--amber);  border: 1px solid var(--amber); }
 
 /* Board states. An unbuildable board is an EXPLICIT failure, never an empty
    one -- rendering empty would tell the advocate they have no matters. */
@@ -796,10 +778,6 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 }
 .composer-under > #hint { margin-right: auto; }
 @media (max-width: 560px) { .composer-under > #hint { display: none; } }
-.composer-row {
-  margin: 0.5rem auto 0; display: flex;
-  align-items: center; justify-content: space-between; gap: 1rem;
-}
 /* F-C-01, F-C-02. The plus on the left of the brief; the mic on its right, after Send (D173). */
 .tool-button {
   align-items: center; border-radius: 999px; display: inline-flex; justify-content: center;
@@ -914,12 +892,6 @@ button.wide { margin: 0.5rem 0.6rem 0.8rem; }
 #pane-advise[data-view="opening"].empty-chat .conversation { justify-content: center; }
 /* A new matter's first message box stays a centred box of its own width. */
 #pane-advise[data-view="opening"].empty-chat .composer { margin: 0 auto; width: min(52rem, calc(100% - 2rem)); }
-
-.opening-board-status { width: min(52rem, calc(100% - 2rem)); margin: 0 auto; }
-.opening-edit { width: min(46rem, calc(100% - 2rem)); padding: 0; }
-.opening-edit .intake { margin: 0; width: auto; max-width: none; border: 0; }
-.intake-actions { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.9rem; }
-.intake .intake-actions button.primary { margin-top: 0; }
 /* F-B-02. A correction of the details, in the conversation where it was made. */
 .opening-note {
   border-left: 2px solid var(--accent); padding: 0.4rem 0.8rem; margin: 0.6rem 0;
@@ -1036,116 +1008,6 @@ main > * { min-width: 0; }
  *
  * The real fixes are above and they are enough: `overflow-wrap: anywhere` on
  * the locator, and `max-width: 100%; min-width: 0` on the containers. */
-
-main.single {
-  display: block;
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 24px 28px 64px;
-  width: 100%; overflow-y: auto;
-}
-
-/* WHAT WAS SEARCHED. Never hidden behind a disclosure control: a zero is
- * unreadable without it, and unreadable in the direction that hurts. */
-.index-line {
-  color: var(--ink-3);
-  font-size: 12px;
-  line-height: 1.6;
-  margin: 14px 0 4px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--rule);
-}
-
-.result-count {
-  color: var(--ink-3);
-  font-size: 12px;
-  margin: 16px 0 10px;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-}
-
-.hit {
-  border-bottom: 1px solid var(--rule);
-  padding: 14px 0;
-}
-
-.hit header {
-  align-items: baseline;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 6px;
-}
-
-/* PROVENANCE IS NOT DECORATION. `searched` must never be able to pass for
- * `resolved` at a glance -- so they differ in WEIGHT and OUTLINE and not only
- * in colour, and both are drawn from the theme's own variables so the
- * distinction survives dark mode. A hardcoded pair here is legible in one
- * theme and invisible in the other, which loses exactly the signal that
- * separates a ranked guess from an exact lookup. */
-.pill.searched {
-  background: transparent;
-  border: 1px dashed var(--rule);
-  color: var(--ink-3);
-  font-style: italic;
-}
-
-.pill.resolved {
-  border: 1px solid var(--accent);
-  border: 1px solid var(--accent);
-  color: var(--accent);
-  font-weight: 600;
-}
-
-/* ========================== THE HISTORY =========================== */
-
-.history-head {
-  align-items: center;
-  display: flex;
-  gap: 16px;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--rule);
-  padding-bottom: 12px;
-}
-
-.history-head h2 { font-size: 15px; font-weight: 600; margin: 0; }
-
-.history-head select {
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: 3px;
-  font: inherit;
-  font-size: 13px;
-  min-width: 260px;
-  padding: 7px 9px;
-}
-
-.recorded-turn {
-  border-bottom: 1px solid var(--rule);
-  padding: 16px 0;
-}
-
-.recorded-turn header {
-  color: var(--ink-3);
-  font-size: 11px;
-  letter-spacing: .06em;
-  margin-bottom: 8px;
-  text-transform: uppercase;
-}
-
-.recorded-asked {
-  border-left: 2px solid var(--accent);
-  font-size: 14px;
-  line-height: 1.6;
-  margin: 0 0 10px;
-  padding-left: 12px;
-}
-
-.recorded-turn summary {
-  color: var(--ink-3);
-  cursor: pointer;
-  font-size: 12px;
-}
 
 /* ========================= A1 — THE GATE =========================
  *
@@ -1338,7 +1200,6 @@ main.single {
 .login .consent input { accent-color: var(--accent); height: 18px; margin: 2px 0 0; min-height: 0; padding: 0; width: 18px; }
 
 .req { color: var(--signal); font-weight: 600; }
-.opt { color: var(--ink-2, #5a6472); font-weight: 400; font-size: 12px; }
 
 .login-alt { margin-top: 10px; text-align: right; font-size: 15px; font-weight: 500; }
 /* F-A-01: Forgot password on the left, Register on the right, in one row
@@ -1538,14 +1399,10 @@ main.single {
   font-family: var(--f-serif); font-size: 2rem; font-weight: 600; letter-spacing: -0.01em;
   margin: 0;
 }
-.intake-lede { color: var(--ink-2); font-size: 0.95rem; margin: 0 0 0.6rem; }
 /* Labels in sentence case at reading size (the signed-off design). */
 .intake label {
   color: var(--ink); font-size: 0.9rem; font-weight: 600; letter-spacing: 0;
   margin-top: 0.75rem; text-transform: none;
-}
-.intake label .opt {
-  letter-spacing: 0; text-transform: none; font-size: 0.85rem;
 }
 .intake input[type="text"], .intake input:not([type]) {
   background: var(--surface); border: 1px solid var(--field); border-radius: 6px;
@@ -1655,40 +1512,6 @@ button.ghost.cancel { margin-right: 0.6rem; }
   width: max-content; max-width: min(34rem, calc(100% - 2rem)); padding: 0.75rem 1rem;
   font-size: 0.85rem; line-height: 1.5; color: var(--ink); background: var(--amber-w);
   border: 1px solid var(--amber); border-radius: 8px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18); }
-/* F-A-18. HOME: two lines and one button. Centred with auto margins, so a short
-   window scrolls to the top of it rather than cutting it off. */
-/* F-B-04. The open matter's one header control: its files. */
-.workspace-actions { align-items: center; display: flex; flex: none; gap: .5rem; justify-content: flex-end; }
-.matter-files { position: relative; }
-.files-toggle { display: inline-flex; align-items: center; justify-content: center; min-width: 44px;
-  min-height: 44px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--ink-2);
-  cursor: pointer; }
-.files-toggle:hover, .files-toggle[aria-expanded="true"] { color: var(--accent); background: var(--accent-w, rgba(0,0,0,.04)); }
-.files-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.files-menu { position: absolute; right: 0; top: 100%; z-index: 65; width: min(24rem, calc(100vw - 1.5rem));
-  max-height: min(60vh, 28rem); overflow-y: auto; padding: .5rem; border: 1px solid var(--rule);
-  border-radius: 12px; background: var(--surface); box-shadow: 0 4px 15px rgba(0,0,0,.08); }
-.files-menu .files-head { margin: .2rem .4rem .5rem; font-size: .78rem; color: var(--ink-3); }
-.files-menu ul { list-style: none; margin: 0; padding: 0; }
-.files-menu li { display: grid; grid-template-columns: auto 1fr; gap: .1rem .6rem; align-items: baseline;
-  padding: .5rem .4rem; border-top: 1px solid var(--rule); }
-.files-menu li:first-child { border-top: 0; }
-.files-menu .file-kind { grid-row: span 2; font-size: .7rem; letter-spacing: .02em; text-transform: uppercase;
-  color: var(--ink-3); min-width: 4.2rem; }
-.files-menu .file-name { font-size: .88rem; overflow-wrap: anywhere; }
-.files-menu .file-meta { font-size: .74rem; color: var(--ink-3); }
-.files-menu .files-note { margin: .4rem; font-size: .84rem; color: var(--ink-2); }
-.files-menu .files-records { margin-top: .4rem; padding-top: .4rem; border-top: 1px solid var(--rule);
-  display: grid; }
-.files-menu .files-record { display: block; width: 100%; min-height: 44px; padding: .4rem .5rem;
-  text-align: left; border: 0; border-radius: 8px; background: none; color: var(--ink); cursor: pointer;
-  font-size: .88rem; }
-.files-menu .files-record:hover:not(:disabled) { background: var(--accent-w, rgba(0,0,0,.04)); }
-.files-menu .files-record:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.files-menu .files-record:disabled { color: var(--ink-3); cursor: default; }
-.page-intro { margin: 1.5rem 0 2rem; max-width: 45rem; }
-.page-intro h1 { font: 400 2.4rem/1.2 var(--f-serif); letter-spacing: -0.025em; margin: 0.8rem 0; }
-.page-intro p:not(.eyebrow) { color: var(--ink-2); line-height: 1.8; }
 .row[role="button"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 #thread:empty { padding: 0; }
@@ -1696,8 +1519,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 #pane-advise[data-view="opening"] .intake { overflow-y: auto; min-height: 0; }
 .thread .el .body { font-size: 1rem; line-height: 1.7; }
 .jump-latest { align-self: center; flex: none; }
-#opening-fields { display: grid; grid-template-columns: minmax(7rem, 1fr) 3fr; gap: .5rem 1rem; }
-#opening-fields dd { margin: 0; overflow-wrap: anywhere; }
 #rail-body:empty { min-height: 3rem; }
 /* F-A-13. LANDSCAPE TABLETS: two columns still, and the story panel and the gap
    give way before the card does. The ribbon's name gives way the same way. */
@@ -1721,12 +1542,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
   :root { --gate-padding: 1.5rem 1rem; }
   .login { padding: 1.8rem; }
   .workspace-heading { padding-inline: .6rem; }
-  .workspace-actions { gap: .2rem; }
   .conversation { --talk-gutter: 1rem; }
   .thread { padding-block: 1.2rem; }
   .intake { width: calc(100% - 1.5rem); padding: 1.3rem; }
-  .history-head { align-items: stretch; flex-direction: column; }
-  .history-head select { min-width: 0; width: 100%; }
 }
 
 /* `body { overflow-x: hidden }` WAS HERE FOR TEN MINUTES AND WAS REMOVED --
@@ -1745,137 +1563,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
  * later, the check is still able to notice.
  */
 
-/* ===================== P17/P18 -- THE CASE FILE ===================== */
-
-.casefile-head {
-  align-items: center;
-  display: flex;
-  gap: 16px;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--rule);
-  padding-bottom: 12px;
-}
-.casefile-head h2 { font-size: 15px; font-weight: 600; margin: 0; }
-.casefile-head select {
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: 3px;
-  font: inherit;
-  font-size: 13px;
-  min-width: 260px;
-  padding: 7px 9px;
-}
-.casefile h3 {
-  font-family: var(--f-serif); font-size: 1rem; font-weight: 500;
-  margin: 1.2rem 0 0.4rem;
-}
-.casefile-lede { color: var(--ink-3); font-size: 0.82rem; margin: 0 0 0.6rem; }
-
-/* The currency block. The pill is the state; the list under it is every
- * conclusion that may not be shown as current, with the reason. */
-.currency { border: 1px solid var(--rule); border-radius: 4px; padding: 0.8rem 1rem; }
-.currency h3 { margin-top: 0; }
-.currency-state { font-size: 0.85rem; }
-.currency-said { color: var(--ink-2); }
-.currency-stale { list-style: none; margin: 0.5rem 0 0; padding: 0; }
-.currency-stale li {
-  border-left: 3px solid var(--amber); font-size: 0.85rem;
-  margin: 0.35rem 0; padding: 0.2rem 0 0.2rem 0.6rem;
-}
-.currency-history { margin-top: 0.6rem; font-size: 0.82rem; }
-.currency-history summary { cursor: pointer; color: var(--ink-2); }
-.node-row { border-bottom: 1px solid var(--rule); padding: 0.4rem 0; }
-.node-row[data-currency="stale"] { border-left: 3px solid var(--amber); padding-left: 0.6rem; }
-.revision { color: var(--ink-2); padding: 0.25rem 0; }
-
-/* One entry on the file. A superseded entry stays on the record, greyed and
- * marked, so the advocate can see both the old and the corrected reading. */
-.entry {
-  border-bottom: 1px solid var(--rule);
-  padding: 0.6rem 0;
-}
-.entry.superseded { color: var(--ink-3); }
-.entry.superseded .entry-text { text-decoration: line-through; }
-.entry-text { font-size: 0.92rem; }
-.entry-meta { color: var(--ink-3); font-size: 0.72rem; margin-top: 0.15rem; }
-.entry button.correct { margin-top: 0.4rem; }
-
-/* The correction form, shaped like intake because it asks the same way. */
-.correction {
-  background: var(--paper); border: 1px solid var(--rule); border-radius: 4px;
-  display: flex; flex-direction: column; gap: 0.3rem;
-  margin-top: 0.6rem; padding: 0.8rem 1rem;
-}
-.correction label {
-  color: var(--ink-3); font-size: 0.68rem; letter-spacing: 0.07em;
-  margin-top: 0.4rem; text-transform: uppercase;
-}
-.correction label .opt { letter-spacing: 0; text-transform: none; font-size: 0.72rem; }
-.correction input {
-  background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
-  font: inherit; font-size: 0.9rem; padding: 0.45rem 0.6rem;
-}
-.correction input:focus { border-color: var(--accent); outline: none; }
-
-/* ===================== P22 -- THE LEGAL PREMISES ===================== */
-.premises { border: 1px solid var(--rule); border-radius: 4px; padding: 0.8rem 1rem; margin-top: 1rem; }
-.premises h3 { margin-top: 0; }
-.premise-thread { border-top: 1px solid var(--rule); margin-top: 0.6rem; padding-top: 0.5rem; }
-.premise-thread h4 { font-size: 0.85rem; margin: 0 0 0.3rem; }
-.premise-row { padding: 0.35rem 0; }
-.premise-row[data-kind] .r-fields { margin: 0; }
-.premise-alt { color: var(--ink-3); font-size: 0.8rem; padding-left: 0.6rem; }
-.premise-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.4rem; }
-.premise-confirm label { color: var(--ink-3); font-size: 0.75rem; }
-.premise-confirm input {
-  background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
-  font: inherit; font-size: 0.85rem; padding: 0.35rem 0.5rem; flex: 1 1 240px;
-}
-
-/* ===================== P23 -- RELIEF AND ENFORCEABILITY ===================== */
-.relief { border: 1px solid var(--rule); border-radius: 4px; padding: 0.8rem 1rem; margin-top: 1rem; }
-.relief h3 { margin-top: 0; }
-.relief-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.5rem; }
-.relief-confirm input, .relief-confirm select {
-  background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
-  font: inherit; font-size: 0.82rem; padding: 0.3rem 0.45rem;
-}
-.relief-confirm input[name="remedy"] { flex: 1 1 200px; }
-.relief-confirm input[name="objective"], .relief-confirm input[name="reason"] { flex: 1 1 160px; }
-
-/* ===================== P24 -- BRIEFING READINESS ===================== */
-.briefing { border: 1px solid var(--rule); border-radius: 4px; padding: 0.6rem 0.8rem; margin: 0.6rem 0; background: var(--wash, transparent); }
-.briefing-head { display: flex; align-items: baseline; gap: 0.4rem; }
-.briefing-why { color: var(--ink-3); font-size: 0.82rem; }
-.briefing-need { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.4rem; font-size: 0.85rem; }
-.briefing-need.paused { color: var(--ink-3); }
-.briefing-need button.ghost { background: transparent; border: 1px solid var(--rule); border-radius: 3px; font: inherit; font-size: 0.78rem; padding: 0.15rem 0.5rem; cursor: pointer; }
-
-/* P33 / P25 / P27 -- custody, attribution and decisions on the case file. */
-.governance { margin-top: 1.5rem; }
-.governance h4 { margin: 1rem 0 .35rem; font-size: .95rem; }
-.binding, .decision, .retention-row {
-  display: flex; flex-wrap: wrap; gap: .5rem; align-items: baseline;
-  padding: .45rem .6rem; border-left: 3px solid var(--rule);
-  margin-bottom: .4rem;
-}
-.binding.unbound { border-left-color: var(--signal); }
-.decision.superseded { opacity: .7; }
-.binding-text, .decision span { flex: 1 1 20rem; }
-.authority-note, .retention-outstanding {
-  flex: 1 1 100%; font-size: .85rem; color: var(--ink-soft);
-}
-.retention-outstanding::before { content: "outstanding: "; font-weight: 600; }
-.binding-form, .decision-form {
-  display: flex; flex-wrap: wrap; gap: .4rem; align-items: center;
-  margin: .4rem 0 .8rem;
-}
-.binding-form input, .decision-form input, .decision-form select {
-  padding: .3rem .45rem; min-width: 8rem;
-}
-.binding-out, .decision-out { flex: 1 1 100%; }
-
-/* ===================== P36 — THE FORMS OF A MATTER'S RECORDS ======================
+/* ===================== P36 — THE FORMS OF THE PAGE'S WINDOWS ======================
  *
  * NO FIXED WIDTHS AND NO HORIZONTAL SCROLLER. The pane is a single column
  * that reflows; at 390px the labels sit above their inputs and nothing is
@@ -1893,31 +1581,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 .prep-form button { align-self: flex-start; margin-top: 0.5rem; }
 .state.problem { color: var(--signal); border-color: var(--signal); }
 /* Protected local drafts use the same restrained account-state vocabulary. */
-.draft-recovery:empty, .draft-status:empty { display: none; }
-.draft-recovery { display: grid; gap: .6rem; margin: 1rem 0; }
-.draft-recovery button { text-align: left; white-space: normal; }
-#draft-dialog { max-width: min(38rem, calc(100vw - 2rem)); color: var(--ink); background: var(--surface);
-  border: 1px solid var(--rule); border-radius: 16px; padding: 1.25rem; }
-#draft-dialog .dialog-head { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
-#draft-dialog h2 { font-size: 1.2rem; margin: .5rem 0; }
+.draft-status:empty { display: none; }
 .draft-status {
   flex: none; font-size: .82rem; line-height: 1.5; color: var(--ink-2);
   margin: 0 var(--talk-gutter, 2.2rem); padding: .4rem .5rem 0;
 }
-.opening-details { border-top: 1px solid var(--rule-2); padding: .8rem 0; margin-top: .65rem; }
-.opening-details summary { cursor: pointer; font-weight: 600; color: var(--ink); padding: .25rem 0; min-height: 2.5rem;
-  display: flex; align-items: center; }
-.opening-details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
-#intake textarea, #intake select {
-  width: 100%; box-sizing: border-box; border: 1px solid var(--field);
-  border-radius: 6px; background: var(--surface); color: var(--ink);
-  font: inherit; padding: .7rem .8rem; min-height: 44px;
-}
-#intake textarea { resize: vertical; line-height: 1.5; }
-#intake textarea:focus-visible, #intake select:focus-visible {
-  outline: 2px solid var(--accent); outline-offset: 2px;
-}
-#opening-fields dd { overflow-wrap: anywhere; white-space: pre-wrap; }
 
 .thread .el { border-left: 0; padding: 0; margin-bottom: 1.2rem; }
 .thread .el .body { margin: 0; }
@@ -1990,91 +1658,26 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
   .ribbon-account { order: 2; gap: 0.5rem; }
   .top-actions { order: 3; flex: 1 0 100%; margin: 0; }
 }
-/* Every dispute stays a short label on the board; details open separately. */
-.dispute-focus { text-align: left; white-space: normal; overflow-wrap: anywhere; }
-.dispute-focus[aria-pressed="true"] { background: var(--accent-w); color: var(--accent-2); }
-.dispute-proposal-list { margin: .3rem 0 .8rem; padding-left: 1.3rem; }
-.dispute-proposal-item { padding: .2rem .35rem; margin: .2rem 0; }
-.dispute-proposal-item.uncertain { background: #f1f2f0; border-radius: 6px; }
-.dispute-proposal-button { display: flex; flex-wrap: wrap; align-items: baseline;
-  gap: .1rem .45rem; width: 100%; min-height: 30px; padding: .2rem 0;
-  border: 0; background: transparent; text-align: left; font: inherit;
-  overflow-wrap: anywhere; }
-.dispute-proposal-button:hover { text-decoration: underline; }
-.dispute-proposal-status { color: var(--ink-2); font-size: .72rem; font-weight: 600; }
-.dispute-requirement-labels { margin: .05rem 0 .35rem; padding-left: 1.2rem;
-  font-size: .74rem; line-height: 1.4; color: var(--ink-2); }
-.dispute-requirement-labels li { margin: .12rem 0; }
-#dispute-reader, #brain-source-reader {
+#brain-source-reader {
   position: fixed; inset: 0 0 0 auto; margin: 0; padding: 0;
   width: min(40rem, 100vw); height: 100dvh; max-width: 100vw; max-height: 100dvh;
   border: 0; border-left: 1px solid var(--rule); border-radius: 0;
   background: var(--surface); color: var(--ink); overflow: hidden;
   box-shadow: -8px 0 36px rgba(0, 0, 0, .12);
 }
-#dispute-reader[open], #brain-source-reader[open] { display: flex; flex-direction: column; }
+#brain-source-reader[open] { display: flex; flex-direction: column; }
 #brain-source-status { flex: 0 0 auto; margin: .75rem 1.15rem; }
 #brain-source-status:empty { display: none; }
 .brain-source-text { white-space: pre-wrap; }
 .brain-source-links ul { list-style: none; margin: .3rem 0; padding-left: .8rem; }
 .brain-source-links li { margin: .2rem 0; }
 .brain-legal-source-links { margin: .2rem 0 .4rem; font-size: .8rem; line-height: 1.4; }
-#dispute-reader::backdrop, #brain-source-reader::backdrop { background: rgba(18, 48, 90, .35); }
-.dispute-reader-head { display: flex; justify-content: space-between;
-  align-items: start; gap: .75rem; flex: 0 0 auto; padding: 1rem 1.15rem;
-  border-bottom: 1px solid var(--rule); }
-.dispute-reader-head button { flex-shrink: 0; }
-.dispute-reader-head h2 { margin: .35rem 0; font: 500 1.15rem/1.4 var(--f-serif);
-  overflow-wrap: anywhere; }
+#brain-source-reader::backdrop { background: rgba(18, 48, 90, .35); }
 .dispute-reader-body { min-height: 0; overflow-y: auto; padding: 0 1.15rem 1rem;
   font-size: .85rem; line-height: 1.5; overflow-wrap: anywhere; }
 .dispute-reader-body p { margin: .55rem 0; }
 .dispute-reader-body blockquote { margin: .4rem 0 .8rem; padding-left: .7rem;
   border-left: 2px solid var(--rule); color: var(--ink-2); }
-.dispute-reader-status, .dispute-reader-source { font-weight: 600; }
-.dispute-reader-work { margin-top: 1rem; padding-top: .6rem;
-  border-top: 1px solid var(--rule); }
-.dispute-reader-work h3 { margin: .2rem 0; font-size: .9rem; }
-.dispute-reader-material { margin-top: 1rem; padding-top: .6rem;
-  border-top: 1px solid var(--rule); }
-.dispute-reader-material h3 { margin: .2rem 0; font-size: .9rem; }
-.dispute-reader-material-list { margin: .5rem 0 0; padding-left: 1.1rem; }
-.dispute-reader-material-list li { padding: .35rem 0; }
-.dispute-reader-material-list li + li { border-top: 1px solid var(--rule); }
-.dispute-reader-requirements { margin-top: 1rem; padding-top: .6rem;
-  border-top: 1px solid var(--rule); }
-.dispute-reader-requirements h3 { margin: .2rem 0; font-size: .9rem; }
-.dispute-reader-requirements-list { margin: .45rem 0; padding-left: 1.1rem; }
-.dispute-reader-requirements-list li { padding: .4rem 0; }
-.dispute-reader-requirements-list li + li { border-top: 1px solid var(--rule); }
-.dispute-reader-requirements-list h4 { margin: .1rem 0 .35rem; font-size: .85rem; }
-.dispute-requirement-source { font-weight: 600; }
-
-/* F-B-17. What a dispute needs, and where each row came from. The state is in
-   words beside the mark: colour and glyph are not how this is read. */
-.requirement-none { font-size: .8rem; color: var(--ink-2); margin: .35rem 0; }
-.requirement-list { list-style: none; margin: .45rem 0 .2rem; padding: 0; }
-.requirement { display: grid; grid-template-columns: 1.1rem 1fr auto;
-  gap: .1rem .45rem; align-items: baseline; padding: .4rem 0;
-  border-top: 1px solid var(--line, #deded8); }
-.requirement-mark { font-size: .9rem; line-height: 1.3; }
-.requirement--held .requirement-mark { color: var(--good); }
-.requirement--promised .requirement-mark { color: var(--amber); }
-.requirement--unavailable .requirement-mark { color: var(--signal); }
-.requirement--outstanding .requirement-mark { color: var(--ink-2); }
-.requirement--review-required .requirement-mark { color: var(--amber); }
-.requirement-need { font-size: .82rem; line-height: 1.4; }
-.requirement-state { font-size: .72rem; text-transform: uppercase;
-  letter-spacing: .04em; color: var(--ink-2); white-space: nowrap; }
-.requirement-force { grid-column: 2 / -1; justify-self: start; font-size: .68rem;
-  text-transform: uppercase; letter-spacing: .04em; color: var(--amber);
-  border: 1px solid var(--amber); border-radius: 2px; padding: 0 .25rem; }
-.requirement-basis { grid-column: 2 / -1; margin: .15rem 0 0; font-size: .74rem;
-  color: var(--ink-2); }
-.requirement-span { grid-column: 2 / -1; margin: .2rem 0 0; padding-left: .5rem;
-  border-left: 2px solid var(--rule); font-size: .74rem; line-height: 1.45;
-  color: var(--ink-2); }
-.requirement-summary { font-size: .78rem; font-weight: 600; margin: .45rem 0 .2rem; }
 
 /* A turn in progress: the stage reached, the time so far, the stages done, in a white card. */
 .thread .el.turn-progress { border: 1px solid var(--rule-2); border-radius: 12px; background: var(--surface);

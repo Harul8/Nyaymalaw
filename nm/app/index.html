@@ -8,7 +8,6 @@
 <!-- The design's fonts, from this server only (owner decision O24, plan AN.18). -->
 <link rel="stylesheet" href="/static/fonts.css">
 <link rel="stylesheet" href="/static/app.css">
-<link rel="stylesheet" href="/static/intake-materials.css">
 </head>
 <body>
 <a class="skip-link" href="#workspace-focus">Skip to your work</a>
@@ -452,104 +451,10 @@
   <section class="conversation" aria-label="Matter workspace">
     <div class="workspace-heading" id="workspace-focus" tabindex="-1">
       <div class="workspace-title"><h1 id="matter-heading">My work</h1></div>
-      <div class="workspace-actions">
-        <!-- F-B-04, owner 28 September 2026: the open matter's header keeps only
-             a file icon. Its drop-down lists every file held on the matter --
-             documents, images, audio, video and voice notes -- and then the
-             matter's records (cover, case file, attributed file, history,
-             protective handoff, draft recovery). The saved-status line is gone. -->
-        <div class="matter-files" id="matter-files" hidden>
-          <button type="button" id="files-toggle" class="files-toggle" aria-expanded="false"
-                  aria-controls="files-menu" aria-label="Files and matter details"
-                  title="Files and matter details">
-            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">
-              <path d="M11.5 2.5H5.8A1.3 1.3 0 0 0 4.5 3.8v12.4a1.3 1.3 0 0 0 1.3 1.3h8.4
-                       a1.3 1.3 0 0 0 1.3-1.3V6.5z M11.5 2.5v4h4 M7.5 10.5h5 M7.5 13.5h5"
-                    fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"
-                    stroke-linecap="round"/>
-            </svg>
-          </button>
-          <section id="files-menu" class="files-menu" aria-label="Files on this matter"
-                   hidden></section>
-        </div>
-      </div>
     </div>
-    <!-- ================= B3-B5 — INTAKE, BEFORE SUBSTANCE =================
-         The screens run before any fact is admitted, and the conflict screen
-         cannot run against a party set nobody has given. So the advocate is
-         asked WHO and WHAT SCOPE when they open the file, once, and the
-         answers travel with the first brief.
-
-         It is not a modal. An advocate who has already typed a brief and is
-         then covered by a dialog has to remember what they were saying; this
-         sits above the composer and stays until it is answered. -->
-    <form id="intake" class="intake" hidden>
-      <p class="eyebrow" id="intake-eyebrow">NEW MATTER</p>
-      <h2 id="intake-title">First, establish the brief.</h2>
-      <p class="intake-lede" id="intake-lede">
-        Record what you know now. Unknown details can follow in the conversation.
-        Opening does not clear conflicts, verify authority or establish a deadline.
-      </p>
-      <label for="in-title">Matter name <span class="opt">— optional working title</span></label>
-      <input id="in-title" maxlength="200" placeholder="Leave blank for a temporary name">
-      <label for="in-client">Who are you acting for?</label>
-      <textarea id="in-client" rows="2" maxlength="4000" placeholder="One client per line; leave blank if not known yet"></textarea>
-      <label for="in-client-type">Client type</label>
-      <select id="in-client-type"><option value="not_known">Not known yet</option><option value="individual">Individual</option><option value="organisation">Organisation</option><option value="mixed">Individuals and organisations</option></select>
-      <label for="in-scope">What would you like NM to help with?</label>
-      <textarea id="in-scope" rows="3" maxlength="4000" placeholder="A short instruction, or tell NM after opening"></textarea>
-      <p class="materials-muted">Your instruction to NM is separate from the client's underlying authority. You can provide the full account and material after opening.</p>
-      <details class="opening-details"><summary>Who is giving instructions?</summary>
-        <label for="in-instructing">Instruction source</label>
-        <select id="in-instructing"><option value="not_known">Not known yet</option><option value="client">The client directly</option><option value="representative">Another person for the client</option></select>
-        <div id="in-representative" hidden>
-          <label for="in-instructor">Their name</label><input id="in-instructor" maxlength="200">
-          <label for="in-instructor-role">Their role</label><input id="in-instructor-role" maxlength="200">
-          <label for="in-authority">Authority, if known</label><textarea id="in-authority" rows="2" maxlength="2000"></textarea>
-        </div>
-        <label class="check"><input type="checkbox" id="in-capacity">I have assessed that the client can give these instructions.</label>
-        <p class="materials-muted">Leave unchecked when not assessed. This records your assessment, not an independent verification or authority for NM to act.</p>
-      </details>
-      <details class="opening-details"><summary>Other parties</summary>
-        <label for="in-other-state">What is known?</label>
-        <select id="in-other-state"><option value="not_known">Not known yet</option><option value="identified">Other parties identified</option><option value="none_identified">No other party identified</option></select>
-        <label for="in-adverse">Opposing parties, if any</label>
-        <textarea id="in-adverse" rows="2" maxlength="4000" placeholder="One name per line; do not invent an opponent"></textarea>
-        <label for="in-others">Counterparties or other relevant people and organisations</label>
-        <textarea id="in-others" rows="2" maxlength="4000" placeholder="One name per line"></textarea>
-        <p class="materials-muted">Conflict checks cover only your own matters, not a firm-wide registry. Missing information is not clearance.</p>
-      </details>
-      <details class="opening-details"><summary>Current position</summary>
-        <label for="in-proceedings">Are proceedings under way?</label>
-        <select id="in-proceedings"><option value="not_known">Not known yet</option><option value="none">No proceedings</option><option value="exists">Proceedings exist</option></select>
-        <div id="in-proceeding-details">
-          <label for="in-forum">Court or forum, if known</label><input id="in-forum" maxlength="300">
-          <label for="in-reference">Case reference, if known</label><input id="in-reference" maxlength="200">
-          <label for="in-stage">Present stage, if known</label><input id="in-stage" maxlength="500">
-        </div>
-      </details>
-      <details class="opening-details"><summary>Anything time-sensitive?</summary>
-        <label for="in-urgency">Urgency</label>
-        <select id="in-urgency"><option value="not_known">Not known yet</option><option value="none_reported">None reported at present</option><option value="stated">A time-sensitive concern</option></select>
-        <div id="in-urgency-details" hidden>
-          <label for="in-urgency-note">What needs attention?</label><textarea id="in-urgency-note" rows="2" maxlength="2000"></textarea>
-          <label for="in-date">Reported date, if known</label><input id="in-date" type="date">
-          <label for="in-date-source">Where does that date come from?</label><input id="in-date-source" maxlength="500">
-          <p class="materials-muted">A reported date is not a computed or verified legal deadline.</p>
-        </div>
-      </details>
-
-      <div class="intake-actions">
-        <button type="submit" class="primary" id="in-go">Record and continue</button>
-        <button type="button" class="ghost" id="in-cancel" hidden>Cancel</button>
-      </div>
-      <div id="intake-state" role="status"></div>
-    </form>
-
     <div id="mode-line" class="mode-line" hidden></div>
     <div id="thread" class="thread"></div>
     <button type="button" id="reply-to-selection" class="reply-to-selection" hidden>Reply to this</button>
-    <div id="opening-board-status" class="opening-board-status" role="status" hidden></div>
 
     <!-- The protected draft's own state, beside the brief it describes. NOT a
          child of `main`: that is a two-column grid, and a third child takes a
@@ -676,14 +581,6 @@
   </dialog>
 </main>
 
-<dialog id="dispute-reader" aria-labelledby="dispute-reader-title">
-  <header class="dispute-reader-head">
-    <h2 id="dispute-reader-title"></h2>
-    <button type="button" id="dispute-reader-close" class="ghost">Close</button>
-  </header>
-  <div id="dispute-reader-body" class="dispute-reader-body" tabindex="0" aria-label="Dispute details"></div>
-</dialog>
-
 <dialog id="source-reader" aria-labelledby="source-title" aria-describedby="source-coverage">
   <header class="source-reader-head">
     <div><p class="hint">Source passage</p><h2 id="source-title">Source passage</h2></div>
@@ -717,131 +614,6 @@
     <button type="button" id="source-copy" disabled>Copy loaded passage with attribution</button>
   </footer>
 </dialog>
-
-<!-- F-B-02. The board's edit borrows THE opening form into this dialog, so there
-     is one form and one set of fields; nothing here is a copy of it. -->
-<dialog id="opening-edit" class="account-dialog opening-edit" aria-labelledby="intake-title">
-  <div id="opening-edit-host"></div>
-</dialog>
-
-<dialog id="draft-dialog" aria-labelledby="draft-title">
-  <div class="dialog-head"><h2 id="draft-title">Saved drafts for this matter</h2>
-    <button type="button" id="draft-close" class="ghost">Close</button></div>
-  <p class="help">Choose a version to continue. Your current unsent work is kept separately.
-    Drafts expire 72 hours after their last changed save. Signing out discards local drafts.</p>
-  <div id="draft-recovery" class="draft-recovery" aria-live="polite"></div>
-</dialog>
-
-<!-- ======================== THE RECORD ========================
-     Every turn as it was SERVED, read back from the encrypted transcript
-     store. Nothing else keeps it: the matter holds facts, the metrics hold
-     counts and no client words, and the answer was held by neither. -->
-<!-- ===================== P17/P18 — THE CASE FILE =====================
-     Every entry on the file with where it came from, and every conclusion
-     with what it rests on and whether it still holds. The one place an
-     advocate corrects an entry by hand: the correction supersedes the entry,
-     keeps the old one on the record, and marks exactly what rested on it
-     stale -- the cover and the board say so until the next brief reworks it. -->
-<main id="pane-casefile" class="single" hidden>
-  <section class="casefile">
-    <div class="casefile-head">
-      <h2>The case file</h2>
-      <select id="casefile-matter" aria-label="Matter"><option value="">Choose a matter…</option></select>
-    </div>
-    <div id="casefile-state"></div>
-    <details id="opening-record" class="opening-details" hidden>
-      <summary>Recorded opening brief</summary>
-      <p class="help">These are recorded instructions, not verified facts or legal clearance.</p>
-      <dl id="opening-fields" class="r-fields"></dl>
-    </details>
-
-    <section class="currency" id="currency" aria-labelledby="currency-h">
-      <h3 id="currency-h">What still holds</h3>
-      <div id="currency-state" class="currency-state"></div>
-      <ul id="currency-stale" class="currency-stale"></ul>
-      <details class="currency-history">
-        <summary>Every conclusion, and every revision</summary>
-        <div id="currency-nodes"></div>
-        <div id="currency-history"></div>
-      </details>
-    </section>
-
-    <section class="premises" id="premises" aria-labelledby="premises-h" hidden>
-      <h3 id="premises-h">The legal premises</h3>
-      <p class="casefile-lede">A limitation rests on which provision governs,
-        what starts the period, and which forum binds. Where I inferred one I
-        say so and do not enter a deadline; confirm it and the date becomes a
-        deadline. Correct arithmetic cannot establish any of the three.</p>
-      <div id="premises-state" class="currency-state"></div>
-      <div id="premises-threads"></div>
-    </section>
-
-    <section class="relief" id="relief" aria-labelledby="relief-h" hidden>
-      <h3 id="relief-h">Relief and enforceability</h3>
-      <p class="casefile-lede">A legally strong claim can still be worth
-        nothing — the debtor has no assets, the order comes too late, the decree
-        cannot be executed, or the suit costs more than it recovers. I read
-        relief against the objective on availability, value, timing and
-        enforceability; a route that costs more than it wins is flagged, not
-        withheld. State what you know and I will not treat a remedy as
-        delivering when the file says it cannot.</p>
-      <div id="relief-state" class="currency-state"></div>
-      <div id="relief-threads"></div>
-    </section>
-
-    <section class="briefing-pane" id="briefing-pane" aria-labelledby="briefing-h" hidden>
-      <h3 id="briefing-h">Briefing readiness</h3>
-      <p class="casefile-lede">Answering a turn is not the same as finishing the
-        intake. I am ready for the task only when no controlling gap is open.
-        Where you cannot obtain something, mark it — I pause it with a resume
-        trigger instead of asking again, and say plainly that intake is not
-        complete while it is outstanding.</p>
-      <div id="briefing-host"></div>
-    </section>
-
-    <section class="governance" id="governance" aria-labelledby="governance-h">
-      <h3 id="governance-h">Custody, attribution and decisions</h3>
-      <p class="casefile-lede">Three questions this file has to be able to
-        answer: which dispute a document belongs to, what has been decided
-        about the advice, and what is being kept or erased and why. None of
-        them is answered by a default — an unattached document contributes
-        nothing until you say where it belongs, and a decision recorded here
-        is not authority to file, send, settle or concede.</p>
-
-      <h4 id="bindings-h">Source attribution</h4>
-      <div id="bindings-state" class="currency-state"></div>
-      <div id="bindings-host" aria-labelledby="bindings-h"></div>
-
-      <h4 id="decisions-h">Decisions on advice</h4>
-      <div id="decisions-state" class="currency-state"></div>
-      <div id="decisions-host" aria-labelledby="decisions-h"></div>
-
-      <h4 id="retention-h">Retention and erasure</h4>
-      <div id="retention-state" class="currency-state"></div>
-      <div id="retention-host" aria-labelledby="retention-h"></div>
-    </section>
-
-    <h3 id="entries-h">Entries</h3>
-    <p class="casefile-lede">Correct an entry here and I will mark everything
-      that rested on it as not current until the next brief reworks it. The
-      entry you corrected stays on the record, marked superseded.</p>
-    <div id="casefile-entries" aria-labelledby="entries-h"></div>
-  </section>
-</main>
-
-<main id="pane-history" class="single" hidden>
-  <section class="history">
-    <div class="page-intro"><p class="eyebrow">THE WORKING RECORD</p><h1>Return to the conversation.</h1>
-      <p>Review what was recorded for a matter. Earlier advice retains the limitations of its original file.</p></div>
-    <div class="history-head">
-      <h2>Conversations, as they were served</h2>
-      <label class="sr-only" for="history-matter">Matter to review</label>
-      <select id="history-matter"><option value="">Choose a matter…</option></select>
-    </div>
-    <div id="history-state"></div>
-    <div id="history-body"></div>
-  </section>
-</main>
 
 <dialog id="sessions-dialog" class="account-dialog" aria-labelledby="sessions-title">
   <div class="dialog-heading"><div><p class="eyebrow">ACCOUNT SECURITY</p>
@@ -1031,6 +803,5 @@
 <script src="/static/draft-vault.js"></script>
 <script src="/static/brain-sources.js"></script>
 <script src="/static/app.js"></script>
-<script src="/static/intake-materials.js"></script>
 </body>
 </html>

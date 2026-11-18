@@ -28,11 +28,6 @@ const state = {
   // carries them onto the file.
   intake: null,
   turns: [],
-  // BK-40. WHAT THE ADVOCATE WAS PART-WAY THROUGH WRITING, kept across a
-  // session that ended under them, and SCOPED TO THE ADVOCATE IT BELONGS TO.
-  // Working text stays in memory. Only authenticated ciphertext may survive
-  // the tab, through the account/device-bound draft vault below.
-  draft: null,
   // `none` | `signing_out` | `unconfirmed`. A logout the server did not
   // confirm is its own state, because the alternative is showing an ordinary
   // sign-in screen and letting that stand as proof.
@@ -46,14 +41,7 @@ const state = {
   railGeneration: 0,
   matterListGeneration: 0,
   sessionGeneration: 0,
-  searchGeneration: 0,
-  historyGeneration: 0,
-  historyListGeneration: 0,
   sessionsGeneration: 0,
-  // A case-file response may return after the advocate has selected another
-  // file. Only the newest read may paint, and its entries and currency must
-  // become visible as one coherent primary snapshot.
-  casefileGeneration: 0,
 };
 
 let registrationInFlight = false;
@@ -78,24 +66,15 @@ let heldSend = null;
 // opening), not to the composer DOM. The immutable pending request belongs to
 // that same context, even if its acknowledgement or session is lost.
 const intentContexts = new Map();
-const INTAKE_INPUTS = [
-  'in-title', 'in-client', 'in-client-type', 'in-adverse', 'in-others', 'in-scope',
-  'in-instructing', 'in-instructor', 'in-instructor-role', 'in-authority',
-  'in-other-state', 'in-proceedings', 'in-forum', 'in-reference', 'in-stage',
-  'in-urgency', 'in-urgency-note', 'in-date', 'in-date-source',
-];
 let activeIntent = null;
 window.NmBrainSources?.configure({request:api, scope:() => ({
   advocate:state.advocate, session:state.sessionGeneration,
   matter:state.matterId, chat:activeIntent?.chatId || null,
 }), openAsk:(answer, element, ask, opener) => openAskedItem(answer, ask, opener)});
-// F-B-02. The board's edit of the opening details, while its dialog is open.
-let openingEdit = null;
 let draftVault = null;
 let draftWrite = 0;
 let draftUnlock = Promise.resolve();
 let storedDraftCount = 0;
-let recoveryGeneration = 0;
 let checkpointTimer = null;
 let restoredTimer = null;
 // The signed-in advocate's allowance as the server last said it (plan AN.17); see loadUsage.
@@ -110,17 +89,15 @@ catch { /* Unavailable storage is reported before any durable-save claim. */ }
 
 function draftHasWork(intent) {
   return Boolean(intent && ((intent.chatId && !intent.matterId)
-    || intent.text.trim() || intent.pending.length
-    || intent.intake || (intent.intakeOpen
-      && Object.values(intent.fields || {}).some(value => String(value).trim()))));
+    || intent.text.trim() || intent.pending.length || intent.intake));
 }
 
-// WHAT IS TRULY UNSENT: words typed, a message waiting to be sent or confirmed, the opening form's fields. An open conversation
-// alone is kept as a draft (draftHasWork), so the page can find its way back to it, but it is nothing unsent: Sign out asks about
-// unsent drafts only where there are some (found mending the browser journeys, 15 Nov 2026 - it asked after every conversation).
+// WHAT IS TRULY UNSENT: words typed, or a message waiting to be sent or confirmed. An open conversation alone is kept as a draft
+// (draftHasWork), so the page can find its way back to it, but it is nothing unsent: Sign out asks about unsent drafts only where
+// there are some (found mending the browser journeys, 15 Nov 2026 - it asked after every conversation). The opening form's fields
+// went with the form (plan AN.57, D292): a draft kept from before holding only those is nothing the page can show.
 function draftHasUnsentWork(intent) {
-  return Boolean(intent && (intent.text.trim() || intent.pending.length || intent.intake
-    || (intent.intakeOpen && Object.values(intent.fields || {}).some(value => String(value).trim()))));
+  return Boolean(intent && (intent.text.trim() || intent.pending.length || intent.intake));
 }
 
 async function saveProtectedDraft({previousKey = null} = {}) {
@@ -149,7 +126,6 @@ async function saveProtectedDraft({previousKey = null} = {}) {
     const snapshot = {
       key:held.key, advocate:held.advocate, workspace:held.workspace,
       matterId:held.matterId, chatId:held.chatId, text:held.text, intake:held.intake,
-      intakeOpen:held.intakeOpen, fields:held.fields, capacity:held.capacity,
       opening:held.opening || null,
       editedAt:held.editedAt || Date.now(),
       pending:held.pending.map(entry=>({turnId:entry.turnId, brief:entry.brief,
@@ -195,12 +171,6 @@ function showDraftRestored() {
   restoredTimer = setTimeout(() => { $('draft-restored').textContent = ''; }, 5000);
 }
 
-function closeDraftRecovery() {
-  recoveryGeneration += 1;
-  $('draft-dialog').close();
-  $('draft-recovery').replaceChildren();
-}
-
 async function unlockDrafts() {
   const generation = state.sessionGeneration;
   const account = state.advocate;
@@ -225,89 +195,10 @@ async function unlockDrafts() {
   }
 }
 
-async function openDraftRecovery() {
-  if (!state.advocate || !activeIntent) return;
-  const generation = ++recoveryGeneration;
-  const session = state.sessionGeneration;
-  const context = activeIntent;
-  const current = () => generation === recoveryGeneration
-    && session === state.sessionGeneration && ownsIntent(context);
-  const panel = $('draft-recovery');
-  $('draft-title').textContent = context.matterId ? 'Saved drafts for this matter' : 'Saved opening drafts';
-  panel.textContent = 'Loading protected drafts…';
-  $('draft-dialog').showModal();
-  try {
-    await draftUnlock;
-    if (!current()) return;
-    const vault = draftVault;
-    if (!vault?.key) throw new Error('Draft protection is unavailable.');
-    const drafts = await vault.list();
-    if (!current()) return;
-    panel.replaceChildren();
-    let count = 0;
-    for (const saved of drafts) {
-      const intent = saved.intent;
-      if (intent.advocate !== state.advocate || intent.workspace !== state.workspace
-          || (intent.key !== context.key
-            && (context.matterId || intent.matterId || !intent.chatId))
-          || !draftHasWork(intent)) continue;
-      count += 1;
-      const button = document.createElement('button');
-      button.type = 'button'; button.className = 'ghost';
-      button.textContent = `Recover unsent draft saved ${new Date(saved.savedAt).toLocaleString()} · expires ${new Date(saved.expiresAt).toLocaleString()}`;
-      button.addEventListener('click', async () => {
-        const buttons = [...panel.querySelectorAll('button')];
-        buttons.forEach(item => { item.disabled = true; });
-        try {
-          if (!current()) return;
-          if (intent.matterId) await api(`/api/matters/${encodeURIComponent(intent.matterId)}`);
-          if (!current()) return;
-          snapshotIntent();
-          if (draftHasWork(context) && !await saveProtectedDraft()) {
-            throw new Error('Your current draft could not be protected. It has not been replaced.');
-          }
-          if (!current()) return;
-          await vault.adopt(saved);
-          if (!current()) return;
-          intent.editedAt = saved.savedAt;
-          intent.pending.forEach(entry=>{entry.context=intent;});
-          // A turn may still be working on the server after a reload: follow it,
-          // then fetch its saved answer under the same turn id.
-          intent.pending.forEach(entry=>{
-            if (!entry.answer && entry.turnId) watchProgress(entry, () => deliver(entry));
-          });
-          // Recover explicitly, keeping other tab versions in protected storage.
-          intentContexts.set(intent.key, intent);
-          activeIntent = null;
-          if (intent.matterId) { showTab('advise'); await showThreadBoard(intent.matterId); }
-          else {
-            if (intent.chatId) await restorePendingChat(intent.chatId);
-            else startMatter();
-          }
-          if (session !== state.sessionGeneration || !ownsIntent(intent)) return;
-          closeDraftRecovery();
-          showDraftRestored();
-          $('message').focus();
-        } catch (error) {
-          if (current()) {
-            panel.appendChild(stateBlock('loud', `Draft was not opened: ${error.message}`));
-          }
-        } finally { buttons.forEach(item => { item.disabled = false; }); }
-      });
-      panel.appendChild(button);
-    }
-    if (!count) panel.textContent = 'No recoverable drafts for this input.';
-  } catch (error) {
-    if (current()) {
-      panel.replaceChildren(stateBlock('loud', 'Draft recovery is unavailable. ' + error.message));
-    }
-  }
-}
-
 window.addEventListener('storage', (event) => {
   if (draftVault && event.key === draftVault.epochKey && draftVault.key) {
     draftVault.lock();
-    intentContexts.clear(); state.draft = null;
+    intentContexts.clear();
     clearPrivileged();
     showGate('This account signed out or discarded its drafts in another tab. Sign in again.');
   }
@@ -333,43 +224,25 @@ function snapshotIntent({ edited = false } = {}) {
   if (!ownsIntent(activeIntent)) return;
   activeIntent.text = $('message').value;
   activeIntent.intake = state.intake;
-  // While the board's edit borrows the opening form (F-B-02), its fields hold
-  // the matter's recorded details, not this tab's unsent opening draft.
-  if (!openingEdit) {
-    activeIntent.intakeOpen = !$('intake').hidden;
-    activeIntent.fields = Object.fromEntries(INTAKE_INPUTS.map((id) => [id, $(id).value]));
-    activeIntent.capacity = $('in-capacity').checked;
-  }
   if (edited) { activeIntent.editedAt = Date.now(); saveProtectedDraft(); }
 }
 
 function restoreIntent() {
-  // Any change of context ends a board edit first; its unsaved changes go.
-  if (openingEdit) closeOpeningEdit({ restore: false });
   const intent = activeIntent;
   $('message').value = intent ? intent.text : '';
   sizeComposer();
   state.intake = intent ? intent.intake : null;
-  INTAKE_INPUTS.forEach((id) => {
-    $(id).value = (intent && intent.fields[id]) || ($(id).tagName === 'SELECT' ? 'not_known' : '');
-  });
-  openingSections();
-  $('in-capacity').checked = Boolean(intent && intent.capacity);
-  $('intake-state').textContent = '';
-  showIntake(false);
 }
 
 function selectIntent(matterId, { opening = false, chatId = null } = {}) {
   snapshotIntent();
   clearDraftNotices();
-  closeDraftRecovery();
   if (!state.advocate || (!matterId && !opening)) activeIntent = null;
   else {
     const key = intentKey(matterId, chatId);
     if (!intentContexts.has(key)) intentContexts.set(key, {
       key, advocate: state.advocate, workspace: state.workspace,
-      matterId: matterId || null, chatId, text: '', intake: null, intakeOpen: false,
-      fields: {}, capacity: false, pending: [],
+      matterId: matterId || null, chatId, text: '', intake: null, pending: [],
     });
     activeIntent = intentContexts.get(key);
   }
@@ -419,10 +292,10 @@ function sessionEnded(message) {
 }
 
 // THE DRAFT IS FROZEN, NOT DISCARDED. An advocate half-way through a brief
-// when the session lapses has typed the most expensive thing on the screen.
+// when the session lapses has typed the most expensive thing on the screen. Its words are taken into the open conversation's
+// intent, which the device's draft keeping holds; the sign-in that follows no longer reads a draft kept here (plan AN.57, D292).
 function keepDraft() {
   snapshotIntent();
-  state.draft = activeIntent;
 }
 
 // PRIVILEGED CONTENT COMES OFF THE GLASS IMMEDIATELY, in one place, so a
@@ -431,10 +304,8 @@ function keepDraft() {
 function clearPrivileged() {
   const adminEntry = $('admin-entry');
   if (adminEntry) adminEntry.hidden = true;
-  closeDisputeReader(false);
   window.NmBrainSources?.close(false);
   if (draftVault) draftVault.lock();
-  closeDraftRecovery();
   clearDraftNotices();
   stopIdleWatch();
   setAccountMenu(false);
@@ -443,17 +314,11 @@ function clearPrivileged() {
   stopDictation({ discard: true });
   closeLiveWords();
   setPlusMenu(false);
-  // The borrowed form holds this matter's details; they leave with the session.
-  closeOpeningEdit({ restore: false });
   $('dictation-state').textContent = '';
   // The allowance belongs to the advocate who signed in, and leaves with them.
   forgetUsage();
   state.sessionGeneration += 1;
-  state.searchGeneration += 1;
-  state.historyGeneration += 1;
-  state.historyListGeneration += 1;
   state.sessionsGeneration += 1;
-  state.casefileGeneration += 1;
   $('sessions-dialog').close();
   $('ai-sharing-dialog').close();
   aiPermission = null;
@@ -477,8 +342,7 @@ function clearPrivileged() {
   state.matterId = null;
   state.turns = [];
   ['thread', 'rail-body', 'rail-meta', 'matter-board-body', 'matter-board-meta',
-   'history-body', 'who-name', 'account-initials', 'profile-name', 'profile-email', 'profile-workspace',
-   'who-detail', 'files-menu', 'history-state']
+   'who-name', 'account-initials', 'profile-name', 'profile-email', 'profile-workspace', 'who-detail']
     .forEach((id) => { const el = $(id); if (el) el.textContent = ''; });
   fitBoard();
   $('matter-heading').textContent = 'My work';
@@ -486,28 +350,14 @@ function clearPrivileged() {
   state.matterVersion = null;
   state.matterReady = false;
   state.intake = null;
-  INTAKE_INPUTS.forEach((id) => { $(id).value = ''; });
-  $('opening-fields').replaceChildren();
-  $('opening-record').hidden = true;
-  $('in-capacity').checked = false;
   // THE RIBBON AND THE PERSON MENU FORGET WHO WAS HERE (F-A-17).
   ['who-name', 'profile-name', 'profile-email', 'profile-workspace']
     .forEach((id) => { const el = $(id); if (el) el.textContent = '—'; });
-  closeFilesMenu();
-  $('matter-files').hidden = true;
   window.NmBrainSources.close(false);
   $('board-status').hidden = true;
   $('board-status').textContent = '';
   const composer = $('message');
   if (composer) composer.value = '';
-  const chooser = $('history-matter');
-  if (chooser) chooser.innerHTML = '<option value="">Choose a matter…</option>';
-  const cf = $('casefile-matter');
-  if (cf) cf.innerHTML = '<option value="">Choose a matter…</option>';
-  ['casefile-entries', 'currency-stale', 'currency-nodes', 'currency-history',
-   'currency-state', 'casefile-state'].forEach((id) => {
-    const el = $(id); if (el) el.textContent = '';
-  });
   window.dispatchEvent(new Event('nm:session-ended'));
 }
 
@@ -817,23 +667,10 @@ function stateBlock(kind, text) {
   return d;
 }
 
-function field(dl, label, value) {
-  const dt = document.createElement('dt'); dt.textContent = label;
-  const dd = document.createElement('dd');
-  if (value && value.pill) {
-    const s = document.createElement('span');
-    s.className = `pill ${value.pill}`; s.textContent = value.text;
-    dd.appendChild(s);
-  } else {
-    dd.textContent = value;
-  }
-  dl.append(dt, dd);
-}
-
 // The conversation window's views (owner, 16 Oct 2026): 'list' is the conversation
-// history; 'opening' a new or saved conversation and 'matter' an earlier matter
-// record, both the conversation with the matter board on its left once the board has
-// something on it (P38, 21 Oct 2026).
+// history; 'opening' a new or saved conversation, with the matter board on its left once
+// the board has something on it (P38, 21 Oct 2026). An earlier matter record is no longer
+// opened (plan AN.57, D292).
 function setWorkView(view) {
   $('pane-advise').dataset.view = view;
   if (view === 'list') $('top-history').setAttribute('aria-current', 'page');
@@ -845,7 +682,6 @@ function setWorkView(view) {
 // opening. Any render still in flight for the old matter loses the right to
 // paint, because the generation it holds is no longer current.
 function closeOpenMatter() {
-  closeDisputeReader(false);
   window.NmBrainSources.close(false);
   state.railGeneration += 1;
   state.boardGeneration = (state.boardGeneration || 0) + 1;
@@ -859,12 +695,6 @@ function closeOpenMatter() {
   fitBoard();
   toggleMatterBoard(false);
   selectMatterRow();
-  $('pane-advise').dataset.matterId = '';
-  $('opening-board-status').hidden = true;
-  $('opening-board-status').replaceChildren();
-  $('opening-fields').replaceChildren();
-  $('opening-record').hidden = true;
-  closeFilesMenu();
 }
 
 async function restorePendingChat(chatId) {
@@ -982,9 +812,8 @@ async function showMatterList({ preserveIntent = false } = {}) {
 function selectMatterRow() {
   let current = null;
   const chatId = activeIntent && activeIntent.chatId;
-  for (const row of $('rail-body').querySelectorAll('[data-matter-id], [data-chat-id]')) {
-    const selected = row.dataset.matterId ? row.dataset.matterId === state.matterId
-      : Boolean(chatId) && row.dataset.chatId === chatId;
+  for (const row of $('rail-body').querySelectorAll('[data-chat-id]')) {
+    const selected = Boolean(chatId) && row.dataset.chatId === chatId;
     row.classList.toggle('selected', selected);
     row.setAttribute('aria-pressed', String(selected));
     if (selected) current = row;
@@ -996,9 +825,14 @@ function selectMatterRow() {
 // Load more adds the next ten, so a long history does not make the first sight of it wait.
 const HISTORY_PAGE = 10;
 
+// THE HISTORY LISTS CONVERSATIONS (plan AN.57, D292). The server's list holds a matter saved before conversations after them; those
+// records stay stored and the page no longer opens them, so their rows, their count and the pages that hold only them are not shown.
 function historyCounts(data) {
-  return `${data.chat_count} conversation${data.chat_count === 1 ? '' : 's'}`
-    + (data.row_count ? ` · ${data.row_count} earlier matter record${data.row_count === 1 ? '' : 's'}` : '');
+  return `${data.chat_count} conversation${data.chat_count === 1 ? '' : 's'}`;
+}
+
+function moreConversations(page) {
+  return Boolean(page.has_more) && page.next_offset !== null && page.next_offset < page.chat_count;
 }
 
 function historyWhen(at) {
@@ -1062,33 +896,10 @@ function historyChatRow(chat, generation, session) {
   return row;
 }
 
-function historyMatterRow(m) {
-  const row = document.createElement('div');
-  row.className = 'row matter-list-row';
-  row.dataset.matterId = m.matter_id;
-  row.setAttribute('role', 'button');
-  row.tabIndex = 0;
-  row.setAttribute('aria-label', `Open ${m.matter}`);
-  const t = document.createElement('div');
-  t.className = 'r-title'; t.textContent = m.matter;
-  const kind = document.createElement('div');
-  kind.className = 'hint';
-  kind.textContent = `Earlier matter record${historyWhen(m.last_updated)}`;
-  row.append(t, kind);
-  row.onclick = () => showThreadBoard(m.matter_id);
-  row.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      showThreadBoard(m.matter_id);
-    }
-  });
-  return row;
-}
-
 // THE LOAD MORE BUTTON under the rows, with a line saying how many are shown of how many. Each press asks for
 // the next ten; a press that fails says so and leaves what is shown where it is.
 function offerMoreHistory(body, first, shownCount, rowsOf, stale) {
-  if (!first.has_more || first.next_offset === null) return;
+  if (!moreConversations(first)) return;
   const footer = document.createElement('div');
   footer.className = 'rail-more';
   const status = document.createElement('p');
@@ -1101,7 +912,7 @@ function offerMoreHistory(body, first, shownCount, rowsOf, stale) {
   footer.append(status, button);
   body.append(footer);
   let count = shownCount;
-  let total = first.total;
+  let total = first.chat_count;
   let next = first.next_offset;
   status.textContent = `Showing ${count} of ${total}`;
   button.addEventListener('click', async () => {
@@ -1121,11 +932,11 @@ function offerMoreHistory(body, first, shownCount, rowsOf, stale) {
     const rows = rowsOf(page);
     footer.before(...rows);
     count += rows.length;
-    total = page.total;
+    total = page.chat_count;
     next = page.next_offset;
     $('rail-meta').textContent = historyCounts(page);
     selectMatterRow();
-    if (page.has_more && next !== null) {
+    if (moreConversations(page)) {
       status.textContent = `Showing ${count} of ${total}`;
       button.textContent = 'Load more';
       button.disabled = false;
@@ -1164,7 +975,7 @@ async function loadMatterList() {
   const notice = incomplete ? stateBlock('unbuildable',
     'Some work could not be loaded. This list may be incomplete. Retry before relying on it.') : null;
 
-  if (!data.matters.length && !data.chats.length) {
+  if (!data.chats.length) {
     body.replaceChildren(notice || stateBlock('empty', 'No conversations yet. Start one with + New matter.'));
     return;
   }
@@ -1179,11 +990,6 @@ async function loadMatterList() {
       shown.add(`chat:${chat.chat_id}`);
       rows.push(historyChatRow(chat, generation, session));
     }
-    for (const m of page.matters) {
-      if (shown.has(`matter:${m.matter_id}`)) continue;
-      shown.add(`matter:${m.matter_id}`);
-      rows.push(historyMatterRow(m));
-    }
     return rows;
   };
   const firstRows = rowsOf(data);
@@ -1192,757 +998,6 @@ async function loadMatterList() {
   if (notice) body.prepend(notice);
   selectMatterRow();
 }
-
-async function showThreadBoard(
-  matterId, { restore = true, closeNavigator = true, adoptOpening = false,
-    deferBoard = false } = {}) {
-  closeDisputeReader(false);
-  // Only a confirmed opening operation may transfer its local draft to the
-  // newly saved shell. Selecting a list row must never imply this transfer.
-  if (adoptOpening && ownsIntent(activeIntent) && !activeIntent.matterId
-      && !activeIntent.pending.length) {
-    snapshotIntent();
-    const previousKey = activeIntent.key;
-    intentContexts.delete(activeIntent.key);
-    activeIntent.matterId = matterId;
-    activeIntent.key = intentKey(matterId);
-    activeIntent.intakeOpen = false;
-    intentContexts.set(activeIntent.key, activeIntent);
-    restoreIntent();
-    await saveProtectedDraft({previousKey});
-  }
-  selectIntent(matterId);
-  if (state.matterId !== matterId) state.disputeFocus = null;
-  const generation = ++state.railGeneration;
-  // OPENING A MATTER CLOSES THE LIST at narrow widths. Leaving it up would
-  // put the advocate on the answer they asked for with the index still over
-  // it, which is the same unreachability wearing the other face.
-  if (closeNavigator) toggleMatterBoard(false);
-  setWorkView(deferBoard ? 'opening' : 'matter');
-  state.matterId = matterId;
-  selectMatterRow();
-  state.matterVersion = null;
-  state.matterReady = false;
-  updateWorkspace();
-  $('matter-heading').textContent = 'Loading matter…';
-  $('matter-heading').removeAttribute('title');
-  closeFilesMenu();
-  if (restore) {
-    state.turns = [];
-    $('thread').textContent = '';
-  }
-  window.dispatchEvent(new Event('nm:matter-changed'));
-  $('pane-advise').dataset.matterId = matterId;
-  $('opening-board-status').hidden = true;
-  $('opening-board-status').replaceChildren();
-  if (deferBoard) showMatterStatus('building', 'Reading the matter board…');
-  const body = $('matter-board-body');
-  $('matter-board-meta').textContent = '';
-  body.replaceChildren();
-
-  let data;
-  try {
-    data = await api(`/api/matters/${matterId}`);
-    if (generation !== state.railGeneration) return;
-    // BK-36. THE VERSION THIS TAB HAS NOW SEEN. Every brief carries it, so a
-    // tab that loaded the file and sat is refused rather than writing onto a
-    // version it never read.
-    if (!Number.isInteger(data.version) || data.version < 0) {
-      throw new Error('The saved file version could not be established. Please reopen the matter.');
-    }
-    state.matterVersion = data.version;
-    state.matterReady = true;
-  } catch (e) {
-    if (generation !== state.railGeneration) return;
-    body.replaceChildren(stateBlock(
-      'unbuildable', `The matter could not be loaded: ${e.message}`));
-    fitBoard();
-    $('matter-board-meta').textContent = 'Matter could not be loaded';
-    if (deferBoard) showOpeningBoardFailure(matterId,
-      `The saved matter could not be read: ${e.message}`);
-    return;
-  }
-
-  if (deferBoard) {
-    $('opening-board-status').hidden = true;
-    $('opening-board-status').replaceChildren();
-    setWorkView('matter');
-  }
-
-  $('matter-board-meta').textContent = '';
-  $('matter-heading').textContent = data.title || 'Untitled matter';
-  $('matter-heading').title = data.title || 'Untitled matter';
-  updateWorkspace();
-  window.dispatchEvent(new Event('nm:matter-changed'));
-
-  // BK-33. THE CONVERSATION COMES BACK WITH THE FILE.
-  //
-  // Opening a matter loaded its thread board and nothing else, so a reload of
-  // a live authenticated session landed on a blank Advise pane: the advocate
-  // was signed in, the file was there, and everything they had been told was
-  // gone from the screen. The transcript is the only thing that keeps what
-  // was SERVED -- the matter holds facts and the metrics hold counts with no
-  // client words -- so this is the only place it can come from.
-  // ONLY WHEN THERE IS NOTHING LIVE TO REPLACE.
-  //
-  // `showThreadBoard` runs after EVERY send, and restoring unconditionally
-  // overwrote the turn that had just been served with its read-back copy --
-  // which keeps what the advocate read and NOT the run's gates, latency or
-  // cost. So a live answer silently became `read back from the record` the
-  // moment its own board refreshed, and the working under it emptied.
-  //
-  // Caught by two journey phases at once: 5b found the gate states gone from
-  // a turn it had just watched being served, and 9 found the restore working
-  // perfectly in isolation and not in sequence.
-  if (restore && !(await restoreConversation(matterId, generation))) return;
-  if (generation !== state.railGeneration) return;
-
-  renderDisputeBoard(body, data.agenda, data.proposed_disputes,
-    data.material_record, data.requirements_record);
-  fitBoard();
-  const selected = selectMatterRow();
-  if (selected) {
-    selected.querySelector('.r-title').textContent = data.title || 'Untitled matter';
-    selected.setAttribute('aria-label', `Open ${data.title || 'Untitled matter'}`);
-  }
-}
-
-function requirementsFor(record, row) {
-  const rows = record?.by_dispute?.[row.id || row.thread_id];
-  return Array.isArray(rows) ? rows : [];
-}
-
-function requirementStatusFor(record, row) {
-  const status = record?.status_by_dispute?.[row.id || row.thread_id];
-  if (['ok', 'partial', 'unavailable', 'unassessed'].includes(status)) return status;
-  return record && record.state !== 'ok' ? 'unavailable' : 'unassessed';
-}
-
-function requirementReviewPending(record, row) {
-  return record?.coverage_by_dispute?.[row.id || row.thread_id]?.verification_current === false
-    && requirementsFor(record, row).length > 0;
-}
-
-function renderDisputeBoard(body, agenda, projection, materialRecord = null,
-                            requirementsRecord = null) {
-  body.replaceChildren();
-  const worked = Array.isArray(agenda?.disputes) ? agenda.disputes : null;
-  const proposed = Array.isArray(projection?.rows) ? projection.rows : null;
-  if (!worked) {
-    body.appendChild(stateBlock('unbuildable', 'Dispute progress could not be read.'));
-  }
-  if (!proposed) {
-    body.appendChild(stateBlock('unbuildable', 'Proposed disputes could not be read.'));
-  } else if (projection.state !== 'ok') {
-    body.appendChild(stateBlock('unbuildable',
-      'Some proposed disputes could not be read. Reopen the matter before relying on this list.'));
-  }
-  if (worked && !worked.some((row) => row.thread_id === state.disputeFocus)) {
-    state.disputeFocus = null;
-  }
-  if (!(worked?.length || proposed?.length)) {
-    if (worked && proposed && projection.state === 'ok') {
-      body.appendChild(stateBlock('empty', 'No disputes identified yet.'));
-    }
-    return;
-  }
-  const heading = document.createElement('h3');
-  heading.textContent = 'Disputes';
-  body.appendChild(heading);
-  const instruction = document.createElement('p'); instruction.className = 'hint';
-  instruction.textContent = 'Click or press Enter for details.';
-  body.appendChild(instruction);
-  const list = document.createElement('ul'); list.className = 'dispute-proposal-list';
-  const focusButtons = [];
-  const setFocus = (threadId) => {
-    state.disputeFocus = threadId;
-    for (const [button, id] of focusButtons) {
-      button.setAttribute('aria-pressed', String(id === threadId));
-    }
-  };
-  const addRow = (row, isWorked) => {
-    const uncertain = !isWorked && row.identification === 'needs_clarification';
-    const unassessed = !isWorked && row.identification !== 'identified' && !uncertain;
-    const item = document.createElement('li');
-    item.className = uncertain ? 'dispute-proposal-item uncertain' : 'dispute-proposal-item';
-    const button = document.createElement('button'); button.type = 'button';
-    button.className = isWorked ? 'dispute-proposal-button dispute-focus'
-      : 'dispute-proposal-button';
-    button.dataset.matterId = state.matterId || '';
-    button.setAttribute('aria-haspopup', 'dialog');
-    button.setAttribute('aria-controls', 'dispute-reader');
-    button.title = 'Read dispute details';
-    if (isWorked) {
-      button.setAttribute('aria-pressed', String(state.disputeFocus === row.thread_id));
-      focusButtons.push([button, row.thread_id]);
-    }
-    const label = document.createElement('span');
-    label.textContent = row.label?.trim() || row.statement;
-    button.appendChild(label);
-    if (uncertain || unassessed) {
-      const status = document.createElement('span');
-      status.className = 'dispute-proposal-status';
-      status.textContent = uncertain ? 'Provisional' : 'Not assessed';
-      button.appendChild(status);
-    }
-    const open = () => openDisputeReader(
-      row, button, isWorked ? setFocus : null, materialRecord, requirementsRecord);
-    button.addEventListener('click', open);
-    item.appendChild(button);
-    const labels = requirementsFor(requirementsRecord, row)
-      .map(need => typeof need?.label === 'string' ? need.label.trim() : '')
-      .filter(Boolean);
-    if (labels.length) {
-      const requirements = document.createElement('ul');
-      requirements.className = 'dispute-requirement-labels';
-      for (const text of labels) {
-        const labelItem = document.createElement('li');
-        labelItem.textContent = text;
-        requirements.appendChild(labelItem);
-      }
-      item.appendChild(requirements);
-    }
-    if (requirementReviewPending(requirementsRecord, row)
-        || requirementStatusFor(requirementsRecord, row) === 'partial') {
-      const coverage = document.createElement('p');
-      coverage.className = 'hint';
-      coverage.textContent = requirementReviewPending(requirementsRecord, row)
-        ? 'Source review pending; see details.' : 'Legal research incomplete; see details.';
-      item.appendChild(coverage);
-    }
-    list.appendChild(item);
-  };
-  for (const row of worked || []) addRow(row, true);
-  for (const row of proposed || []) addRow(row, false);
-  body.appendChild(list);
-}
-
-let disputeReaderTrigger = null;
-
-function closeDisputeReader(restoreFocus = true) {
-  if (!restoreFocus) {
-    disputeReaderTrigger = null;
-    $('dispute-reader-title').textContent = '';
-    $('dispute-reader-body').replaceChildren();
-  }
-  if ($('dispute-reader').open) $('dispute-reader').close();
-}
-
-function appendMaterialRows(host, rows) {
-  const list = document.createElement('ul');
-  list.className = 'dispute-reader-material-list';
-  const basisLabels = {
-    stated: 'As stated in your message',
-    attributed: 'Attributed to another person',
-    described_record: 'Described record; not examined',
-    inferred: 'Inference to check',
-    uncertain: 'Uncertain account',
-    hypothetical: 'Hypothetical',
-  };
-  const relationLabels = {
-    adds: 'Adds to earlier account',
-    corrects: 'Corrects earlier account',
-    contradicts: 'Conflicts with earlier account',
-    withdraws: 'Withdraws earlier account',
-  };
-  for (const detail of rows) {
-    const item = document.createElement('li');
-    const description = document.createElement('p');
-    const category = typeof detail.kind === 'string' && detail.kind
-      ? detail.kind[0].toUpperCase() + detail.kind.slice(1) : 'Detail';
-    description.textContent = `${category}: ${detail.statement || ''}`;
-    item.appendChild(description);
-    const attribution = document.createElement('p');
-    attribution.className = 'hint';
-    attribution.textContent = [basisLabels[detail.basis] || 'Attribution unassessed',
-      relationLabels[detail.relation]].filter(Boolean).join(' · ');
-    item.appendChild(attribution);
-    if (detail.why_material) {
-      const relevance = document.createElement('p');
-      relevance.textContent = `Relevance: ${detail.why_material}`;
-      item.appendChild(relevance);
-    }
-    if (detail.quoted) {
-      const sourceLabel = document.createElement('p');
-      sourceLabel.className = 'dispute-reader-source';
-      sourceLabel.textContent = 'Source: your saved message';
-      sourceLabel.dataset.sourceTurnId = detail.source_turn_id || '';
-      item.appendChild(sourceLabel);
-      const source = document.createElement('blockquote');
-      source.textContent = detail.quoted;
-      item.appendChild(source);
-    }
-    for (const prior of detail.prior_references || []) {
-      const reference = document.createElement('blockquote');
-      reference.textContent = `Earlier ${prior.role === 'nm' ? 'NM reply' : 'your message'}: ${prior.quoted}`;
-      item.appendChild(reference);
-    }
-    list.appendChild(item);
-  }
-  host.appendChild(list);
-}
-
-function openDisputeReader(row, trigger, setFocus = null, materialRecord = null,
-                           requirementsRecord = null) {
-  const dialog = $('dispute-reader');
-  disputeReaderTrigger = trigger;
-  const label = row.label?.trim() || row.statement;
-  $('dispute-reader-title').textContent = label;
-  const body = $('dispute-reader-body'); body.replaceChildren();
-  if (row.statement && row.statement !== label) {
-    const statement = document.createElement('p');
-    statement.textContent = row.statement; body.appendChild(statement);
-  }
-  if (!setFocus && row.identification === 'needs_clarification') {
-    const status = document.createElement('p');
-    status.className = 'dispute-reader-status'; status.textContent = 'Provisional';
-    body.appendChild(status);
-  } else if (!setFocus && row.identification !== 'identified') {
-    const status = document.createElement('p');
-    status.className = 'dispute-reader-status';
-    status.textContent = 'Identification has not been assessed.';
-    body.appendChild(status);
-  }
-  if (row.why_material) {
-    const reason = document.createElement('p');
-    reason.textContent = `Why listed: ${row.why_material}`;
-    body.appendChild(reason);
-  }
-  if (row.clarification && row.identification !== 'identified') {
-    const clarification = document.createElement('p');
-    clarification.textContent = `To clarify: ${row.clarification}`;
-    body.appendChild(clarification);
-  }
-  if (row.quoted) {
-    const sourceLabel = document.createElement('p');
-    sourceLabel.className = 'dispute-reader-source';
-    sourceLabel.textContent = 'Source: your saved message';
-    sourceLabel.dataset.sourceTurnId = row.source_turn_id;
-    body.appendChild(sourceLabel);
-    const source = document.createElement('blockquote');
-    source.textContent = row.quoted; body.appendChild(source);
-  }
-  for (const prior of row.prior_references || []) {
-    const reference = document.createElement('blockquote');
-    reference.textContent = `Earlier ${prior.role === 'nm' ? 'NM reply' : 'your message'}: ${prior.quoted}`;
-    body.appendChild(reference);
-  }
-  renderLegalRequirements(body, row, requirementsRecord);
-  if (setFocus && !row.why_material && !row.quoted) {
-    const missing = document.createElement('p');
-    missing.className = 'hint';
-    missing.textContent = 'No identification reason or source passage is stored with this dispute.';
-    body.appendChild(missing);
-  }
-  if (materialRecord?.state) {
-    const linkedMaterial = materialRecord.by_dispute?.[row.id || row.thread_id] || [];
-    const material = document.createElement('section');
-    material.className = 'dispute-reader-material';
-    const heading = document.createElement('h3');
-    heading.textContent = 'Material from the conversation';
-    material.appendChild(heading);
-    const explanation = document.createElement('p');
-    explanation.className = 'hint';
-    explanation.textContent = 'Linked to this dispute. These sourced readings of the account are not findings.';
-    material.appendChild(explanation);
-    if (materialRecord.state !== 'ok') {
-      const incomplete = document.createElement('p');
-      incomplete.className = 'hint';
-      incomplete.textContent = 'Some saved material could not be read. Reopen the matter before relying on this record.';
-      material.appendChild(incomplete);
-    }
-    if (Array.isArray(linkedMaterial) && linkedMaterial.length) {
-      appendMaterialRows(material, linkedMaterial);
-    } else {
-      const empty = document.createElement('p');
-      empty.className = 'hint';
-      empty.textContent = 'No material is linked to this dispute yet.';
-      material.appendChild(empty);
-    }
-    body.appendChild(material);
-    if (Array.isArray(materialRecord.matter) && materialRecord.matter.length) {
-      const matterWide = document.createElement('section');
-      matterWide.className = 'dispute-reader-material';
-      const title = document.createElement('h3');
-      title.textContent = 'Matter-wide material';
-      matterWide.appendChild(title);
-      const note = document.createElement('p');
-      note.className = 'hint';
-      note.textContent = 'Recorded for the matter as a whole; not specifically linked to this dispute.';
-      matterWide.appendChild(note);
-      appendMaterialRows(matterWide, materialRecord.matter);
-      body.appendChild(matterWide);
-    }
-    if (Array.isArray(materialRecord.unresolved) && materialRecord.unresolved.length) {
-      const unassigned = document.createElement('details');
-      unassigned.className = 'dispute-reader-material';
-      const title = document.createElement('summary');
-      title.textContent = `Unassigned material (${materialRecord.unresolved.length})`;
-      unassigned.appendChild(title);
-      const note = document.createElement('p');
-      note.className = 'hint';
-      note.textContent = materialRecord.unverified_count > 0
-        ? `${materialRecord.unverified_count} older ${materialRecord.unverified_count === 1 ? 'reading has' : 'readings have'} not been independently grounded. Shown from your saved words, they are excluded from legal research until checked.`
-        : 'These details have not been assigned to a dispute.';
-      unassigned.appendChild(note);
-      appendMaterialRows(unassigned, materialRecord.unresolved);
-      body.appendChild(unassigned);
-    }
-  }
-  if (setFocus) {
-    const work = document.createElement('section');
-    work.className = 'dispute-reader-work';
-    const heading = document.createElement('h3');
-    heading.textContent = 'Current work'; work.appendChild(heading);
-    const statuses = { not_assessed: 'Not yet reviewed', needs_review: 'Needs review',
-      needs_information: 'Needs information', waiting: 'Waiting for information',
-      paused: 'Paused', reviewed: 'Reviewed on current record' };
-    const status = document.createElement('p');
-    status.textContent = statuses[row.status] || 'Progress not established';
-    work.appendChild(status);
-    if (row.next_need) {
-      const next = document.createElement('p');
-      next.textContent = row.next_need; work.appendChild(next);
-    }
-    renderRequirements(work, row);
-    body.appendChild(work);
-    const focus = document.createElement('button');
-    focus.type = 'button'; focus.className = 'ghost';
-    focus.textContent = state.disputeFocus === row.thread_id
-      ? 'Return to whole matter' : 'Focus next message on this dispute';
-    focus.addEventListener('click', () => {
-      setFocus(state.disputeFocus === row.thread_id ? null : row.thread_id);
-      closeDisputeReader();
-    });
-    body.appendChild(focus);
-  }
-  if (!dialog.open) dialog.showModal();
-  $('dispute-reader-close').focus();
-  body.scrollTop = 0;
-}
-
-function renderLegalRequirements(host, row, record) {
-  const section = document.createElement('section');
-  section.className = 'dispute-reader-requirements';
-  const heading = document.createElement('h3');
-  heading.textContent = 'Legal requirements';
-  section.appendChild(heading);
-  const status = requirementStatusFor(record, row);
-  const reviewPending = requirementReviewPending(record, row);
-  if (reviewPending) {
-    const review = document.createElement('p');
-    review.className = 'hint';
-    review.textContent = 'These saved items await the current source review. '
-      + 'They remain available as history and are not used as checked law for a new response.';
-    section.appendChild(review);
-  }
-  if (status !== 'ok' && status !== 'partial') {
-    const unavailable = document.createElement('p');
-    unavailable.className = 'hint';
-    unavailable.textContent = status === 'unassessed'
-      ? 'Legal requirements have not been assessed for this dispute yet. '
-        + 'This is not a conclusion about the governing law.'
-      : 'Legal requirements could not be read for this dispute right now. '
-        + 'This does not establish that no law applies.';
-    section.appendChild(unavailable);
-    host.appendChild(section);
-    return;
-  }
-  if (status === 'partial') {
-    const coverage = document.createElement('p');
-    coverage.className = 'hint';
-    coverage.textContent = reviewPending ? 'Legal research is incomplete.'
-      : 'Legal research is incomplete. Listed items use checked passages from the available corpus.';
-    section.appendChild(coverage);
-    const diagnostics = record?.diagnostics_by_dispute?.[row.id || row.thread_id];
-    if (Array.isArray(diagnostics)) {
-      for (const reason of diagnostics) {
-        if (typeof reason !== 'string' || !reason.trim()) continue;
-        const detail = document.createElement('p');
-        detail.className = 'hint';
-        detail.textContent = reason;
-        section.appendChild(detail);
-      }
-    }
-  }
-  const rows = requirementsFor(record, row);
-  if (!rows.length) {
-    const empty = document.createElement('p');
-    empty.className = 'hint';
-    empty.textContent = 'No requirements are recorded for this dispute yet. '
-      + 'This is not a conclusion about the governing law.';
-    section.appendChild(empty);
-    host.appendChild(section);
-    return;
-  }
-  const list = document.createElement('ul');
-  list.className = 'dispute-reader-requirements-list';
-  for (const need of rows) {
-    const item = document.createElement('li');
-    const label = document.createElement('h4');
-    label.textContent = need.label || 'Requirement';
-    item.appendChild(label);
-    for (const [title, value] of [
-      ['What is needed', need.need], ['Why it matters', need.why],
-      ['Legal force', reviewPending ? 'Saved interpretation; source review pending'
-        : need.force === 'required' ? 'Required if cited law applies'
-        : need.force === 'strengthening' ? 'Strengthening' : 'Not assessed'],
-      ['Conversation record', need.record_status === 'mentioned'
-        ? 'Related material was mentioned; it has not been examined.'
-        : need.record_status === 'not_mentioned'
-          ? 'No related material is linked in the current conversation record.'
-          : 'Not assessed'],
-    ]) {
-      if (!value) continue;
-      const detail = document.createElement('p');
-      detail.textContent = `${title}: ${value}`;
-      item.appendChild(detail);
-    }
-    if (Array.isArray(need.sources) && need.sources.length) {
-      for (const source of need.sources) {
-        const citation = document.createElement('p');
-        citation.className = 'dispute-requirement-source';
-        const label = window.NmBrainSources.labelFor(source);
-        const readable = window.NmBrainSources?.isReadableRecordSource(source);
-        if (readable) {
-          const link = document.createElement('button');
-          link.type = 'button'; link.className = 'citation-link';
-          link.textContent = label;
-          link.setAttribute('aria-label', `Open saved passage: ${label}`);
-          link.addEventListener('click', () => window.NmBrainSources.openRecordSource(
-            source, link, {reviewPending}));
-          citation.appendChild(link);
-        } else {
-          citation.textContent = label;
-        }
-        item.appendChild(citation);
-        const verification = source.verification;
-        if (verification && verification.support_excerpt) {
-          const support = document.createElement('p');
-          support.textContent = `Supporting words: “${verification.support_excerpt}”`;
-          item.appendChild(support);
-        }
-        if (verification && verification.scope_excerpt) {
-          const scope = document.createElement('p');
-          scope.textContent = `Limiting condition: “${verification.scope_excerpt}”`;
-          item.appendChild(scope);
-        }
-        if (!readable) {
-          const passage = document.createElement('blockquote');
-          passage.textContent = source.text || '';
-          item.appendChild(passage);
-        }
-      }
-    } else {
-      const missing = document.createElement('p');
-      missing.className = 'hint';
-      missing.textContent = 'No supporting passage is recorded for this item.';
-      item.appendChild(missing);
-    }
-    list.appendChild(item);
-  }
-  section.appendChild(list);
-  host.appendChild(section);
-}
-
-$('dispute-reader-close').addEventListener('click', () => closeDisputeReader());
-$('dispute-reader').addEventListener('close', () => {
-  const trigger = disputeReaderTrigger;
-  disputeReaderTrigger = null;
-  if (trigger?.isConnected && state.matterId === trigger.dataset.matterId) trigger.focus();
-});
-
-// F-B-17. WHAT THIS DISPUTE NEEDS, read in the worked dispute's detail pane.
-//
-// Every row states which passage requires it and shows those words, because a
-// requirement an advocate cannot check is this product inventing law and
-// asking them to chase it. The mark is DERIVED on the server from the file and
-// from what the advocate answered; nothing here can set one.
-const REQUIREMENT_MARK = {
-  held: { mark: '\u2713', label: 'on the file' },
-  promised: { mark: '\u25CF', label: 'promised' },
-  unavailable: { mark: '\u2717', label: 'not available' },
-  outstanding: { mark: '\u25CB', label: 'still outstanding' },
-};
-
-function renderRequirements(item, row) {
-  if (row.requirements_state !== 'established') {
-    const none = document.createElement('p');
-    none.className = 'requirement-none';
-    // Nothing retrieved is not the same as nothing needed, and the board must
-    // not let the reader treat the first as the second.
-    none.textContent = 'What this dispute needs has not been established yet.';
-    item.appendChild(none);
-    return;
-  }
-  const list = document.createElement('ul');
-  list.className = 'requirement-list';
-  for (const need of row.requirements || []) {
-    const needsRelevanceReview = need.applicability_state === 'review_required';
-    const mark = needsRelevanceReview ? { mark: '?', label: 'legal relevance needs re-review' }
-      : REQUIREMENT_MARK[need.state] || REQUIREMENT_MARK.outstanding;
-    const line = document.createElement('li');
-    line.className = `requirement requirement--${need.state}`
-      + (needsRelevanceReview ? ' requirement--review-required' : '');
-    const tick = document.createElement('span');
-    tick.className = 'requirement-mark'; tick.textContent = mark.mark;
-    // The mark is decorative; the state is in words for anyone who cannot see
-    // a colour or a glyph.
-    tick.setAttribute('aria-hidden', 'true');
-    line.appendChild(tick);
-    const what = document.createElement('span');
-    what.className = 'requirement-need';
-    what.textContent = need.need;
-    line.appendChild(what);
-    const state = document.createElement('span');
-    state.className = 'requirement-state';
-    state.textContent = needsRelevanceReview ? 'legal relevance needs re-review'
-      : need.state === 'promised' && need.due
-      ? `promised by ${need.due}` : need.state === 'promised'
-        ? 'promised — no confirmed date' : mark.label;
-    line.appendChild(state);
-    if (need.force === 'strengthening') {
-      const force = document.createElement('span');
-      force.className = 'requirement-force';
-      force.textContent = 'strengthens';
-      force.title = 'Read the quoted judgment for its conditions and applicability.';
-      line.appendChild(force);
-    }
-    const basis = document.createElement('p');
-    basis.className = 'requirement-basis';
-    basis.textContent = (needsRelevanceReview
-      ? 'Previously read passage; relevance to the corrected dispute is not established. '
-      : '') + (need.basis ? `${need.source} \u00b7 ${need.basis}` : need.source);
-    line.appendChild(basis);
-    const span = document.createElement('blockquote');
-    span.className = 'requirement-span';
-    span.textContent = need.span;
-    line.appendChild(span);
-    list.appendChild(line);
-  }
-  item.appendChild(list);
-  const state = document.createElement('p');
-  state.className = 'requirement-summary';
-  // A changed dispute needs a law-relevance review before any earlier
-  // checklist can be presented as settled, even if no new question is due.
-  const relevanceReviews = row.applicability_review_required || 0;
-  state.textContent = relevanceReviews
-    ? `${relevanceReviews} checklist item${relevanceReviews === 1 ? ' needs' : 's need'} legal relevance re-review`
-      + (row.outstanding_requirements
-        ? `; ${row.outstanding_requirements} still to ask about.` : '.')
-    : row.requirements_settled
-    ? 'Checklist follow-up complete on the available record; this is not a decision on the dispute.'
-    : row.nothing_to_ask
-      ? 'Nothing further to ask; waiting on what was promised.'
-      : `${row.outstanding_requirements} still to ask about.`;
-  item.appendChild(state);
-}
-
-function renderOpeningBrief(record) {
-  const dl = $('opening-fields');
-  dl.replaceChildren();
-  $('opening-record').hidden = record?.state !== 'recorded';
-  if (record?.state !== 'recorded') return;
-  const brief = record.brief;
-  for (const [name, role] of Object.entries(record.parties || {})) {
-    field(dl, role === 'client' ? 'acting for' : role === 'adverse' ? 'opposing party' : 'other party', name);
-  }
-  const labels = { not_known: 'Not yet known', none_identified: 'None identified',
-    none_reported: 'None reported', none: 'No proceedings reported',
-    exists: 'Proceedings reported', stated: 'Urgency reported',
-    representative: 'Through a representative', client: 'Client directly',
-    identified: 'Parties recorded', individual: 'Individual', organisation: 'Organisation', mixed: 'Multiple types' };
-  for (const [key, label] of [
-    ['objective', 'immediate task'], ['client_type', 'client type'], ['instructing', 'instructions from'],
-    ['instructor_name', 'instructor'], ['instructor_role', 'role'], ['authority_basis', 'stated authority'],
-    ['other_party_state', 'other parties'], ['proceedings', 'current position'], ['forum', 'forum'],
-    ['case_reference', 'reference'], ['stage', 'stage'], ['urgency', 'urgency'],
-    ['urgency_details', 'reported urgency'], ['reported_date', 'reported date — not calculated'],
-    ['date_source', 'date source'],
-  ]) {
-    const value = brief[key];
-    if (value || key === 'objective') field(dl, label, labels[value] || value || 'To be discussed');
-  }
-  field(dl, 'capacity', (brief.capacity?.state || 'not_assessed').replaceAll('_', ' '));
-}
-
-function showMatterStatus(kind, message) {
-  const status = $('opening-board-status');
-  status.hidden = false;
-  status.replaceChildren(stateBlock(kind, message));
-}
-
-function showOpeningBoardFailure(matterId, message) {
-  const status = $('opening-board-status');
-  status.hidden = false;
-  const retry = document.createElement('button');
-  retry.type = 'button';
-  retry.className = 'ghost';
-  retry.textContent = 'Retry matter board';
-  retry.addEventListener('click', () => showThreadBoard(matterId, {
-    restore: false, closeNavigator: false, deferBoard: true,
-  }));
-  status.replaceChildren(stateBlock('unbuildable', message), retry);
-}
-
-// BK-33. THE SERVED CONVERSATION, READ BACK.
-//
-// The read-back keeps what the advocate read. How each answer was made is
-// not shown in the conversation (owner, 28 September 2026); it stays in the
-// turn's sealed history record, and nothing here renders run numbers that
-// the read-back does not carry.
-async function restoreConversation(matterId, generation = state.railGeneration) {
-  state.turns = [];
-  let d;
-  try {
-    d = await api(`/api/matters/${matterId}/transcript`);
-  } catch (e) {
-    if (generation !== state.railGeneration) return false;
-    // NOT SILENT. A conversation that could not be read back is not a
-    // conversation that did not happen, and an empty pane says the second.
-    state.turns = [{
-      brief: '',
-      answer: {
-        elements: [{
-          kind: 'ground', disclosure: true, section: 'needed', refs: [],
-          signal: 'none',
-          text: `I could not read this matter's served conversation back: `
-              + `${e.message}. I cannot verify the conversation's completeness `
-              + `or integrity from this failed read. Do not assume missing records are intact.`,
-        }],
-        metrics: null, restored: true,
-      },
-    }];
-    reconcileIntent([]);
-    repaint();
-    showConversationFromStart();
-    return true;
-  }
-
-  if (generation !== state.railGeneration) return false;
-
-  state.turns = withOpeningNotes((d.turns || []).map(restoredTurn), d.opening_changes);
-
-  reconcileIntent(d.turns || []);
-  if (d.unreadable_reason) {
-    state.turns.push({
-      brief: '',
-      answer: {
-        elements: [{
-          kind: 'ground', disclosure: true, section: 'needed', refs: [],
-          signal: 'none', text: d.unreadable_reason,
-        }],
-        metrics: null, restored: true,
-      },
-    });
-  }
-  repaint();
-  showConversationFromStart();
-  return true;
-}
-
-/* -------------------------------------------------------------- the answer --- */
-
 
 // Both matter re-entry and History consume the same release projection.
 // Diagnostic presence alone never turns a withheld draft into ordinary advice.
@@ -1970,94 +1025,6 @@ function restoredTurn(turn) {
     // LB-83. The rating last saved on this reply, shown on its thumb.
     rating: typeof turn.rating === 'string' ? turn.rating : 'none',
   } };
-}
-
-// P24. THE BRIEFING READINESS SURFACE. Intake is READY only when no gap is
-// open; a completed turn does not make it so. A need the advocate cannot get is
-// paused with a resume trigger and not re-asked; the controls are the stop and
-// resume decision, so the loop on unavailable material is the advocate's call.
-function renderBriefing(brief, matterId, version) {
-  const box = document.createElement('div');
-  box.className = 'briefing';
-  box.dataset.state = brief.state;
-  const head = document.createElement('div');
-  head.className = 'briefing-head';
-  const pill = document.createElement('span');
-  pill.className = 'pill ' + (brief.state === 'ready' ? 'ok'
-    : brief.state === 'blocked' ? 'blocked' : 'unknown');
-  pill.textContent = brief.state === 'ready' ? 'intake ready'
-    : brief.state === 'blocked' ? 'paused — decision owed' : 'intake open';
-  const why = document.createElement('span');
-  why.className = 'briefing-why';
-  why.textContent = ' ' + (brief.intake_complete_refused || brief.why || '');
-  head.append(pill, why);
-  box.appendChild(head);
-
-  (brief.open_needs || []).forEach((need) => {
-    const row = document.createElement('div');
-    row.className = 'briefing-need';
-    const t = document.createElement('span'); t.textContent = need;
-    const btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'ghost'; btn.textContent = "I can't get this";
-    const note = document.createElement('span'); note.className = 'hint';
-    btn.addEventListener('click', async () => {
-      note.textContent = 'Recording…';
-      try {
-        const out = await api(`/api/matters/${matterId}/briefing/unavailable`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ need, resume_when: 'new material or an instruction arrives',
-            expected_version: ((state.matterId === matterId && state.matterVersion > version) ? state.matterVersion : version) }),
-        });
-        if (state.matterId === matterId) state.matterVersion = out.version;
-        note.textContent = 'Paused. I will not ask again until it can be obtained.';
-        btn.disabled = true;
-      } catch (err) {
-        note.textContent = (err.detail && err.detail.why) || err.message;
-      }
-    });
-    row.append(t, btn, note);
-    box.appendChild(row);
-  });
-
-  (brief.paused || []).forEach((p) => {
-    const row = document.createElement('div');
-    row.className = 'briefing-need paused';
-    const t = document.createElement('span');
-    t.textContent = `paused: ${p.need} — resumes when ${p.resume_when}`;
-    const btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'ghost'; btn.textContent = 'Resume';
-    const note = document.createElement('span'); note.className = 'hint';
-    btn.addEventListener('click', async () => {
-      note.textContent = 'Resuming…';
-      try {
-        const out = await api(`/api/matters/${matterId}/briefing/resume`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ need: p.need,
-            expected_version: ((state.matterId === matterId && state.matterVersion > version) ? state.matterVersion : version) }),
-        });
-        if (state.matterId === matterId) state.matterVersion = out.version;
-        note.textContent = 'Resumed. I will raise it again at the useful moment.';
-        btn.disabled = true;
-      } catch (err) {
-        note.textContent = (err.detail && err.detail.why) || err.message;
-      }
-    });
-    row.append(t, btn, note);
-    box.appendChild(row);
-  });
-  return box;
-}
-
-// P24. The briefing readiness on the CASE FILE, from the cover, so it survives
-// across turns and a restart. Reuses the same control as the Advise pane.
-function renderBriefingPane(matterId, brief, version) {
-  const pane = $('briefing-pane');
-  const host = $('briefing-host');
-  if (!pane || !host) return;
-  host.textContent = '';
-  if (!brief || brief.state === 'not_assessed') { pane.hidden = true; return; }
-  pane.hidden = false;
-  host.appendChild(renderBriefing(brief, matterId, version));
 }
 
 // F-B-02. A CORRECTION OF THE OPENING DETAILS, in the conversation where it
@@ -2574,9 +1541,6 @@ function boardAction(entry, change) {
       b.after(said);
       try {
         said.textContent = ` ${await run()}`;
-        if (matterId === state.matterId) {
-          await showThreadBoard(matterId, { restore: false, closeNavigator: false }).catch(() => {});
-        }
       } catch (e) {
         if (e.obsolete) return;
         b.disabled = false;
@@ -2670,23 +1634,6 @@ function boardAction(entry, change) {
     return span;
   }
   return null;
-}
-
-// Each correction goes before the first turn known to come after it.
-function withOpeningNotes(turns, changes) {
-  const time = (value) => { const t = Date.parse(value || ''); return Number.isNaN(t) ? null : t; };
-  const out = [...turns];
-  for (const change of Array.isArray(changes) ? changes : []) {
-    if (!change || !Array.isArray(change.changes) || !change.changes.length) continue;
-    const at = time(change.at);
-    const later = at === null ? -1 : out.findIndex((entry) => {
-      const t = time(entry.note ? entry.note.at : entry.answer?.at);
-      return t !== null && t > at;
-    });
-    out.splice(later < 0 ? out.length : later, 0,
-      { note: { at: change.at, changes: change.changes.map(String) } });
-  }
-  return out;
 }
 
 function renderTurn(entry) {
@@ -3992,20 +2939,6 @@ function showDisputeOnBoard(dispute) {
   const title = card.querySelector('.dtitle');
   if (title) title.focus();
 }
-
-// Opening a saved matter starts with its first turn. New live replies still
-// follow the latest turn through the send path.
-function showConversationFromStart() {
-  const t = $('thread');
-  t.scrollTop = 0;
-  $('jump-latest').hidden = t.scrollHeight <= t.clientHeight;
-}
-
-// THE MATTER BOARD ON THE LEFT (owner decisions, 16 Oct 2026), laid out as the readability
-// design shows it (owner, 18 Oct 2026: "exactly the way your artifact has presented"). It is
-// read from the conversation's saved understanding, read again after every answer, and while
-// NM works it says what NM is doing. A dispute, a checklist item and the files open in the
-// reading pane on the right, beside the answer.
 
 // What NM is doing on this conversation's message, shown on its board.
 function syncBoardStatus() {
@@ -6230,10 +5163,8 @@ function sizeComposer() {
 }
 
 function updateWorkspace() {
-  const intakeOpen = !$('intake').hidden && !openingEdit;
-  $('composer').hidden = intakeOpen || $('pane-advise').dataset.view === 'list';
-  // The board's file icon is the conversation's; an earlier matter record keeps its
-  // own file icon in its header.
+  $('composer').hidden = $('pane-advise').dataset.view === 'list';
+  // The board's file icon is the conversation's.
   $('board-files').hidden = Boolean(state.matterId);
   // With the count of the files sent in this conversation (the design of 17 Oct 2026).
   const sent = state.turns.reduce((count, entry) => count + (Array.isArray(entry.documents) ? entry.documents.length : 0), 0);
@@ -6242,11 +5173,6 @@ function updateWorkspace() {
   syncBoardStatus();
   $('pane-advise').classList.toggle('empty-chat',
     $('pane-advise').dataset.view === 'opening' && !state.turns.length);
-  // F-B-04. The file icon is offered for an open matter, and on a new matter's
-  // form, where Recover a draft is the one record that already applies.
-  const filesShown = Boolean(state.matterId) || intakeOpen;
-  $('matter-files').hidden = !filesShown;
-  if (!filesShown) closeFilesMenu();
   paintSend();
 }
 
@@ -6387,11 +5313,6 @@ async function deliver(entry) {
     entry.endpoint = null;
     intent.pending = intent.pending.filter((item) => item !== entry);
     if (matchesIntake(entry, intent.intake)) intent.intake = null;
-    // A reply belongs to the conversation that sent it. An unestablished
-    // screen may ask for information, but prose must never navigate back to
-    // the opening form or hide that question. Opening is an explicit user
-    // action; correcting a saved cover uses the matter's own controls.
-    intent.intakeOpen = false;
     // A saved opening acquires a file identity, but its original turn envelope
     // keeps matter_id:null for idempotent replay if this acknowledgement is lost.
     const previousKey = intent.key;
@@ -6417,11 +5338,8 @@ async function deliver(entry) {
     state.matterId = intent.matterId;
     if (Number.isInteger(answer.matter_version)) state.matterVersion = answer.matter_version;
     repaint();
-    if (state.matterId) await showThreadBoard(state.matterId, {
-      restore: false, closeNavigator: false, deferBoard: !entry.request.matter_id,
-    });
     // The board is read again after every answer (owner, 16 Oct 2026).
-    else if (intent.chatId) loadChatBoard();
+    if (intent.chatId) loadChatBoard();
     // Plan AN.43 (D84): the title, where NM had not named the conversation when this answer began.
     if (intent.chatId) refreshTitle(intent.chatId);
   } catch (e) {
@@ -6470,29 +5388,8 @@ async function deliver(entry) {
       reconnect(entry);
     }
     if (!current()) return;
-    if (entry.state === 'input_only' && entry.refusal?.matter_id) {
-      const openedId = entry.refusal.matter_id;
-      if (!intent.matterId && !entry.request.matter_id) {
-        const previousKey = intent.key;
-        intentContexts.delete(previousKey);
-        intent.matterId = openedId;
-        intent.key = intentKey(openedId);
-        intentContexts.set(intent.key, intent);
-        intent.pending = intent.pending.filter((item) => item !== entry);
-        state.matterId = openedId;
-        await saveProtectedDraft({previousKey});
-        if (!current()) return;  // 53i: the advocate left during that wait
-      }
-      if (Number.isInteger(entry.refusal.matter_version)) {
-        state.matterVersion = entry.refusal.matter_version;
-      }
-      await showThreadBoard(openedId, {
-        restore: false, closeNavigator: false, deferBoard: !entry.request.matter_id,
-      }).catch(() => {});
-    }
-    if (entry.state === 'stale' && state.matterId) {
-      await showThreadBoard(state.matterId).catch(() => {});
-    }
+    // An opening refused but kept as an earlier matter record, and a stale earlier matter, were opened here; the page no longer
+    // opens those records (plan AN.57, D292).
     if (ownsIntent(intent) && attempt.session === state.sessionGeneration) repaint();
   } finally {
     if (watcher) watcher.stop();
@@ -7120,9 +6017,9 @@ $('reply-to-selection').addEventListener('click', () => {
 
 /* ------------------------------------------------------- plus and mic --- */
 
-// F-C-01. THE PLUS UNDER THE BRIEF. Its three items open the original-material
-// window (`intake-materials.js`), which seals what it receives and reads none
-// of it; this owns only the menu opening and closing.
+// F-C-01. THE PLUS UNDER THE BRIEF: Attach and Record a voice note, which go with the message. The earlier matters'
+// original-material window it once opened was deleted with their screens (plan AN.57, D292); this owns only the menu opening
+// and closing.
 function setPlusMenu(open) {
   $('plus-panel').hidden = !open;
   $('plus-toggle').setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -7956,379 +6853,6 @@ function toggleMatterBoard(force) {
 
 $('board-toggle').addEventListener('click', () => toggleMatterBoard());
 
-// B3-B5. INTAKE IS ASKED ONCE PER MATTER, AND ITS ANSWERS TRAVEL WITH THE
-// FIRST BRIEF.
-//
-// The screens run in ADMIT-A, before any fact is admitted -- so the conflict
-// screen cannot be run against parties read out of a brief it has not
-// admitted. Asking who is involved when the file is opened is what makes the
-// first brief screenable at all, which is why this is a form and not a read.
-function showIntake(show) {
-  $('intake').hidden = !show;
-  updateWorkspace();
-  if (show) $('in-client').focus();
-}
-
-function intakeFields() {
-  const parties = {};
-  const seen = new Set();
-  for (const [id, role] of [['in-client', 'client'], ['in-adverse', 'adverse'], ['in-others', 'related']]) {
-    for (const entry of $(id).value.split('\n')) {
-      const name = entry.trim();
-      if (!name) continue;
-      const identity = name.toLocaleLowerCase();
-      if (seen.has(identity)) throw new Error('A party is listed more than once. Give each party one role.');
-      seen.add(identity);
-      Object.defineProperty(parties, name, { value: role, enumerable: true });
-    }
-  }
-  const capacity = {
-    state: $('in-capacity').checked ? 'not_in_doubt' : 'not_assessed',
-    basis: $('in-capacity').checked
-      ? 'The advocate explicitly confirms that the client can give these instructions.'
-      : 'The advocate has not assessed capacity to give these instructions.',
-  };
-  const text = (id) => $(id).value.trim();
-  const representative = text('in-instructing') === 'representative';
-  const proceedings = text('in-proceedings');
-  const urgency = text('in-urgency');
-  let otherState = text('in-other-state');
-  const others = Object.values(parties).some(role => role !== 'client');
-  if (otherState === 'not_known' && others) {
-    otherState = 'identified';
-  }
-  if (otherState === 'identified' && !others) {
-    throw new Error('Other parties are marked as identified, but none is listed. '
-      + 'Add their names, or change what is known about other parties.');
-  }
-  const brief = {
-    client_type: text('in-client-type'), instructing: text('in-instructing'),
-    instructor_name: representative ? text('in-instructor') : '',
-    instructor_role: representative ? text('in-instructor-role') : '',
-    authority_basis: representative ? text('in-authority') : '',
-    objective: text('in-scope'), other_party_state: otherState, proceedings,
-    forum: proceedings !== 'none' ? text('in-forum') : '',
-    case_reference: proceedings !== 'none' ? text('in-reference') : '',
-    stage: proceedings !== 'none' ? text('in-stage') : '', urgency,
-    urgency_details: urgency === 'stated' ? text('in-urgency-note') : '',
-    reported_date: urgency === 'stated' ? text('in-date') : '',
-    date_source: urgency === 'stated' ? text('in-date-source') : '', capacity,
-  };
-  return { parties, capacity, title: text('in-title'), brief,
-    release: brief.objective ? { scope: brief.objective } : {} };
-}
-
-function openingSections() {
-  $('in-representative').hidden = $('in-instructing').value !== 'representative';
-  $('in-proceeding-details').hidden = $('in-proceedings').value === 'none';
-  $('in-urgency-details').hidden = $('in-urgency').value !== 'stated';
-}
-['in-instructing', 'in-proceedings', 'in-urgency'].forEach(id =>
-  $(id).addEventListener('change', openingSections));
-
-let openingInFlight = false;
-
-// F-B-02. EDIT THE OPENING DETAILS FROM THE BOARD (owner, 28 September 2026).
-//
-// The pencil on the matter board opens THE opening form -- borrowed into a
-// dialog, not copied -- so a field added to the form is editable the day it is
-// added. It starts from the details as they now stand, and saving records an
-// attributed correction beside the original on the server. Deadline, position
-// and last worked are not on the form: they are calculated, never typed.
-const intakeHome = { parent: $('intake').parentElement, next: $('intake').nextElementSibling };
-const INTAKE_WORDING = ['intake-eyebrow', 'intake-title', 'intake-lede', 'in-go'];
-let intakeWording = null;
-
-function fillOpeningForm(form) {
-  const named = (side) => Object.entries(form.parties || {})
-    .filter(([, role]) => role === side).map(([name]) => name).join('\n');
-  const brief = form.brief || {};
-  const values = {
-    'in-title': form.title || '', 'in-client': named('client'),
-    'in-adverse': named('adverse'), 'in-others': named('related'),
-    'in-client-type': brief.client_type || 'not_known', 'in-scope': brief.objective || '',
-    'in-instructing': brief.instructing || 'not_known', 'in-instructor': brief.instructor_name || '',
-    'in-instructor-role': brief.instructor_role || '', 'in-authority': brief.authority_basis || '',
-    'in-other-state': brief.other_party_state || 'not_known',
-    'in-proceedings': brief.proceedings || 'not_known', 'in-forum': brief.forum || '',
-    'in-reference': brief.case_reference || '', 'in-stage': brief.stage || '',
-    'in-urgency': brief.urgency || 'not_known', 'in-urgency-note': brief.urgency_details || '',
-    'in-date': brief.reported_date || '', 'in-date-source': brief.date_source || '',
-  };
-  INTAKE_INPUTS.forEach((id) => { $(id).value = values[id] ?? ''; });
-  $('in-capacity').checked = brief.capacity?.state === 'not_in_doubt';
-  openingSections();
-  // Sections that hold an answer open, so nothing recorded is hidden.
-  for (const section of $('intake').querySelectorAll('details.opening-details')) {
-    section.open = [...section.querySelectorAll('input, textarea, select')].some((field) =>
-      field.type === 'checkbox' ? field.checked : field.value && field.value !== 'not_known');
-  }
-}
-
-async function openOpeningEdit() {
-  const matterId = state.matterId;
-  if (!matterId || !state.matterReady || activeDelivery || openingEdit) return;
-  const trigger = $('files-toggle');
-  if (trigger.disabled) return;
-  trigger.disabled = true;
-  let data;
-  try {
-    data = await api(`/api/matters/${encodeURIComponent(matterId)}`);
-  } catch (e) {
-    if (!e.obsolete && state.matterId === matterId) {
-      showMatterStatus('loud',
-        `The matter details could not be opened for editing: ${e.message}. Nothing was changed.`);
-    }
-    return;
-  } finally {
-    trigger.disabled = false;
-    updateWorkspace();
-  }
-  if (state.matterId !== matterId || activeDelivery || openingEdit) return;
-  if (!data?.opening_form || !Number.isInteger(data.version)) {
-    showMatterStatus('loud',
-      'The recorded details could not be established, so they cannot be edited. Reopen the matter.');
-    return;
-  }
-  snapshotIntent();
-  openingEdit = { matterId, version: data.version, capacity: data.opening_form.brief?.capacity || null,
-    offer: null, key: null, saving: false, trigger };
-  intakeWording = INTAKE_WORDING.map((id) => [id, $(id).textContent]);
-  $('intake-eyebrow').textContent = 'MATTER DETAILS';
-  $('intake-title').textContent = 'Edit or add what you know.';
-  $('intake-lede').textContent = 'Saving records a correction beside the original details, with '
-    + 'who made it and when. It does not clear conflicts, verify authority or establish a deadline.';
-  $('in-go').textContent = 'Save changes';
-  $('in-cancel').hidden = false;
-  fillOpeningForm(data.opening_form);
-  $('intake-state').textContent = '';
-  $('opening-edit-host').appendChild($('intake'));
-  $('intake').hidden = false;
-  $('opening-edit').showModal();
-  $('in-title').focus();
-}
-
-function closeOpeningEdit({ restore = true } = {}) {
-  const edit = openingEdit;
-  if (!edit) return;
-  openingEdit = null;
-  const form = $('intake');
-  form.hidden = true;
-  intakeHome.parent.insertBefore(form, intakeHome.next);
-  (intakeWording || []).forEach(([id, text]) => { $(id).textContent = text; });
-  intakeWording = null;
-  $('in-cancel').hidden = true;
-  $('intake-state').textContent = '';
-  [...INTAKE_INPUTS, 'in-capacity', 'in-go', 'in-cancel'].forEach((id) => { $(id).disabled = false; });
-  // The matter's details never stay behind in the hidden form.
-  INTAKE_INPUTS.forEach((id) => { $(id).value = $(id).tagName === 'SELECT' ? 'not_known' : ''; });
-  $('in-capacity').checked = false;
-  if ($('opening-edit').open) $('opening-edit').close();
-  if (restore) {
-    restoreIntent();
-    if (edit.trigger.isConnected && state.matterId === edit.matterId) edit.trigger.focus();
-  }
-}
-
-async function saveOpeningEdit() {
-  const edit = openingEdit;
-  if (!edit || edit.saving) return;
-  let fields;
-  try { fields = intakeFields(); }
-  catch (error) {
-    $('intake-state').replaceChildren(stateBlock('loud', error.message));
-    return;
-  }
-  const brief = { ...fields.brief };
-  // AN UNTOUCHED BOX KEEPS THE RECORDED ASSESSMENT EXACTLY, including one the
-  // checkbox cannot express; only a deliberate change records a new one.
-  if (edit.capacity && $('in-capacity').checked === (edit.capacity.state === 'not_in_doubt')) {
-    brief.capacity = edit.capacity;
-  }
-  const offer = { title: fields.title, parties: fields.parties, brief };
-  // ONE REQUEST KEY PER SET OF DETAILS, as at opening: a retry after a lost
-  // response is recognised as the same correction rather than a second one.
-  const wire = JSON.stringify(offer);
-  if (edit.offer !== wire) { edit.offer = wire; edit.key = `opening_${newTurnId().slice(5)}`; }
-  const controls = [...INTAKE_INPUTS, 'in-capacity', 'in-go', 'in-cancel'];
-  edit.saving = true;
-  controls.forEach((id) => { $(id).disabled = true; });
-  $('intake-state').replaceChildren(stateBlock('building', 'Saving the corrected details…'));
-  let out;
-  try {
-    out = await api(`/api/matters/${encodeURIComponent(edit.matterId)}/opening`, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ request_key: edit.key, expected_version: edit.version, ...offer }),
-    });
-  } catch (e) {
-    if (openingEdit !== edit) return;
-    edit.saving = false;
-    controls.forEach((id) => { $(id).disabled = false; });
-    if (e.obsolete) return;
-    if (e.status === 409) {
-      // THE FILE MOVED UNDER THE FORM. Reload what is recorded now rather
-      // than write over details the advocate has not seen.
-      try {
-        const fresh = await api(`/api/matters/${encodeURIComponent(edit.matterId)}`);
-        if (openingEdit !== edit || !fresh?.opening_form || !Number.isInteger(fresh.version)) return;
-        edit.version = fresh.version;
-        edit.capacity = fresh.opening_form.brief?.capacity || null;
-        edit.offer = null;
-        fillOpeningForm(fresh.opening_form);
-        $('intake-state').replaceChildren(stateBlock('loud',
-          'Not saved: this matter changed while the form was open. The form now shows the '
-          + 'current details; make your change again and save.'));
-      } catch (again) {
-        if (openingEdit === edit && !again.obsolete) {
-          $('intake-state').replaceChildren(stateBlock('loud',
-            `Not saved: this matter changed while the form was open, and the current details could `
-            + `not be read (${again.message}). Close this form and open it again.`));
-        }
-      }
-      return;
-    }
-    $('intake-state').replaceChildren(stateBlock('loud',
-      `The correction was not confirmed: ${e.message}. Your changes are still here. Saving again `
-      + 'is safe: it carries the same request, so a correction that did land is not recorded twice.'));
-    return;
-  }
-  if (openingEdit !== edit) return;
-  edit.saving = false;
-  controls.forEach((id) => { $(id).disabled = false; });
-  if (!out || out.matter_id !== edit.matterId
-      || !['opening_corrected', 'opening_unchanged'].includes(out.state)) {
-    $('intake-state').replaceChildren(stateBlock('loud',
-      'The server did not confirm the correction. Reopen the matter before relying on the board.'));
-    return;
-  }
-  closeOpeningEdit();
-  if (state.matterId !== edit.matterId) return;
-  if (out.state === 'opening_corrected' && Array.isArray(out.changes) && out.changes.length) {
-    state.turns.push({ note: { at: new Date().toISOString(), changes: out.changes.map(String) } });
-    repaint();
-  }
-  // THE NEW VERSION IS READ BACK before the next brief can be sent on it.
-  await showThreadBoard(edit.matterId, { restore: false, closeNavigator: false }).catch(() => {});
-}
-
-$('in-cancel').addEventListener('click', () => closeOpeningEdit());
-// Escape closes the dialog; the form goes home with it, unsaved changes discarded.
-$('opening-edit').addEventListener('cancel', (ev) => {
-  ev.preventDefault();
-  if (!openingEdit?.saving) closeOpeningEdit();
-});
-
-$('intake').addEventListener('submit', async (ev) => {
-  ev.preventDefault();
-  if (openingEdit) { await saveOpeningEdit(); return; }
-  if (openingInFlight) return;
-  // THE ANSWERS STILL TRAVEL WITH THE FIRST BRIEF. The scope, capacity and
-  // conflict screens run on that turn, before any fact is admitted (BK-34).
-  try { state.intake = intakeFields(); }
-  catch (error) {
-    $('intake-state').replaceChildren(stateBlock('loud', error.message));
-    return;
-  }
-  if (state.matterId) {
-    // Intake asked again on a matter that already exists: nothing to open.
-    showIntake(false);
-    $('intake-state').textContent = '';
-    $('message').focus();
-    return;
-  }
-  // F-B-01. THE MATTER IS SAVED WHEN ITS CHAT OPENS, not at the first brief:
-  // the product owner's rule is that a new matter is in My work from the
-  // moment its chat and board appear, so it can be closed and resumed. The
-  // server opens it with the parties the form gave and names it from them;
-  // only once the server confirms it is saved do the chat and board open.
-  const intent = activeIntent;
-  const go = $('in-go');
-  const payload = { title: state.intake.title, parties: state.intake.parties, brief: state.intake.brief };
-  const offer = JSON.stringify(payload);
-  if (intent.opening && intent.opening.offer !== offer && intent.opening.uncertain) {
-    $('intake-state').replaceChildren(stateBlock('loud',
-      'The earlier opening is awaiting confirmation. A changed brief cannot be submitted as a second matter until that opening is resolved.'));
-    if (intent.opening.fields) {
-      const restore = document.createElement('button');
-      restore.type = 'button';
-      restore.textContent = 'Restore original answers and retry';
-      restore.addEventListener('click', () => {
-        if (!ownsIntent(intent)) return;
-        intent.fields = { ...intent.opening.fields };
-        intent.capacity = intent.opening.capacity;
-        restoreIntent();
-        $('intake').requestSubmit();
-      });
-      $('intake-state').append(restore);
-    }
-    return;
-  }
-  if (!intent.opening || intent.opening.offer !== offer) {
-    // ONE REQUEST KEY PER SET OF ANSWERS, so a retry after a lost response
-    // reopens the same file rather than a second one.
-    intent.opening = { offer, key: newTurnId(),
-      fields: Object.fromEntries(INTAKE_INPUTS.map(id => [id, $(id).value])),
-      capacity: $('in-capacity').checked };
-  }
-  openingInFlight = true;
-  go.disabled = true;
-  [...INTAKE_INPUTS, 'in-capacity'].forEach(id => { $(id).disabled = true; });
-  $('intake-state').replaceChildren(stateBlock('building', 'Opening the matter…'));
-  try {
-    snapshotIntent();
-    if (!await saveProtectedDraft()) {
-      throw new Error('the retry details could not be saved on this device; no request was sent');
-    }
-    intent.opening.uncertain = true;
-    if (!await saveProtectedDraft()) {
-      intent.opening.uncertain = false;
-      throw new Error('the retry state could not be saved on this device; no request was sent');
-    }
-    const opened = await api('/api/matters/intake', {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ request_key: intent.opening.key, ...payload }),
-    });
-    if (!ownsIntent(intent)) return;
-    if (!opened.matter_id || opened.state !== 'intake_opened') {
-      throw new Error('the server did not confirm that the matter was saved');
-    }
-    // THE OPENING'S IDENTITY IS SPENT ONCE THE SERVER CONFIRMS IT. It exists so
-    // a retry after a LOST reply reopens the same file; kept after success, the
-    // next new-matter form with the same answers -- two blank forms, most often
-    // -- reused it, and the server rightly handed back the earlier matter
-    // (owner, 28 September 2026: "a blank form is going back to a latest
-    // previous matter chat"). Every Record and continue is a new matter.
-    intent.opening = null;
-    // These instructions are now on the server, not an unsent first-turn draft.
-    // The turn engine reads their attributed record when the advocate returns.
-    state.intake = null;
-    intent.intake = null;
-    showIntake(false);
-    $('intake-state').textContent = '';
-    await showThreadBoard(opened.matter_id, { adoptOpening: true, restore: false });
-    // Adoption saves the protected draft before revealing the composer. Focus
-    // only after that transition, and never steal it from a different context.
-    if (ownsIntent(intent) && state.matterId === opened.matter_id && state.matterReady) {
-      $('message').focus();
-    }
-  } catch (e) {
-    if (e.obsolete || !ownsIntent(intent)) return;
-    if (intent.opening && [400, 403, 413, 422].includes(e.status)) {
-      intent.opening.uncertain = false;
-      await saveProtectedDraft();
-    }
-    const recovery = intent.opening?.uncertain
-      ? 'The server may have saved the matter. Your original answers and retry identity are kept; retry without changing them.'
-      : 'Your answers remain here. Resolve the reported problem before retrying.';
-    $('intake-state').replaceChildren(stateBlock('loud',
-      `Opening was not confirmed: ${e.message}. ${recovery}`));
-  } finally {
-    openingInFlight = false;
-    go.disabled = false;
-    [...INTAKE_INPUTS, 'in-capacity'].forEach(id => { $(id).disabled = false; });
-  }
-});
-
 // A new matter begins with only the chat. Its first turn opens the saved file;
 // the board appears after its details have been read back.
 function startMatter(chatId = null) {
@@ -8337,10 +6861,8 @@ function startMatter(chatId = null) {
   showTab('advise');
   setWorkView('opening');
   selectIntent(null, { opening: true, chatId });
-  activeIntent.intakeOpen = false;
   activeIntent.intake = null;
   state.intake = null;
-  showIntake(false);
   closeOpenMatter();
   state.turns = [...activeIntent.pending];
   repaint();
@@ -8544,17 +7066,10 @@ $('dictation-setting-close').addEventListener('click', () => $('dictation-settin
 $('dictation-setting-dialog').addEventListener('close', () => { ++dictationSettingRequest; dictationSetting = null; });
 boot();
 
-/* ============================== THE TABS ==============================
- *
- * Three surfaces that deliberately do NOT share state. A hit found in the
- * corpus is not a fact on a matter until the advocate puts it there, and the
- * quickest way to break that is a shared object both panes write to.
- */
-
-// THE PAGES OF THE WORKSPACE (plan AN.57, D292): the conversation, and the Case file and History of a matter saved before
-// conversations. There is no tab bar since the owner's decisions of 15 and 16 Oct 2026; Home, the Legal library and Preparation,
-// which nothing reached, are deleted.
-const PANES = ['advise', 'casefile', 'history'];
+// THE WORKSPACE'S PAGE (plan AN.57, D292): the conversation. There is no tab bar since the owner's decisions of 15 and 16 Oct 2026;
+// Home, the Legal library and Preparation, which nothing reached, are deleted, and so are the Case file and History of a matter saved
+// before conversations, whose records stay stored and which the page no longer opens.
+const PANES = ['advise'];
 
 // F-B-03. THE TOP BAR'S HISTORY IS THE LIST OF CONVERSATIONS, every time it is chosen.
 function openTab(name) {
@@ -8565,53 +7080,9 @@ function openTab(name) {
 function showTab(name) {
   document.body.dataset.pane = name;
   PANES.forEach((p) => { $(`pane-${p}`).hidden = (p !== name); });
-  if (name === 'history') loadHistoryMatters();
-  if (name === 'casefile') loadCasefileMatters();
 }
 
-/* F-B-04. THE OPEN MATTER'S FILES, from the one file icon in its header.
- *
- * Owner, 28 September 2026: "just keep file icon and show all the files under
- * it ... list all the files there include AV media files". Read from the
- * matter's saved upload receipts -- the same record the plus menu writes -- so
- * the list cannot name a file the matter does not hold. Listing is not
- * opening: originals stay held exactly as before. A list that could not be
- * read says so; it never renders as "no files".
- *
- * The generation lives on `state`, not in a module `let`: `closeFilesMenu` is
- * called from paths that run before this part of the script is reached.
- */
-function closeFilesMenu() {
-  state.filesGeneration = (state.filesGeneration || 0) + 1;
-  const menu = $('files-menu');
-  if (!menu) return;
-  menu.hidden = true;
-  menu.replaceChildren();
-  $('files-toggle').setAttribute('aria-expanded', 'false');
-}
-
-function fileKind(row) {
-  const type = String(row.receipt?.declared_type || '').toLowerCase();
-  const name = String(row.filename || '');
-  const extension = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
-  if (type.startsWith('audio/') || ['mp3', 'm4a', 'wav', 'ogg', 'oga', 'aac', 'flac', 'opus', 'amr'].includes(extension)
-      || (type === 'video/webm' && name.startsWith('Voice note '))) {
-    return name.startsWith('Voice note ') ? 'Voice note' : 'Audio';
-  }
-  if (type.startsWith('video/') || ['mp4', 'mov', 'webm', 'mkv', 'avi', '3gp'].includes(extension)) return 'Video';
-  if (type.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'heic', 'webp', 'tif', 'tiff', 'bmp'].includes(extension)) return 'Image';
-  return 'Document';
-}
-
-function fileState(receipt) {
-  return {
-    received: 'Received',
-    receiving: 'Incomplete upload',
-    cancelled: 'Upload cancelled',
-    not_started: 'Not yet sent',
-  }[receipt?.state] || 'Integrity not established';
-}
-
+// A file's size, as the files sent in a conversation are listed.
 function fileSize(bytes) {
   if (!Number.isFinite(bytes) || bytes < 0) return '';
   if (bytes < 1024) return `${bytes} bytes`;
@@ -8621,750 +7092,6 @@ function fileSize(bytes) {
   while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit += 1; }
   return `${value.toLocaleString(undefined, { maximumFractionDigits: 1 })} ${units[unit]}`;
 }
-
-/* F-B-04, later the same day. THE MATTER'S RECORDS, under the same icon.
- *
- * Owner: "if any of these are important and must be kept, keep those files
- * under the same files icon folder". The six records remain -- each serves something
- * nothing else does: recording a danger (Protective handoff), the capacity
- * correction a blocked turn points to and the recorded instructions (Matter
- * cover), the inspectable record of the file and where each statement came
- * from (Case file, Attributed file), the review record of what was served
- * (History), and an unsent message brought back (Recover a draft). Only the
- * last applies before a new matter is saved. Editing matter details is an
- * action beside those records.
- */
-const MATTER_RECORDS = [
-  { id: 'records-cover', label: 'Matter cover & instructions', matter: true,
-    open: () => window.NMMatterRecords?.open('cover') },
-  { id: 'records-edit', label: 'Edit matter details', matter: true,
-    open: () => openOpeningEdit() },
-  { id: 'records-casefile', label: 'Case file', matter: true,
-    open: () => { $('casefile-matter').value = ''; showTab('casefile'); } },
-  { id: 'records-attributed', label: 'Attributed file', matter: true,
-    open: () => window.NMMatterRecords?.open('casefile') },
-  { id: 'records-history', label: 'History', matter: true, open: () => showTab('history') },
-  { id: 'records-handoff', label: 'Protective handoff', matter: true,
-    open: () => window.NMMatterRecords?.open('emergency') },
-  { id: 'draft-open', label: 'Recover a draft', matter: false, open: () => openDraftRecovery() },
-];
-
-function matterRecords() {
-  const part = document.createElement('div');
-  part.className = 'files-records';
-  const head = document.createElement('p');
-  head.className = 'files-head';
-  head.textContent = 'Matter details and records';
-  part.appendChild(head);
-  for (const record of MATTER_RECORDS) {
-    if (record.matter && !state.matterId) continue;
-    const button = document.createElement('button');
-    button.type = 'button'; button.id = record.id; button.className = 'files-record';
-    button.textContent = record.label;
-    button.disabled = (record.matter && !state.matterReady)
-      || (record.id === 'records-edit' && Boolean(activeDelivery));
-    button.addEventListener('click', () => { closeFilesMenu(); record.open(); });
-    part.appendChild(button);
-  }
-  return part;
-}
-
-async function openFilesMenu() {
-  const matterId = state.matterId;
-  if (!state.advocate || state.ended) return;
-  state.filesGeneration = (state.filesGeneration || 0) + 1;
-  const generation = state.filesGeneration;
-  const menu = $('files-menu');
-  const note = (text) => { const p = document.createElement('p'); p.className = 'files-note'; p.textContent = text; return p; };
-  const files = document.createElement('div');
-  files.className = 'files-list';
-  menu.replaceChildren(files, matterRecords());
-  menu.hidden = false;
-  $('files-toggle').setAttribute('aria-expanded', 'true');
-  if (!matterId) {
-    files.replaceChildren(note('Files appear here once this matter is saved.'));
-    return;
-  }
-  files.replaceChildren(note('Reading the files on this matter…'));
-  let reply;
-  try {
-    reply = await api(`/api/matters/${encodeURIComponent(matterId)}/uploads`);
-  } catch (error) {
-    if (generation !== state.filesGeneration || error.obsolete) return;
-    files.replaceChildren(note('The file list could not be read. This does not mean no files are held; try again.'));
-    return;
-  }
-  if (generation !== state.filesGeneration || matterId !== state.matterId) return;
-  if (!reply || reply.matter_id !== matterId || !Array.isArray(reply.uploads)) {
-    files.replaceChildren(note('The file list could not be verified. This does not mean no files are held.'));
-    return;
-  }
-  const rows = reply.uploads.filter((row) => row && typeof row.filename === 'string' && row.receipt);
-  if (!rows.length) {
-    files.replaceChildren(note('No files on this matter yet. Add documents, media or a voice note with the + under the message box.'));
-    return;
-  }
-  const head = document.createElement('p');
-  head.className = 'files-head';
-  head.textContent = `${rows.length} file${rows.length === 1 ? '' : 's'} on this matter`;
-  const list = document.createElement('ul');
-  for (const row of rows) {
-    const item = document.createElement('li');
-    const kind = document.createElement('span');
-    kind.className = 'file-kind'; kind.textContent = fileKind(row);
-    const name = document.createElement('span');
-    name.className = 'file-name'; name.textContent = row.filename;
-    const meta = document.createElement('span');
-    meta.className = 'file-meta';
-    const size = fileSize(row.receipt.observed_size ?? row.receipt.declared_size);
-    meta.textContent = [size, fileState(row.receipt)].filter(Boolean).join(' · ');
-    item.append(kind, name, meta);
-    list.appendChild(item);
-  }
-  files.replaceChildren(head, list);
-}
-
-$('files-toggle').addEventListener('click', () => {
-  if ($('files-menu').hidden) openFilesMenu();
-  else closeFilesMenu();
-});
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && !$('files-menu').hidden) {
-    closeFilesMenu();
-    $('files-toggle').focus();
-  }
-});
-document.addEventListener('click', (event) => {
-  if (!$('files-menu').hidden && !event.target.closest('#matter-files')) closeFilesMenu();
-  // LB-83. A reply's rating pop-up closes on a click anywhere outside it.
-  const rating = event.target.closest?.('.rate');
-  closeRatePops(rating ? rating.querySelector('.rate-pop') : null);
-});
-window.addEventListener('nm:matter-changed', closeFilesMenu);
-window.addEventListener('nm:session-ended', closeFilesMenu);
-
-function line(into, text, cls) {
-  if (!text) return null;
-  const p = document.createElement('p');
-  if (cls) p.className = cls;
-  p.textContent = text;
-  into.appendChild(p);
-  return p;
-}
-
-async function loadCasefileMatters() {
-  const sel = $('casefile-matter');
-  const st = $('casefile-state');
-  try {
-    const d = await api('/api/matters');
-    const rows = d.matters || [];
-    const held = sel.value;
-    sel.textContent = '';
-    const first = document.createElement('option');
-    first.value = '';
-    first.textContent = d.state !== 'ok'
-      ? 'The matter list could not be read'
-      : (rows.length ? 'Choose a matter…' : 'No matters yet');
-    sel.appendChild(first);
-    rows.forEach((m) => {
-      const o = document.createElement('option');
-      o.value = m.matter_id;
-      o.textContent = m.matter || m.matter_id;
-      sel.appendChild(o);
-    });
-    // THE FILE THE ADVOCATE IS IN, unless they chose another. A pane that
-    // opens on "Choose a matter" over the matter they are working is a
-    // pane that asks them what they just told it.
-    const want = held || state.matterId || '';
-    if (want && rows.some((m) => m.matter_id === want)) {
-      sel.value = want;
-      await showCasefile(want);
-    }
-  } catch (err) {
-    st.textContent = '';
-    st.appendChild(stateBlock('loud',
-      `The matter list could not be read: ${err.message}`));
-  }
-}
-
-async function showCasefile(matterId) {
-  const generation = ++state.casefileGeneration;
-  const st = $('casefile-state');
-  const entries = $('casefile-entries');
-  renderOpeningBrief(null);
-  if (!matterId) {
-    st.textContent = '';
-    entries.replaceChildren();
-    delete entries.dataset.matterId;
-    renderCurrency(null);
-    return;
-  }
-
-  let file; let deps; let matter;
-  try {
-    [file, deps, matter] = await Promise.all([
-      api(`/api/matters/${matterId}/casefile`),
-      api(`/api/matters/${matterId}/dependencies`),
-      api(`/api/matters/${matterId}`),
-    ]);
-  } catch (err) {
-    if (generation !== state.casefileGeneration) return;
-    st.textContent = '';
-    st.appendChild(stateBlock('loud', `The case file could not be read: ${err.message}`));
-    // Never leave a different matter under this error. When the failed read
-    // was a refresh of the same file, retain its last coherent snapshot so a
-    // transient failure does not erase the advocate's record from the glass.
-    if (entries.dataset.matterId !== matterId) {
-      entries.replaceChildren();
-      delete entries.dataset.matterId;
-      renderCurrency(null);
-    }
-    return;
-  }
-  if (generation !== state.casefileGeneration) return;
-  renderOpeningBrief(matter.opening_brief);
-
-  // Build the entry population off-DOM, then publish entries before currency.
-  // A consumer waiting on the currency pill can therefore never observe a
-  // new dependency state beside an old or temporarily empty source record.
-  const nextEntries = document.createDocumentFragment();
-  const live = new Set((file.live || []).map((e) => e.fact_id));
-  (file.entries || []).forEach((e) => {
-    nextEntries.appendChild(
-      renderEntry(matterId, e, live.has(e.fact_id), file.version));
-  });
-  if (!(file.entries || []).length) {
-    nextEntries.appendChild(
-      stateBlock('empty', 'Nothing has been recorded on this file yet.'));
-  }
-
-  st.textContent = '';
-  if (file.state !== 'ok') {
-    st.appendChild(stateBlock('loud', `The case file is ${file.state}.`));
-  }
-  entries.replaceChildren(nextEntries);
-  entries.dataset.matterId = matterId;
-  renderCurrency(deps);
-  try {
-    const cover = await api(`/api/matters/${matterId}/cover`);
-    if (generation !== state.casefileGeneration) return;
-    renderPremises(matterId, cover.premises, file.version);
-    renderRelief(matterId, cover.relief, file.version);
-    renderBriefingPane(matterId, cover.briefing, file.version);
-    await renderBindings(matterId, file.version);
-    await renderDecisions(matterId, file.version);
-    await renderRetention(matterId, file.version);
-  } catch (err) {
-    $('premises').hidden = false;
-    $('premises-state').textContent = '';
-    $('premises-state').appendChild(stateBlock('loud',
-      `The legal premises could not be read: ${err.message}`));
-  }
-}
-
-// P22. THE LEGAL PREMISES, per thread, with a Confirm control for one the
-// product INFERRED. The state pill is `established`, `conditional`,
-// `inconsistent` or `not assessed` -- never a blank that reads as settled.
-// Confirming an inferred accrual states it and the next brief makes the date
-// a deadline; the control posts to the premise route and re-reads the file.
-function renderPremises(matterId, prem, version) {
-  const panel = $('premises');
-  const stateEl = $('premises-state');
-  const body = $('premises-threads');
-  stateEl.textContent = ''; body.textContent = '';
-  if (!prem || prem.state === 'not_assessed') { panel.hidden = true; return; }
-  panel.hidden = false;
-
-  const pill = document.createElement('span');
-  pill.className = 'pill ' + (prem.state === 'established' ? 'ok'
-    : prem.state === 'inconsistent' ? 'blocked' : 'unknown');
-  pill.textContent = prem.state === 'established' ? 'established'
-    : prem.state === 'inconsistent' ? 'INCONSISTENT'
-    : prem.state === 'conditional' ? 'conditional' : prem.state;
-  pill.dataset.premises = prem.state;
-  const said = document.createElement('span');
-  said.className = 'currency-said'; said.textContent = ' ' + (prem.said || '');
-  stateEl.append(pill, said);
-
-  (prem.threads || []).forEach((t) => {
-    const card = document.createElement('div');
-    card.className = 'premise-thread';
-    card.dataset.threadId = t.thread_id;
-    const h = document.createElement('h4'); h.textContent = t.thread;
-    card.appendChild(h);
-    (t.premises || []).forEach((p) => {
-      const row = document.createElement('div');
-      row.className = 'premise-row';
-      row.dataset.kind = p.kind;
-      const dl = document.createElement('dl'); dl.className = 'r-fields';
-      field(dl, p.kind.replace(/_/g, ' '), p.statement || '—');
-      field(dl, 'basis', {
-        pill: p.basis === 'stated' ? 'ok' : p.basis === 'inferred' ? 'unknown' : 'searched',
-        text: p.basis });
-      field(dl, 'review', p.review_state === 'reviewed'
-        ? `reviewed by ${p.reviewed_by}` : 'not assessed');
-      row.appendChild(dl);
-      if (p.basis === 'inferred') {
-        (p.alternatives || []).forEach((a) => {
-          const alt = document.createElement('div');
-          alt.className = 'premise-alt'; alt.textContent = `alternative: ${a}`;
-          row.appendChild(alt);
-        });
-        row.appendChild(premiseForm(matterId, t.thread_id, p.kind, version));
-      }
-      card.appendChild(row);
-    });
-    body.appendChild(card);
-  });
-}
-
-function premiseForm(matterId, threadId, kind, version) {
-  const form = document.createElement('form');
-  form.className = 'premise-confirm';
-  const lab = document.createElement('label');
-  lab.htmlFor = `prem-${threadId}-${kind}`;
-  lab.textContent = 'State it (and I will compute a deadline from it) ';
-  const inp = document.createElement('input');
-  inp.id = `prem-${threadId}-${kind}`; inp.name = 'statement';
-  inp.placeholder = 'e.g. time runs from the date fixed for repayment';
-  const go = document.createElement('button');
-  go.type = 'submit'; go.className = 'primary'; go.textContent = 'Confirm premise';
-  const stateEl = document.createElement('span'); stateEl.className = 'hint premise-state';
-  form.append(lab, inp, go, stateEl);
-  form.addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    const statement = inp.value.trim();
-    if (!statement) { stateEl.textContent = 'Say what the premise is.'; return; }
-    stateEl.textContent = 'Recording…';
-    try {
-      const out = await api(`/api/matters/${matterId}/threads/${threadId}/premises/${kind}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ statement, source: 'the advocate', expected_version: version }),
-      });
-      if (state.matterId === matterId) state.matterVersion = out.version;
-      stateEl.textContent = 'Recorded. Brief me again and the date becomes a deadline.';
-      await showCasefile(matterId);
-    } catch (err) {
-      const detail = err.detail || {};
-      stateEl.textContent = detail.why || err.message;
-      if (detail.code === 'STALE_VERSION') await showCasefile(matterId);
-    }
-  });
-  return form;
-}
-
-// P23. RELIEF AND ENFORCEABILITY, per thread. The state pill is `serveable`,
-// `no useful relief` or `not assessed` -- and a disproportionate route is shown
-// ALONGSIDE, never hidden (E3). The form states a remedy's coordinates; the
-// next brief re-reads them and the recommendation changes when the relief is
-// unavailable, hollow, late or unenforceable. The panel stays visible so the
-// advocate can state relief even before anything has been assessed.
-const RELIEF_COORDS = {
-  availability: ['not_assessed', 'available', 'unavailable'],
-  value: ['not_assessed', 'substantial', 'hollow'],
-  timing: ['not_assessed', 'timely', 'late'],
-  enforceability: ['not_assessed', 'enforceable', 'unenforceable'],
-  proportionality: ['not_assessed', 'proportionate', 'disproportionate'],
-};
-
-function renderRelief(matterId, rel, version) {
-  const panel = $('relief');
-  const stateEl = $('relief-state');
-  const body = $('relief-threads');
-  stateEl.textContent = ''; body.textContent = '';
-  if (!rel || !(rel.threads || []).length) { panel.hidden = true; return; }
-  panel.hidden = false;
-
-  const pill = document.createElement('span');
-  pill.className = 'pill ' + (rel.state === 'serveable' ? 'ok'
-    : rel.state === 'no_useful_relief' ? 'blocked' : 'unknown');
-  pill.textContent = rel.state === 'no_useful_relief' ? 'no useful relief'
-    : rel.state;
-  pill.dataset.relief = rel.state;
-  const said = document.createElement('span');
-  said.className = 'currency-said'; said.textContent = ' ' + (rel.said || '');
-  stateEl.append(pill, said);
-
-  (rel.threads || []).forEach((t) => {
-    const card = document.createElement('div');
-    card.className = 'premise-thread'; card.dataset.threadId = t.thread_id;
-    const h = document.createElement('h4');
-    h.textContent = t.thread
-      + (t.objective ? ` — objective: ${t.objective.statement} (${t.objective.basis})` : '');
-    card.appendChild(h);
-
-    if (t.state === 'not_assessed') {
-      card.appendChild(stateBlock('empty',
-        'No relief has been assessed on this thread yet.'));
-    }
-    (t.reliefs || []).forEach((r) => {
-      const row = document.createElement('div');
-      row.className = 'premise-row'; row.dataset.remedy = r.remedy;
-      const dl = document.createElement('dl'); dl.className = 'r-fields';
-      field(dl, 'remedy', r.remedy);
-      ['availability', 'value', 'timing', 'enforceability', 'proportionality']
-        .forEach((c) => field(dl, c, {
-          pill: (r[c] === 'available' || r[c] === 'substantial'
-                 || r[c] === 'timely' || r[c] === 'enforceable'
-                 || r[c] === 'proportionate') ? 'ok'
-            : r[c] === 'not_assessed' ? 'searched' : 'blocked',
-          text: r[c].replace(/_/g, ' ') }));
-      field(dl, 'basis', { pill: r.basis === 'stated' ? 'ok'
-        : r.basis === 'inferred' ? 'unknown' : 'searched', text: r.basis });
-      if (r.reason) field(dl, 'reason', r.reason);
-      row.appendChild(dl);
-      card.appendChild(row);
-    });
-    (t.disproportionate || []).forEach((d) => {
-      const alt = document.createElement('div');
-      alt.className = 'premise-alt';
-      alt.textContent = `cost against recovery: ${d.remedy} — ${d.why} (stated alongside, not withheld)`;
-      card.appendChild(alt);
-    });
-    card.appendChild(reliefForm(matterId, t.thread_id, version));
-    body.appendChild(card);
-  });
-}
-
-function reliefForm(matterId, threadId, version) {
-  const form = document.createElement('form');
-  form.className = 'premise-confirm relief-confirm';
-  const remedy = document.createElement('input');
-  remedy.name = 'remedy'; remedy.placeholder = 'remedy, e.g. a money decree';
-  const objective = document.createElement('input');
-  objective.name = 'objective'; objective.placeholder = 'objective (optional)';
-  const selects = {};
-  Object.entries(RELIEF_COORDS).forEach(([name, opts]) => {
-    const sel = document.createElement('select'); sel.name = name;
-    opts.forEach((o) => {
-      const opt = document.createElement('option');
-      opt.value = o; opt.textContent = `${name}: ${o.replace(/_/g, ' ')}`;
-      sel.appendChild(opt);
-    });
-    selects[name] = sel;
-  });
-  const reason = document.createElement('input');
-  reason.name = 'reason'; reason.placeholder = 'why (optional)';
-  const go = document.createElement('button');
-  go.type = 'submit'; go.className = 'primary'; go.textContent = 'State relief';
-  const stateEl = document.createElement('span');
-  stateEl.className = 'hint premise-state';
-  form.append(remedy, objective, ...Object.values(selects), reason, go, stateEl);
-  form.addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    if (!remedy.value.trim()) { stateEl.textContent = 'Name the remedy.'; return; }
-    stateEl.textContent = 'Recording…';
-    const payload = {
-      remedy: remedy.value.trim(), objective: objective.value.trim(),
-      reason: reason.value.trim(), source: 'the advocate',
-      expected_version: version,
-    };
-    Object.keys(RELIEF_COORDS).forEach((c) => { payload[c] = selects[c].value; });
-    try {
-      const out = await api(`/api/matters/${matterId}/threads/${threadId}/relief`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (state.matterId === matterId) state.matterVersion = out.version;
-      stateEl.textContent = 'Recorded. Brief me again and the recommendation weighs it.';
-      await showCasefile(matterId);
-    } catch (err) {
-      const detail = err.detail || {};
-      stateEl.textContent = detail.why || err.message;
-      if (detail.code === 'STALE_VERSION') await showCasefile(matterId);
-    }
-  });
-  return form;
-}
-
-// P18. THE CURRENCY BLOCK. Three states at the top and the third is a file
-// with no ledger: `not assessed` is rendered as a value, never as a clean
-// sheet, because an empty list of stale conclusions is not a certificate.
-function renderCurrency(deps) {
-  const stateEl = $('currency-state');
-  const staleEl = $('currency-stale');
-  const nodesEl = $('currency-nodes');
-  const histEl = $('currency-history');
-  stateEl.textContent = ''; staleEl.textContent = '';
-  nodesEl.textContent = ''; histEl.textContent = '';
-  if (!deps) return;
-
-  const pill = document.createElement('span');
-  pill.className = 'pill ' + (deps.state === 'current' ? 'ok'
-    : deps.state === 'stale' ? 'blocked' : 'unknown');
-  pill.textContent = deps.state === 'current' ? 'current'
-    : deps.state === 'stale' ? 'NOT CURRENT' : 'not assessed';
-  pill.dataset.currency = deps.state;
-  const said = document.createElement('span');
-  said.className = 'currency-said';
-  said.textContent = ' ' + (deps.said || '');
-  stateEl.append(pill, said);
-
-  (deps.stale || []).forEach((n) => {
-    const li = document.createElement('li');
-    li.className = 'stale-node';
-    li.dataset.node = n.name;
-    const strong = document.createElement('strong');
-    strong.textContent = n.shown || n.name;
-    li.append(strong, document.createTextNode(
-      ` — ${n.currency}: ${n.because}` +
-      (n.value ? ` It read ${n.value}.` : '') +
-      (n.rework_exhausted ? ' No further recomputation is scheduled.' : '')));
-    staleEl.appendChild(li);
-  });
-
-  (deps.nodes || []).forEach((n) => {
-    const row = document.createElement('div');
-    row.className = 'node-row';
-    row.dataset.node = n.name;
-    row.dataset.currency = n.currency;
-    const dl = document.createElement('dl'); dl.className = 'r-fields';
-    field(dl, 'conclusion', n.shown || n.name);
-    field(dl, 'value', n.value || '—');
-    field(dl, 'currency', {
-      pill: n.currency === 'current' ? 'ok' : n.currency === 'stale' ? 'blocked' : 'unknown',
-      text: n.currency,
-    });
-    field(dl, 'rests on', (n.rests_on || []).map((r) => `${r.kind} ${r.id} v${r.version}`).join('; ') || 'nothing recorded');
-    row.appendChild(dl);
-    nodesEl.appendChild(row);
-  });
-
-  (deps.history || []).forEach((h) => {
-    const row = document.createElement('div');
-    row.className = 'revision';
-    row.dataset.node = h.name;
-    // THE LABEL, not the key; and WHO, from the record's own field -- the
-    // reason is a sentence and attributes nobody.
-    row.textContent =
-      `${h.at || ''} — ${h.shown || h.name}: was ${h.was || '—'}` +
-      (h.now ? `, now ${h.now}` : ', not yet recomputed') +
-      ` — ${h.reason || ''}` + (h.by ? ` (by ${h.by})` : '');
-    histEl.appendChild(row);
-  });
-}
-
-function renderEntry(matterId, e, isLive, version) {
-  const row = document.createElement('div');
-  row.className = 'entry' + (isLive ? '' : ' superseded');
-  row.dataset.factId = e.fact_id;
-  const text = document.createElement('div');
-  text.className = 'entry-text';
-  text.textContent = e.statement;
-  const meta = document.createElement('div');
-  meta.className = 'entry-meta';
-  const bits = [e.date ? `dated ${e.date}` : 'undated', e.certainty, e.confirmed,
-                e.attribution && e.attribution.said];
-  if (e.superseded_by) bits.push(`superseded by ${e.superseded_by}`);
-  meta.textContent = bits.filter(Boolean).join(' · ');
-  row.append(text, meta);
-
-  if (isLive) {
-    const btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'ghost correct';
-    btn.textContent = 'Correct';
-    btn.setAttribute('aria-label', `Correct: ${e.statement.slice(0, 60)}`);
-    btn.addEventListener('click', () => {
-      if (row.querySelector('form')) return;
-      row.appendChild(correctionForm(matterId, e, version));
-    });
-    row.appendChild(btn);
-  }
-  return row;
-}
-
-function correctionForm(matterId, e, version) {
-  const form = document.createElement('form');
-  form.className = 'correction';
-  const id = e.fact_id.replace(/[^a-zA-Z0-9_-]/g, '');
-  const mk = (name, label, opt, type) => {
-    const lab = document.createElement('label');
-    lab.htmlFor = `corr-${name}-${id}`;
-    lab.textContent = label + ' ';
-    if (opt) {
-      const o = document.createElement('span'); o.className = 'opt'; o.textContent = opt;
-      lab.appendChild(o);
-    }
-    const inp = document.createElement('input');
-    inp.name = name; inp.id = `corr-${name}-${id}`;
-    if (type) inp.type = type;
-    return [lab, inp];
-  };
-  const [l1, statement] = mk('statement', 'Corrected wording', '— leave blank to keep the words');
-  statement.placeholder = e.statement.slice(0, 80);
-  const [l2, date] = mk('date', 'Corrected date', '— or blank to keep it', 'date');
-  const [l3, reason] = mk('reason', 'Why it changes', '');
-  reason.required = true;
-  reason.placeholder = 'the invoice is dated 2019, not 2023';
-  const rowEl = document.createElement('div'); rowEl.className = 'composer-row';
-  const stateEl = document.createElement('span'); stateEl.className = 'hint correction-state';
-  const go = document.createElement('button'); go.type = 'submit'; go.className = 'primary';
-  go.textContent = 'Record the correction';
-  rowEl.append(stateEl, go);
-  form.append(l1, statement, l2, date, l3, reason, rowEl);
-
-  form.addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    const why = reason.value.trim();
-    if (!why) { stateEl.textContent = 'Say why it changes.'; return; }
-    const body = { reason: why, expected_version: version };
-    if (statement.value.trim()) body.statement = statement.value.trim();
-    if (date.value) body.date = date.value;
-    stateEl.textContent = 'Recording…';
-    let out;
-    try {
-      out = await api(`/api/matters/${matterId}/facts/${e.fact_id}/corrections`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-    } catch (err) {
-      // A REFUSAL IS SHOWN AS ONE, with what the server said. A file that
-      // moved is re-read; nothing is retried on the advocate's behalf.
-      const detail = err.detail || {};
-      stateEl.textContent = detail.why || err.message;
-      if (detail.code === 'STALE_VERSION') await showCasefile(matterId);
-      return;
-    }
-    stateEl.textContent =
-      `Recorded. Not current until reworked: ${(out.affected || []).length}; ` +
-      `left alone: ${(out.unaffected || []).length}.`;
-    if (state.matterId === matterId) state.matterVersion = out.version;
-    await showCasefile(matterId);
-    // THE BOARD SAYS SO TOO, if it is the file that is open.
-    if (state.matterId === matterId) {
-      showThreadBoard(matterId, { restore: false, closeNavigator: false });
-    }
-  });
-  return form;
-}
-
-async function loadHistoryMatters() {
-  const generation = ++state.historyListGeneration;
-  const sel = $('history-matter');
-  try {
-    const d = await api('/api/matters');
-    if (generation !== state.historyListGeneration) return;
-    const rows = d.matters || [];
-    sel.textContent = '';
-    const first = document.createElement('option');
-    first.value = '';
-    // AN UNREADABLE LIST IS NOT AN EMPTY ONE. `state` says which, and a
-    // dropdown reading "No matters yet" over a list that failed to build is
-    // the same defect the rail already refuses.
-    first.textContent = d.state !== 'ok'
-      ? 'The matter list could not be read'
-      : (rows.length ? 'Choose a matter…' : 'No matters yet');
-    sel.appendChild(first);
-    if (d.state !== 'ok') {
-      $('history-state').appendChild(stateBlock('loud', d.unreadable_reason
-        || 'The matter list could not be built.'));
-    }
-    rows.forEach((m) => {
-      const o = document.createElement('option');
-      o.value = m.matter_id;
-      // `matter` is the projection's own name for it. Falling back to the id
-      // was showing every row as `mat_65fc8d70d72a`, which is a list nobody
-      // can choose from.
-      o.textContent = m.matter || m.matter_id;
-      sel.appendChild(o);
-    });
-    // OPENED FROM A MATTER, IT OPENS ON THAT MATTER (F-A-17). History is
-    // reached from inside My work, for the matter that is open there.
-    if (state.matterId && rows.some((m) => m.matter_id === state.matterId)) {
-      sel.value = state.matterId;
-      showHistory(state.matterId);
-    }
-  } catch (err) {
-    if (err.obsolete || generation !== state.historyListGeneration) return;
-    $('history-state').textContent = '';
-    $('history-state').appendChild(stateBlock('loud',
-      `The matter list could not be read: ${err.message}`));
-  }
-}
-
-async function showHistory(matterId) {
-  const generation = ++state.historyGeneration;
-  const st = $('history-state');
-  const body = $('history-body');
-  st.textContent = ''; body.textContent = '';
-  if (!matterId) return;
-
-  let d;
-  try {
-    d = await api(`/api/matters/${matterId}/transcript`);
-    if (generation !== state.historyGeneration) return;
-  } catch (err) {
-    if (err.obsolete || generation !== state.historyGeneration) return;
-    st.appendChild(stateBlock('loud', `The history could not be read: ${err.message}`));
-    return;
-  }
-
-  if (d.state !== 'ok') {
-    // LOUD, and ABOVE the transcript rather than below it.
-    st.appendChild(stateBlock('loud', d.unreadable_reason
-      || 'Some turns on this matter could not be read back.'));
-  }
-
-  const head = document.createElement('p');
-  head.className = 'result-count';
-  head.textContent = `${d.turn_count} turn${d.turn_count === 1 ? '' : 's'} on ${d.title}`;
-  body.appendChild(head);
-  // No panel of other saved working stages here (owner, 28 September 2026;
-  // LB-139): the stages are kept for review, not shown.
-
-  // BK-39. THE SAME RENDERER, AND THAT IS THE WHOLE FIX.
-  //
-  // History showed the advocate's message and a collapsed "The turn as it was
-  // served" which, opened, printed the complete raw JSON: internal ids,
-  // prompts, model answers, metrics, gates. The answer they were actually
-  // given was not rendered at all -- so the surface that exists for REVIEW
-  // showed a different thing from the surface that gave the advice, and only
-  // one of them was readable.
-  //
-  // TWO RENDERERS FOR ONE ANSWER IS S9, and the drift is not hypothetical:
-  // BK-37 filed the served answer into sections, and this one would still
-  // have been printing JSON. `renderTurn` is now the only thing that renders
-  // an answer, here and on the Advise pane, so a change to how an answer
-  // reads changes both.
-  //
-  // THE RAW RECORD IS NOT DELETED. It moves inside the same `How this answer
-  // was made` door every served turn already has -- forensic diagnosis is
-  // what this store is FOR, and it stays one click away rather than being
-  // the first thing an advocate meets.
-  d.turns.forEach((t, i) => {
-    const card = document.createElement('article');
-    card.className = 'recorded-turn';
-
-    const h = document.createElement('header');
-    // NO TURN ID. It is one of this product's own keys and an advocate
-    // cannot act on it (J-5); the ordinal is what they use to talk about a
-    // turn, and the id stays in the raw record below.
-    h.textContent = t.at ? `Turn ${i + 1} · ${t.at}` : `Turn ${i + 1}`;
-    card.appendChild(h);
-
-    card.appendChild(renderTurn(restoredTurn(t)));
-
-    body.appendChild(card);
-  });
-  $('pane-history').scrollTop = 0;
-}
-
-$('history-matter').addEventListener('change', (ev) => showHistory(ev.target.value));
-$('casefile-matter').addEventListener('change', (ev) => showCasefile(ev.target.value));
-
-/* ========================= A1 — THE GATE =========================
- *
- * The application does not start until a session resolves. Not a redirect and
- * not an overlay dropped on a loaded board: `showMatterList()` used to run at
- * load, so the matters fetched and painted first and the question of who was
- * holding the laptop came second. A board that appears for an instant has
- * already been read.
- *
- * A FAILED SIGN-IN SAYS ONE THING. The server sends one message for an
- * unknown advocate and for a wrong password, and the client must not improve
- * on it — a helpful "no such advocate" here would undo the whole arrangement
- * from the outside.
- */
 
 function showGate(message) {
   $('gate').hidden = false;
@@ -9436,13 +7163,12 @@ function showApplication(advocate, workspace, professionalApproval) {
   $('gate').hidden = true;
   $('masthead').hidden = false;
   state.ended = false;
-  // A sign-in that follows a session that ended part-way through a brief goes straight back to that brief.
-  const draftWaiting = Boolean(state.draft && state.draft.advocate === advocate.id
-    && state.draft.workspace === workspace.id);
-  // Owner decisions, 15 and 16 Oct 2026: no Home page and no tabs. A sign-in opens a
-  // new matter, its board beside it, unless a brief was interrupted.
+  // Owner decisions, 15 and 16 Oct 2026: no Home page and no tabs. A sign-in opens a new matter, its board beside it. A sign-in
+  // after a session ended part-way through a brief went back to that brief only where it was a matter saved before
+  // conversations, which is no longer opened (plan AN.57, D292); the brief's words stay in the device's keeping. Going back to a
+  // conversation is the owner's open question D300.
   showTab('advise');
-  if (!draftWaiting) startMatter();
+  startMatter();
   loadHealth();
   loadUsage();
   showAdminEntry();
@@ -9450,16 +7176,6 @@ function showApplication(advocate, workspace, professionalApproval) {
   // started a second, overlapping list request when the advocate chose My
   // work, and did work even when they resumed an already-open file. The list
   // is read at its actual entry point; it must never reuse an old result.
-
-  // Restore the entire original intent, not a new instruction made from its
-  // text. Transcript reconciliation may confirm a turn whose acknowledgement
-  // was lost; unavailable read-back retains its exact retry envelope.
-  if (draftWaiting) {
-    const draft = state.draft;
-    if (draft.matterId) showThreadBoard(draft.matterId);
-    else startMatter();
-  }
-  state.draft = null;
   draftUnlock = unlockDrafts();
 }
 
@@ -9841,7 +7557,6 @@ async function signOut() {
   } catch {
     localWarning = 'Draft removal could not be confirmed. Clear this site’s browser data before leaving a shared device.';
   }
-  state.draft = null;
   intentContexts.clear();
   clearPrivileged();
   forgetRetirement();
@@ -9860,17 +7575,11 @@ async function retryRevoke(token = retiringSession) {
 }
 
 $('signout').addEventListener('click', signOut);
-['message', ...INTAKE_INPUTS, 'in-capacity'].forEach(id => {
-  $(id).addEventListener('input', () => snapshotIntent({edited:true}));
-});
+$('message').addEventListener('input', () => snapshotIntent({edited:true}));
 
 $('message').addEventListener('input', sizeComposer);
 // Words typed while NM works bring the arrow back (plan AN.42, D76).
 $('message').addEventListener('input', paintSend);
-$('draft-close').addEventListener('click', closeDraftRecovery);
-$('draft-dialog').addEventListener('cancel', (event) => {
-  event.preventDefault(); closeDraftRecovery();
-});
 $('jump-latest').addEventListener('click', () => {
   $('thread').scrollTop = $('thread').scrollHeight;
   $('jump-latest').hidden = true;
@@ -10497,262 +8206,3 @@ document.querySelectorAll('.pw-eye').forEach((eye) => {
   });
 });
 
-
-// ===================================================================== P25 ==
-// SOURCE ATTRIBUTION. BK-94-AC5: every admitted document has a visible,
-// correctable binding to ONE dispute before it contributes facts, and an
-// unattached source never defaults to the first or largest thread. The pane
-// shows the unbound ones FIRST, because a list of what is attached tells an
-// advocate nothing about the document sitting there contributing nothing.
-async function renderBindings(matterId, version) {
-  const host = $('bindings-host');
-  const stateEl = $('bindings-state');
-  host.textContent = ''; stateEl.textContent = '';
-  let data;
-  try {
-    data = await api(`/api/matters/${matterId}/source-bindings`);
-  } catch (err) {
-    stateEl.appendChild(stateBlock('loud',
-      `Source attribution could not be read: ${err.message}`));
-    return;
-  }
-  const rows = data.bindings || [];
-  if (!rows.length) {
-    host.appendChild(stateBlock('empty',
-      'No admitted source has been attached to a dispute yet.'));
-  }
-  rows.forEach((b) => {
-    const row = document.createElement('div');
-    row.className = 'binding' + (b.refused ? ' unbound' : '');
-    row.dataset.sourceId = b.source_id;
-    const pill = document.createElement('span');
-    pill.className = 'pill ' + (b.refused ? 'blocked'
-      : b.provisional ? 'unknown' : 'ok');
-    pill.textContent = b.refused ? 'contributes nothing'
-      : b.provisional ? 'my reading' : 'you stated it';
-    const text = document.createElement('span');
-    text.className = 'binding-text';
-    text.textContent = b.refused
-      ? `${b.source_id} (${b.source_version}) — ${b.refused}`
-      : `${b.source_id} (${b.source_version}) → ${b.thread_id}`;
-    row.append(pill, text, bindingForm(matterId, b, version));
-    host.appendChild(row);
-  });
-  keepForm(host, 'binding-form', () => bindingForm(matterId, null, version));
-}
-
-
-// THE FORM SURVIVES THE RE-RENDER. `host.textContent = ''` above clears the
-// derived list, which is right; it must not also clear the control somebody
-// is halfway through using. The existing node is detached before the wipe and
-// put back after, so its values, focus and listeners are untouched.
-function keepForm(host, className, make) {
-  const kept = host.__keptForm;
-  const form = (kept && kept.className.includes(className)) ? kept : make();
-  host.__keptForm = form;
-  host.appendChild(form);
-}
-
-function bindingForm(matterId, existing, version) {
-  const form = document.createElement('form');
-  form.className = 'binding-form';
-  const src = document.createElement('input');
-  src.type = 'text'; src.name = 'source_id'; src.required = true;
-  src.placeholder = 'document id';
-  src.setAttribute('aria-label', 'Document this binding is about');
-  if (existing) { src.value = existing.source_id; src.readOnly = true; }
-  const ver = document.createElement('input');
-  ver.type = 'text'; ver.name = 'source_version'; ver.required = true;
-  ver.placeholder = 'version';
-  ver.setAttribute('aria-label', 'Version of the document');
-  if (existing) { ver.value = existing.source_version; ver.readOnly = true; }
-  const thread = document.createElement('input');
-  thread.type = 'text'; thread.name = 'thread_id'; thread.required = true;
-  thread.placeholder = 'which dispute';
-  thread.setAttribute('aria-label', 'The dispute this document belongs to');
-  const go = document.createElement('button');
-  go.type = 'submit'; go.className = 'ghost';
-  go.textContent = existing ? 'Re-attach' : 'Attach';
-  const out = document.createElement('div');
-  out.className = 'binding-out';
-  form.append(src, ver, thread, go, out);
-
-  form.addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    out.textContent = '';
-    try {
-      const said = await api('/api/source-bindings', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          matter_id: matterId, source_id: src.value.trim(),
-          source_version: ver.value.trim(), thread_id: thread.value.trim(),
-          basis: 'stated',
-          expected_matter_version: currentVersion(matterId, version),
-        }),
-      });
-      // AFTER the re-render, not before it. Appending here and then calling
-      // `showCasefile` wiped the note in the same tick -- the advocate was
-      // told which dispute lost the source for a few milliseconds. The
-      // sentence is the whole point of a correction: it says which thread's
-      // work has to be reopened.
-      if (state.matterId === matterId) state.matterVersion = said.version;
-      await showCasefile(matterId);
-      $('bindings-state').appendChild(stateBlock('quiet', said.reopen_note));
-    } catch (err) {
-      out.appendChild(stateBlock('loud',
-        `Not attached: ${(err.detail && err.detail.why) || err.message}`));
-    }
-  });
-  return form;
-}
-
-// ===================================================================== P27 ==
-// DECISIONS ON ADVICE. BK-55-AC3. Every row carries the sentence saying what
-// it does NOT do, because a consumer that has to ask separately will not.
-async function renderDecisions(matterId, version) {
-  const host = $('decisions-host');
-  const stateEl = $('decisions-state');
-  host.textContent = ''; stateEl.textContent = '';
-  let data;
-  try {
-    data = await api(`/api/matters/${matterId}/advice-decisions`);
-  } catch (err) {
-    stateEl.appendChild(stateBlock('loud',
-      `Decisions could not be read: ${err.message}`));
-    return;
-  }
-  const rows = data.decisions || [];
-  if (!rows.length) {
-    host.appendChild(stateBlock('empty',
-      'Nothing has been decided about the advice on this file. '
-      + 'Silence is not acceptance.'));
-  }
-  rows.forEach((d) => {
-    const row = document.createElement('div');
-    row.className = 'decision' + (d.current ? '' : ' superseded');
-    row.dataset.decisionId = d.decision_id;
-    const pill = document.createElement('span');
-    pill.className = 'pill ' + (d.current ? 'ok' : 'unknown');
-    pill.textContent = d.current ? d.disposition : `${d.disposition} (superseded)`;
-    const text = document.createElement('span');
-    text.textContent = `advice ${d.advice_version} · ${d.scope} · owner `
-      + `${d.owner} · review: ${d.review_trigger}`;
-    const note = document.createElement('div');
-    note.className = 'authority-note';
-    note.textContent = d.authority_note;
-    row.append(pill, text, note);
-    host.appendChild(row);
-  });
-  keepForm(host, 'decision-form', () => decisionForm(matterId, version));
-}
-
-function decisionForm(matterId, version) {
-  const form = document.createElement('form');
-  form.className = 'decision-form';
-  const pick = document.createElement('select');
-  pick.name = 'disposition';
-  pick.setAttribute('aria-label', 'What you decided about the advice');
-  ['accept', 'reject', 'narrow', 'defer'].forEach((v) => {
-    const o = document.createElement('option'); o.value = v; o.textContent = v;
-    pick.appendChild(o);
-  });
-  const adviceVersion = document.createElement('input');
-  adviceVersion.type = 'text'; adviceVersion.required = true;
-  adviceVersion.name = 'advice_version';
-  adviceVersion.placeholder = 'advice version';
-  adviceVersion.setAttribute('aria-label', 'Which version of the advice');
-  const scope = document.createElement('input');
-  scope.type = 'text'; scope.required = true; scope.placeholder = 'scope';
-  scope.name = 'scope';
-  scope.setAttribute('aria-label', 'What this decision covers');
-  const owner = document.createElement('input');
-  owner.type = 'text'; owner.required = true; owner.placeholder = 'owner';
-  owner.name = 'owner';
-  owner.setAttribute('aria-label', 'Who owns this decision');
-  const trigger = document.createElement('input');
-  trigger.type = 'text'; trigger.required = true;
-  trigger.name = 'review_trigger';
-  trigger.placeholder = 'what brings it back';
-  trigger.setAttribute('aria-label', 'What brings this decision back for review');
-  const go = document.createElement('button');
-  go.type = 'submit'; go.className = 'ghost'; go.textContent = 'Record decision';
-  const out = document.createElement('div'); out.className = 'decision-out';
-  form.append(pick, adviceVersion, scope, owner, trigger, go, out);
-
-  form.addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    out.textContent = '';
-    try {
-      const said = await api('/api/advice-decisions', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          matter_id: matterId, disposition: pick.value,
-          advice_version: adviceVersion.value.trim(),
-          scope: scope.value.trim(), owner: owner.value.trim(),
-          review_trigger: trigger.value.trim(),
-          expected_matter_version: currentVersion(matterId, version),
-        }),
-      });
-      if (state.matterId === matterId) state.matterVersion = said.version;
-      await showCasefile(matterId);
-      $('decisions-state').appendChild(
-        stateBlock('quiet', said.decision.authority_note));
-    } catch (err) {
-      out.appendChild(stateBlock('loud',
-        `Not recorded: ${(err.detail && err.detail.why) || err.message}`));
-    }
-  });
-  return form;
-}
-
-// ===================================================================== P33 ==
-// RETENTION AND ERASURE. What is outstanding is named, never implied by a
-// count that does not add up, and a held request says so on its face.
-async function renderRetention(matterId, version) {
-  const host = $('retention-host');
-  const stateEl = $('retention-state');
-  host.textContent = ''; stateEl.textContent = '';
-  let cover;
-  try {
-    cover = await api(`/api/matters/${matterId}/cover`);
-  } catch (err) {
-    stateEl.appendChild(stateBlock('loud',
-      `Retention could not be read: ${err.message}`));
-    return;
-  }
-  const rows = (cover.retention || []);
-  if (!rows.length) {
-    host.appendChild(stateBlock('empty',
-      'No retention or erasure has been requested on this file.'));
-    return;
-  }
-  rows.forEach((r) => {
-    const row = document.createElement('div');
-    row.className = 'retention-row';
-    row.dataset.requestId = r.request_id;
-    const pill = document.createElement('span');
-    pill.className = 'pill ' + (r.state === 'complete_for_declared_scope' ? 'ok'
-      : r.state === 'under_hold' ? 'blocked' : 'unknown');
-    pill.textContent = r.state.replace(/_/g, ' ');
-    const text = document.createElement('span');
-    text.textContent = `${r.resolved_asset_count} of ${r.expected_asset_count} `
-      + `resolved · ${(r.retained_reason_codes || []).join(', ') || 'nothing retained'}`;
-    row.append(pill, text);
-    (r.outstanding || []).forEach((o) => {
-      const li = document.createElement('div');
-      li.className = 'retention-outstanding';
-      li.textContent = o;
-      row.appendChild(li);
-    });
-    host.appendChild(row);
-  });
-}
-
-// THE VERSION THE SERVER LAST CONFIRMED. A second tab that moved the matter
-// leaves this one holding a stale number, and posting it would lose the other
-// tab's write -- so the fresher of the two is used, the same fix P24's
-// briefing control needed.
-function currentVersion(matterId, fallback) {
-  return (state.matterId === matterId && state.matterVersion > fallback)
-    ? state.matterVersion : fallback;
-}

@@ -171,8 +171,6 @@
     "person.js": "nm/app/person.js",
     "draft-vault.js": "nm/arrive/draft-vault.js",
     "dictation-worklet.js": "nm/open_matter/dictation-worklet.js",
-    "intake-materials.css": "nm/open_matter/intake-materials.css",
-    "intake-materials.js": "nm/open_matter/intake-materials.js",
     "site.css": "nm/site/site.css",
     "site.js": "nm/site/site.js",
     "home.html": "nm/site/home.html",

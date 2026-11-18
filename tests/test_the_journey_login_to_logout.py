@@ -43,7 +43,6 @@ import urllib.request
 
 import pytest
 
-from tests.matter_records import open_record
 
 pytestmark = pytest.mark.journey
 
@@ -170,7 +169,7 @@ def _sign_in(page, journey, width=1280, height=900):
 
 
 def _open_matter(page, journey, client=None, **kw):
-    """Sign in and answer intake -- the state every later phase needs.
+    """Sign in and open a new conversation -- the state every later phase needs.
 
     `client` NAMES THE MATTER, and a phase that has to find its own file
     later must pass one. The server is module-scoped and every phase adds a
@@ -179,48 +178,16 @@ def _open_matter(page, journey, client=None, **kw):
     that as the restore being broken when it was the click.
     """
     _sign_in(page, journey, **kw)
-    # F-B-01. A NEW MATTER STARTS FROM HOME, on the intake form alone.
+    # A new matter opens on its message box (owner, 15 and 16 Oct 2026); the opening form it once answered was deleted with
+    # the screens of a matter saved before conversations (plan AN.57, D292), so `client` names nothing on the page now.
     _start_matter(page)
-    _intake(page, client=client or "Ramesh Traders")
     return page
-
-
-def _intake(page, client="Ramesh Traders", adverse="Kiran Steels",
-            scope="recover the price of goods sold"):
-    """Answer the intake form, if it is up. B3-B5.
-
-    THE PRODUCT ASKS BEFORE IT WORKS, so the journey has to answer before it
-    briefs -- exactly as an advocate does. A helper rather than a phase of its
-    own because every later phase needs a workable matter, and a suite that
-    re-typed this eleven times would be testing the form eleven times and the
-    rest of the journey never.
-    """
-    if page.is_hidden("#intake"):
-        return
-    page.fill("#in-client", client)
-    # The approved opening form uses progressive disclosure, not mandatory
-    # opponent/capacity fields. This journey deliberately supplies both.
-    if page.is_hidden("#in-adverse"):
-        page.get_by_text("Other parties", exact=True).click()
-    page.fill("#in-adverse", adverse)
-    page.fill("#in-scope", scope)
-    if page.is_hidden("#in-capacity"):
-        page.get_by_text("Who is giving instructions?", exact=True).click()
-    page.check("#in-capacity")
-    page.click("#in-go")
-    # `state="hidden"`, NOT the default. `wait_for_selector("#intake
-    # [hidden]")` waits for that element to become VISIBLE, and an
-    # element selected BY being hidden never will -- so the wait timed
-    # out on a form that had closed correctly.
-    page.wait_for_selector("#intake", state="hidden", timeout=10000)
-    # F-B-01: the chat opens once the server has saved the matter.
-    page.wait_for_selector("#composer:not([hidden])", timeout=15000)
 
 
 def _start_matter(page):
     """Start a new matter the way the page offers it: the top bar's New matter, which opens the conversation on its message
     box. Since the owner's decisions of 15 and 16 Oct 2026 there are no tabs - the top bar holds a new matter and the
-    conversation history - and the intake form is no longer shown; _intake answers it only where a page still shows it."""
+    conversation history - and the opening form was deleted (plan AN.57, D292)."""
     page.click("#top-new")
     page.wait_for_selector("#message", state="visible", timeout=15000)
 
@@ -319,41 +286,11 @@ def _reopen(page, first_words):
 
 
 def _tab(page, name: str):
-    """Switch panes and WAIT FOR THE PANE, never for a fixed number of ms.
-
-    This was `click(...)` then `wait_for_timeout(2000)`, and phase 8 failed
-    once in three runs with the History pane still carrying `hidden` in the
-    saved artifact. A sleep long enough on this machine is the flake that
-    fails on a slower one -- and worse, it makes a real defect and a slow
-    render indistinguishable, which is the whole failure mode this repository
-    keeps recording.
-
-    Case file and History belong to the matter that is open, and since F-B-04
-    (owner, 28 September 2026) they are among its records under the file icon
-    -- reached there, opening the first matter on the list when none is open,
-    as an advocate would have to. The ribbon's tabs (F-A-17) are gone since the
-    owner's decisions of 15 and 16 Oct 2026: My work is the top bar's
-    conversation history, and Home, the Legal library and Preparation were
-    deleted with their phases (plan AN.57, D292).
-    """
-    if name in ("casefile", "history"):
-        if not page.is_visible("#files-toggle"):
-            _reach_rail(page, page.viewport_size["width"])
-            page.wait_for_selector("#rail-body .row, #rail-body .rail-empty, #rail-body p", timeout=15000)
-            matters = page.locator("#rail-body .row[data-matter-id]")
-            if not matters.count():
-                # The file icon and its records belong to a matter saved before conversations; a conversation's records are its
-                # board and its files (owner, 16 and 17 Oct 2026; the icon is offered only for such a matter, app.js).
-                pytest.skip("a matter's Case file and History are reached only from a matter saved before conversations, and "
-                            "this store holds none")
-            matters.first.click()
-            page.wait_for_selector("#files-toggle", state="visible", timeout=15000)
-            page.wait_for_function("() => state.matterReady", timeout=15000)
-        open_record(page, "Case file" if name == "casefile" else "History")
-    elif name == "advise":
-        _reach_rail(page, page.viewport_size["width"])
-        return
-    page.wait_for_selector(f"#pane-{name}:not([hidden])", timeout=15000)
+    """Go back to the conversation history - the one pane the top bar switches to. Case file and History, once reached under a
+    matter's file icon, were deleted with the screens of a matter saved before conversations (plan AN.57, D292); the ribbon's
+    tabs (F-A-17) went with the owner's decisions of 15 and 16 Oct 2026."""
+    assert name == "advise", f"the page has no {name} pane"
+    _reach_rail(page, page.viewport_size["width"])
 
 
 def _open_account_menu(page):
@@ -634,15 +571,8 @@ def test_phase_6b_an_expired_period_is_never_a_window_to_act_within(
 
 # ========================================================== 7-8. the panes ===
 
-def test_phase_8_history_shows_the_turn_that_was_served(page, journey):
-    """The advocate's own record. A History that cannot show what was served
-    makes every other guarantee unverifiable by them."""
-    _open_matter(page, journey)
-    _advise(page, BRIEF)
-    _tab(page, "history")
-
-    assert page.inner_text("#pane-history").strip(), "History is empty"
-    assert not page.errors, f"the page threw: {page.errors}"
+# Phase 8 read a matter's History pane, deleted with the screens of a matter saved before conversations (plan AN.57, D292);
+# a conversation is reviewed by reopening it, exactly as saved (phase 8b).
 
 
 # ============================================= 9-10. surviving the ordinary ==

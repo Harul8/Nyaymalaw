@@ -18,8 +18,7 @@ const between = (start, end) => {
   return app.slice(a, b);
 };
 const rendererSource = between('function appendReplyBody(', 'const REPLY_ICONS')
-  + '\n' + between('function renderTurn(entry) {', 'function showConversationFromStart()')
-  + '\n' + between('function showConversationFromStart()', 'function repaint()');
+  + '\n' + between('function renderTurn(entry) {', 'function repaint()');
 // The board's event rows and point labels, which the folded record reuses, stand within that stretch of the page's code.
 if (!rendererSource.includes('function eventRows(') || !rendererSource.includes('const SIDE_BY_SIDE = ')) {
   throw new Error('renderer boundary moved: the board helpers the record reuses');

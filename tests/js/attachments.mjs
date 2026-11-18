@@ -236,7 +236,7 @@ const reading = (finished, total) => ({ state: 'reading', done: finished, total 
   });
   vm.runInContext(between("// THE MATTER'S FILES", 'const CERTAINTY = '), context);
   // The page has one fileSize (18 Oct 2026: a second, shadowed copy had been tested instead).
-  vm.runInContext(between('function fileSize(bytes) {', "/* F-B-04, later the same day."), context);
+  vm.runInContext(between('function fileSize(bytes) {', 'function showGate(message) {'), context);
   const [empty] = context.renderChatDocuments({ sent: [] }, () => {});
   assert.match(empty.textContent, /No files have been sent/);
   const received = '2026-10-17T04:20:00+00:00';

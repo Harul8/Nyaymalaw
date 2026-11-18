@@ -1143,21 +1143,21 @@ def phone_top_bar(stylesheet):
 @then("a sign-in opens a new matter with its board beside the conversation")
 def sign_in_opens_a_new_matter(page_script):
     show = _function(page_script, "showApplication")
-    for step in ("showTab('advise');", "if (!draftWaiting) startMatter();"):
+    for step in ("showTab('advise');", "startMatter();"):
         assert step in show, step
     start = _function(page_script, "startMatter")
     for step in ("showTab('advise');", "setWorkView('opening');", "loadChatBoard();", "$('message').focus();"):
         assert step in start, step
 
 
-@then("a sign-in after a session ended part-way through a brief goes back to that brief")
-def sign_in_returns_to_the_draft(page_script):
+@then("a sign-in after a session ended part-way through a brief keeps its words and opens no earlier matter")
+def sign_in_keeps_the_draft(page_script):
+    # It went back to the brief only where that was a matter saved before conversations, which is no longer opened (plan AN.57,
+    # D292); going back to a conversation is the owner's open question D300.
     show = _function(page_script, "showApplication")
-    waiting = show.index("const draftWaiting = Boolean(state.draft && "
-                         "state.draft.advocate === advocate.id")
-    assert waiting < show.index("if (!draftWaiting) startMatter();") < show.index("if (draftWaiting) {")
-    assert "showThreadBoard(draft.matterId)" in show[show.index("if (draftWaiting) {"):]
+    assert "startMatter();" in show and "draftWaiting" not in show and "showThreadBoard" not in page_script
     assert "keepDraft();" in _function(page_script, "sessionEnded")
+    assert "snapshotIntent();" in _function(page_script, "keepDraft")
 
 
 # ================================ B. Open a matter ============================
@@ -1171,8 +1171,10 @@ def sign_in_returns_to_the_draft(page_script):
 def new_matter_opens_the_conversation(page_script):
     assert "$('top-new').addEventListener('click', () => startMatter());" in page_script
     start = _function(page_script, "startMatter")
-    for step in ("showIntake(false);", "$('matter-heading').textContent = 'New matter';", "$('message').focus();"):
+    for step in ("$('matter-heading').textContent = 'New matter';", "$('message').focus();"):
         assert step in start, step
+    # The form of a matter saved before conversations is gone from the page (plan AN.57, D292).
+    assert "function showIntake(" not in page_script and "$('intake')" not in page_script
 
 
 @then("the board says it fills in as NM understands the matter")
@@ -1446,10 +1448,11 @@ def plus_button_beside_the_brief(app_page, page_script):
 
 
 @then("there is no files bar above the chat")
-def no_files_bar(app_page):
-    materials = _asset("intake-materials.js")
-    assert "materials-entry" not in app_page and "materials-entry" not in materials
-    assert "$('workspace-focus').after(" not in materials
+def no_files_bar(app_page, page_script):
+    # The earlier matters' original-material window, which once drew one, was deleted with their screens (plan AN.57, D292).
+    assert "intake-materials" not in app_page
+    assert "materials-entry" not in app_page and "materials-entry" not in page_script
+    assert "$('workspace-focus').after(" not in page_script
     assert "Add files or record a voice note" not in app_page
 
 

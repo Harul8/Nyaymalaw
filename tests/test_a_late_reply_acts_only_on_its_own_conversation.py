@@ -85,7 +85,6 @@ function page() {
 const turns = async () => { for (let i = 0; i < 20; i += 1) await Promise.resolve(); };
 const entryOf = (context, more = {}) => ({ context, turnId: 't-1', request: { matter_id: context.matterId, chat_id: context.chatId },
   envelope: '{}', ...more });
-const refused = (detail) => Object.assign(new Error('refused'), { status: 409, detail });
 
 // Each case: the advocate is in the first conversation; `leaves` says whether another is opened during the wait.
 async function answered(leaves) {
@@ -104,21 +103,8 @@ async function answered(leaves) {
   return p;
 }
 
-async function inputOnly(leaves) {
-  const p = page();
-  const first = p.intent(null, null, null);
-  const other = p.intent('c-other', 'm-other', 3);
-  p.open(first);
-  const done = p.deliver(entryOf(first));
-  await turns();
-  p.waits.api.shift().reject(refused({ committed: 'input_only', matter_id: 'm-first', matter_version: 7 }));
-  await turns();
-  assert.equal(p.waits.draft.length, 1);
-  if (leaves) p.open(other);
-  p.waits.draft.shift().resolve(true);
-  await done;
-  return p;
-}
+// A refusal that kept the message as an earlier matter record opened that record here; the server no longer gives that refusal
+// and the page no longer opens such a record (plan AN.57, D292), so that case is gone.
 
 async function afterARestart(leaves) {
   const p = page();
@@ -184,20 +170,11 @@ _CASES = {
     "an_answer": r"""
 (async () => {
   const stayed = await answered(false);
-  assert.deepEqual(stayed.did, ['opened matter m-first']);
+  // The answer takes effect in its own conversation; no earlier matter record is opened over it (plan AN.57, D292).
+  assert.deepEqual(stayed.did, []);
   assert.equal(stayed.state.matterId, 'm-first');
   assert.equal(stayed.state.matterVersion, 7);
   untouched(await answered(true), 'an answer that came after the advocate left');
-})().catch((error) => { console.error(error); process.exit(1); });
-""",
-    "a_refusal_that_kept_the_message": r"""
-(async () => {
-  const stayed = await inputOnly(false);
-  assert.deepEqual(stayed.did, ['opened matter m-first']);
-  assert.equal(stayed.state.matterVersion, 7);
-  const left = await inputOnly(true);
-  assert.deepEqual(left.did, [], 'nothing is opened over the conversation the advocate is now in');
-  assert.equal(left.state.matterVersion, 3, 'the open conversation keeps its own version');
 })().catch((error) => { console.error(error); process.exit(1); });
 """,
     "a_turn_followed_after_a_restart": r"""

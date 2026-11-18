@@ -50,10 +50,8 @@ ARTIFACTS = ROOT / ".nm" / "journey"
 from assurance.gate.layout import WIDTHS  # noqa: E402
 from tests.test_the_journey_login_to_logout import (  # noqa: E402
     _advise,
-    _intake,
     _sign_in,
     _start_matter,
-    _tab,
     _visible_text,
 )
 
@@ -141,8 +139,7 @@ def _artifact_on_failure(request, page):
 
 def _open(page, journey, client: str, width: int = 1280, height: int = 900):
     _sign_in(page, journey, width, height)
-    _start_matter(page)
-    _intake(page, client=client)
+    _start_matter(page)  # the conversation opens on its message box; `client` names nothing since the form went
     _advise(page, BRIEF)
     return page
 
@@ -164,66 +161,10 @@ def test_the_answer_says_each_thing_an_advocate_must_identify(
         f"would be measuring a thing that was never rendered")
 
 
-def test_a_corrected_fact_changes_what_the_screen_says(page, journey):
-    """BK-66-AC1'S NEGATIVE CONTROL: *change a decisive fact while retaining
-    an old conclusion and hiding the new assumption or pending question*.
-
-    The screen that renders the same confident answer after the date moved is
-    the defect, and it is the one a static page never shows.
-    """
-    _open(page, journey, "Reader Correction Traders")
-    before = _visible_text(page)
-
-    _tab(page, "casefile")
-    page.wait_for_selector("#casefile-matter", state="visible", timeout=15000)
-    page.select_option("#casefile-matter", index=1)
-    page.wait_for_selector("#casefile-entries .entry", timeout=20000)
-
-    dated = page.locator("#casefile-entries .entry").filter(
-        has_text="2023").first
-    if not dated.count():
-        pytest.skip("this brief produced no dated entry to correct")
-    form = dated.locator("form.correction")
-    if not form.count():
-        dated.locator("button.correct").first.click()
-        form = dated.locator("form.correction")
-        form.wait_for(timeout=10000)
-    form.locator("input[name='date']").fill("2019-03-14")
-    form.locator("input[name='reason']").fill(
-        "the invoices are dated 2019; 2023 was a typing error")
-    form.locator("button[type='submit']").click()
-    page.wait_for_selector("#currency-state .pill[data-currency='stale']",
-                           timeout=20000)
-
-    after = _visible_text(page)
-    assert after != before, (
-        "the screen says exactly what it said before a decisive date moved")
-
-    lowered = after.lower()
-    assert "stale" in lowered or "not current" in lowered, (
-        "nothing on the screen says anything became stale when the date "
-        "moved, so an advocate reading it has an old conclusion and no sign "
-        "of it")
-    assert "2019" in after, (
-        "the corrected value is not on the screen, so what changed cannot be "
-        "identified from it")
-
-
-def test_the_source_behind_a_statement_is_reachable_from_the_screen(
-        page, journey):
-    """BK-66-AC1's *reach and inspect the supporting source*. Reachable, by
-    some control -- not necessarily visible."""
-    _open(page, journey, "Reader Source Traders")
-    _tab(page, "casefile")
-    page.wait_for_selector("#casefile-matter", state="visible", timeout=15000)
-    page.select_option("#casefile-matter", index=1)
-    page.wait_for_selector("#casefile-entries", timeout=20000)
-
-    shown = _visible_text(page).lower()
-    assert any(word in shown for word in
-               ("source", "entry", "recorded", "rested on", "basis")), (
-        "nothing on the case file offers a way to the material behind a "
-        "statement")
+# BK-66-AC1's negative control (a corrected decisive fact changes what the screen says) and its reachable source were
+# driven through a matter's Case file, deleted with the screens of a matter saved before conversations (plan AN.57, D292).
+# A conversation is corrected in the advocate's own words through Steer (plan AN.42, D79), and the law and papers behind
+# its board open in the reading pane.
 
 
 def test_correcting_pausing_and_returning_need_no_retyping(page, journey):
@@ -236,7 +177,6 @@ def test_correcting_pausing_and_returning_need_no_retyping(page, journey):
     """
     _sign_in(page, journey)
     _start_matter(page)
-    _intake(page, client="Reader Draft Traders")
     page.fill("#message", "a half-written brief that must survive")
     page.reload()
     page.wait_for_selector("#masthead:not([hidden])", timeout=15000)
