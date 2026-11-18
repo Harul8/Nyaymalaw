@@ -3300,17 +3300,7 @@ function renderTurn(entry) {
           where.type = 'button';
           where.className = 'cite';
           where.textContent = 'Show this dispute on the matter board';
-          where.addEventListener('click', () => {
-            const card = Array.from(document.querySelectorAll('.board-disputes .dispute'))
-              .find((dispute) => dispute.getAttribute('aria-label') === el.dispute.name);
-            if (!card) return;
-            // A board of several disputes shows one open at a time (49c, D180): this one is opened, as its own button opens it.
-            const toggle = card.querySelector('.dispute-toggle');
-            if (toggle && toggle.getAttribute('aria-expanded') === 'false') toggle.click();
-            card.scrollIntoView({ block: 'nearest' });
-            const title = card.querySelector('.dtitle');
-            if (title) title.focus();
-          });
+          where.addEventListener('click', () => showDisputeOnBoard(el.dispute));
           const line = document.createElement('p');
           line.className = 'req-law';
           line.appendChild(where);
@@ -3425,7 +3415,15 @@ function renderTurn(entry) {
           parts.push(asks);
         }
         const ask = document.createElement('li');
-        if (item.kind === 'NEED_CASE' && item.need) {
+        if (item.kind === 'NEED_BOARD') {
+          // Plan AN.48 (D303): what to get for the case is on the matter board; code's line says how many, and shows the card.
+          const where = document.createElement('button');
+          where.type = 'button';
+          where.className = 'cite';
+          where.textContent = 'Show this dispute on the matter board';
+          where.addEventListener('click', () => showDisputeOnBoard(item.dispute));
+          ask.append(document.createTextNode(`${item.text} `), where);
+        } else if (item.kind === 'NEED_CASE' && item.need) {
           // Rendering v20: what to get for a dispute's case, from whom and why. Plan AN.39 (D55): its words open the point of the
           // case it is for, in the reading pane, as the board's point does.
           const point = caseElementFor(entry.answer, item.dispute, item.need.for);
@@ -3696,6 +3694,8 @@ function needQuestions(items) {
     if (item.kind === 'NEED_GROUP') { group = String(item.text || '').trim() || null; continue; }
     // What is the advocate's call is asked across the disputes, not for one of them.
     if (item.kind === 'YOUR_CALL') { group = null; continue; }
+    // D303: the line that what to get is on the board asks nothing; the board's 'Tell NM about these' answers those.
+    if (item.kind === 'NEED_BOARD') continue;
     const text = item.kind === 'NEED_CASE' && item.need
       ? `${item.need.what} — from ${item.need.from_whom}` : String(item.text || '').trim();
     if (text) questions.push({ group, text });
@@ -4010,6 +4010,19 @@ function renderQuestionsAsked(asked) {
   }
   box.appendChild(list);
   return box;
+}
+
+// A dispute's card on the matter board, shown from the answer: opened where the board shows one at a time (49c, D180), as its own
+// button opens it, brought into view and given the focus. Nothing happens where the board does not hold it.
+function showDisputeOnBoard(dispute) {
+  const card = Array.from(document.querySelectorAll('.board-disputes .dispute'))
+    .find((shown) => shown.getAttribute('aria-label') === (dispute && dispute.name));
+  if (!card) return;
+  const toggle = card.querySelector('.dispute-toggle');
+  if (toggle && toggle.getAttribute('aria-expanded') === 'false') toggle.click();
+  card.scrollIntoView({ block: 'nearest' });
+  const title = card.querySelector('.dtitle');
+  if (title) title.focus();
 }
 
 // Opening a saved matter starts with its first turn. New live replies still
@@ -5645,7 +5658,7 @@ function renderWorking(el) {
 // by dispute. Earlier answers group as before.
 function groupAnswerElements(elements) {
   const IN_SHORT_PARTS = new Set(['ROW', 'ROW_ACTION', 'ROW_READY', 'DO_FIRST', 'TIES']);
-  const NEED_PARTS = new Set(['QUESTION', 'NEED_GROUP', 'NEED_ITEM', 'NEED_CASE', 'ASK', 'YOUR_CALL']);
+  const NEED_PARTS = new Set(['QUESTION', 'NEED_GROUP', 'NEED_ITEM', 'NEED_CASE', 'NEED_BOARD', 'ASK', 'YOUR_CALL']);
   const ANSWER_RUNS = { RISK: 'RISKS', STEP: 'STEPS', MORE: 'MORE_FOLD' };
   const out = [];
   for (const el of elements) {

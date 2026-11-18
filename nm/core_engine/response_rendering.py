@@ -360,7 +360,9 @@ NOT_PARAGRAPHS = frozenset({"HEADING", "WORKING", "NOTICE", "HELD", "NEEDS", "NO
                             # Research v14 (plan AN.33, piece 33m): what the papers record, folded at the end.
                             "PAPERS",
                             # v20 (plan AN.35, piece 35c3b): what makes a dispute's case stronger, and what to get for it.
-                            "CASE", "NEED_CASE"})
+                            "CASE", "NEED_CASE",
+                            # Plan AN.48 (D303): code's line that what to get for a dispute's case is on the matter board.
+                            "NEED_BOARD"})
 #: v14: the heading under which every question to the advocate is gathered.
 NEEDS = "What I need from you"
 
@@ -1426,6 +1428,13 @@ def _by_when(piece, boxes):
             "days_label": _DAYS.get(standing["state"]), "as_of": rows.get("As of")}
 
 
+def _on_the_board(count):
+    """Code's line under "What I need from you" for a dispute's things to get (plan AN.48, D303)."""
+    many = count != 1
+    return (f"{'One thing' if not many else f'{count} things'} to get for this case {'are' if many else 'is'} on the matter "
+            "board, under this dispute, where 'Tell NM about these' takes your answers.")
+
+
 def _misleading_whole(piece):
     """What the independent check found may mislead though it tied it to no one paragraph."""
     return [finding for finding in answer_sections.beside(piece)
@@ -1688,8 +1697,12 @@ def _render_presented(context, research_record, sources, *, sections, cross_chec
         group = [_label("NEED_ITEM", item["need"], item=deepcopy(checklist.kept(item, context, sources)),
                         dispute={"id": saved["dispute_id"], "name": name})
                  for item in piece["draft"]["checklists"][0]["items"] if item.get("asked")]
-        group += [_label("NEED_CASE", ask["what"], need=deepcopy(ask), dispute={"id": saved["dispute_id"], "name": name})
-                  for ask in (case or {}).get("to_get", ())]
+        # D303 (plan AN.48; the owner, 18 Nov 2026): what to get for the case is listed on the matter board, where 'Tell NM about
+        # these' takes the advocate's answers, so the answer says only how many there are and where; its questions stay below.
+        # An answer saved with each listed (NEED_CASE) is shown as saved (P46).
+        to_get = (case or {}).get("to_get", ())
+        group += [_label("NEED_BOARD", _on_the_board(len(to_get)), count=len(to_get),
+                         dispute={"id": saved["dispute_id"], "name": name})] if to_get else []
         group += [_shown_paragraph(unit, index, saved["part"], sources, asks, kind="ASK") for index, unit in units
                   if unit["place"] == "ask" and not asks.get(unit["id"])]
         if group:

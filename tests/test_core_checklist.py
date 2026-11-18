@@ -344,13 +344,15 @@ def test_a_saved_turn_keeps_its_disputes_case_as_records_and_the_board_and_the_a
     shown = board["disputes"][0]
     assert shown["checklist"]["case"] == case and shown["checklist"]["answered_at"] == reply["at"]
     assert shown["law"]["state"] == "assessed"
-    # The answer shows it beside the section, and what to get under "What I need from you".
+    # The answer shows it beside the section, and under "What I need from you" code's line that what to get is on the board
+    # (plan AN.48, D303) - never the list again.
     beside = [element for element in reply["elements"] if element["kind"] == "CASE"]
     assert [element["case"] for element in beside] == [case]
-    asked = [element for element in reply["elements"] if element["kind"] == "NEED_CASE"]
-    assert [(element["text"], element["need"]["from_whom"]) for element in asked] == [("The postal receipt", "the client")]
+    assert not [element for element in reply["elements"] if element["kind"] == "NEED_CASE"]
+    on_board, = [element for element in reply["elements"] if element["kind"] == "NEED_BOARD"]
+    assert on_board["count"] == 1 and on_board["text"].startswith("One thing to get for this case is on the matter board")
     kinds = [element["kind"] for element in reply["elements"]]
-    assert kinds.index("CASE") < kinds.index("NEEDS") < kinds.index("NEED_CASE")
+    assert kinds.index("CASE") < kinds.index("NEEDS") < kinds.index("NEED_BOARD")
     # Records changed after saving are refused on reopening: the turn's own digest is made whole
     # here, but the chain's tail no longer matches (P46: the record is checked, never rebuilt).
     damaged = deepcopy(matter)

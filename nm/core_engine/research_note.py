@@ -44,7 +44,9 @@ def _when(response):
 
 #: v18: words of code's own that say what a line of the answer is, as the page shows them.
 _LEADS = {"ROW_ACTION": "What to do: ", "ROW_READY": "Have ready: ", "DO_FIRST": "Do first: ",
-          "RISK": "• ", "NEED_ITEM": "• ", "ASK": "• ", "NEED_CASE": "• "}
+          "RISK": "• ", "NEED_ITEM": "• ", "ASK": "• ", "NEED_CASE": "• ",
+          # Plan AN.48 (D303): the line that what to get for a case is on the matter board.
+          "NEED_BOARD": "• "}
 #: Rendering v20 (plan AN.35, piece 35c3b): how each element of a dispute's case stands, in code's words.
 _STANDS = {"shown": "Shown by the papers", "weak": "Shown only weakly", "missing": "Not yet shown"}
 _PROVES = {"client": "for the client to prove", "other_side": "for the other side to prove"}

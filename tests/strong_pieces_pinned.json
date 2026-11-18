@@ -11,7 +11,7 @@
   "nm/core_engine/answer_sections.py": "c91d8e5a4a3195369b671bfea259203fbb732c05f013c9dd8bd723acb7b727ee",
   "nm/core_engine/response_writer.py": "b6077f87cd4050c805dd903a494501440a20206e540cda7292db19c1e9e31358",
   "nm/core_engine/case_strength.py": "0548add0ede2a908d2a4c187e096ad9583b3bb9e99833bc11e48efbc850fb118",
-  "nm/core_engine/response_rendering.py": "a717b16d7bc2f1208607f7fab020aba81daf6c5f0d35ee11202abe99cace003e",
+  "nm/core_engine/response_rendering.py": "3a12736b92fdaeabafff7a53c69e1e220b9e2e3b441d8e1541f10d2d81e75d3e",
   "nm/core_engine/calculation.py": "557b2800cb86433a23b80e602207072173a7221e457455c0e9485a0de0172928",
   "nm/core_engine/understanding.py": "4e0938c7c3741396b7e008d2f90d5437f3c121930c1ab83bbab46fac37931099",
   "nm/core_engine/questions.py": "cbd01082cd170d417592c440dbc77d0d55c56fe466c81624698e5ebf73dd409d",
@@ -71,6 +71,9 @@
   ],
   "18 (D297; plan AN.48 register, column 10)": [
    "nm/core_engine/matter_board.py"
+  ],
+  "19 (D303; plan AN.48 register, column 10)": [
+   "nm/core_engine/response_rendering.py"
   ]
  }
 }

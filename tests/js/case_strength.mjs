@@ -543,4 +543,29 @@ assert.ok(none.textContent.includes('NM could not set out what would make this c
   assert.equal(times([said, { ...said, text: 'The notice went in time. ' }]), 1, 'said twice, shown once');
   assert.equal(times([said, { ...said, refs: ['another'] }]), 2, 'resting on other sources, shown twice');
 }
+
+// WHAT TO GET IS ON THE BOARD (plan AN.48, D303): under "What I need from you" a new answer says how many things there are to get
+// for a dispute's case and shows its card on the board; it offers no answer box for that line, and still offers one for a question.
+{
+  const answer = context.renderTurn({ brief: 'What do we need?', answer: { turn_id: 't10', chat_id: 'c1', elements: [
+    label('NEEDS', 'What I need from you'),
+    label('NEED_BOARD', '3 things to get for this case are on the matter board, under this dispute, where \'Tell NM about these\' '
+      + 'takes your answers.', { count: 3, dispute: { id: 'D1', name: 'The boundary dispute' } }),
+    label('ASK', 'When was the notice posted?')],
+  metrics: { gates_fired: [], outcome: 'ok', latency_ms: 1, llm_calls: 1, tokens: { in: 1, out: 1 }, cost_usd: 0, violations: [],
+    tier_downgrades: [] } } });
+  const [need] = walk(answer).filter(has('need'));
+  assert.ok(need.textContent.includes('3 things to get for this case are on the matter board'), 'the line is drawn');
+  assert.ok(!need.textContent.includes('from the client'), 'nothing of the list itself');
+  const [show] = walk(need).filter((node) => node.tagName === 'BUTTON' && node.textContent === 'Show this dispute on the matter board');
+  const toggle = Object.assign(el('button'), { clicks: 0, click() { this.clicks += 1; }, getAttribute: () => 'false' });
+  const card = { getAttribute: (name) => (name === 'aria-label' ? 'The boundary dispute' : null), scrollIntoView() {},
+    querySelector: (selector) => ({ '.dispute-toggle': toggle, '.dtitle': el('button') })[selector] || null };
+  document.querySelectorAll = () => [card];
+  show.handlers.click();
+  document.querySelectorAll = () => [];
+  assert.equal(toggle.clicks, 1, 'its card is opened on the board');
+  const [answerThis] = walk(need).filter((node) => node.tagName === 'BUTTON' && has('need-answer')(node));
+  assert.equal(answerThis.textContent, 'Answer this', 'one question to answer: the line asks nothing');
+}
 console.log('case_strength.mjs: ok');
