@@ -22,7 +22,11 @@ def _status(record, work_id):
     if work_id is None:
         return "not_researched"
     if work_id in record["failures"]:
-        return "search_failed"
+        # D297 (plan AN.48): a question the answer stopped before searching - a matter waiting for its go-ahead to research, or
+        # an answer saved before its research - was never searched: it is not researched yet. Only a search made fails.
+        failure = record["failures"][work_id]
+        return ("not_researched" if isinstance(failure, dict) and failure.get("reason") == research.UNFINISHED
+                else "search_failed")
     return "researched" if work_id in record["searches"] else "not_researched"
 
 
@@ -31,6 +35,8 @@ def _status(record, work_id):
 _NO_QUESTIONS = "NM has not researched the law for this dispute, so what the law requires of it has not been assessed."
 _NOT_FINISHED = ("NM's research of the law for this dispute did not finish, so what the law requires of it has not been "
                  "assessed.")
+#: D297 (plan AN.48): said where no question of the dispute has been searched yet - never that its research did not finish.
+_NOT_YET = "NM has not researched the law for this dispute yet, so what the law requires of it has not been assessed."
 #: The points NM's own check raised that the board shows, and how much of each.
 _OPEN_POINTS, _POINT_CHARACTERS = 5, 600
 
@@ -43,6 +49,8 @@ def _law(questions, assessed):
         return {"state": "assessed", "why": ""}
     if any(question["status"] == "researched" for question in questions):
         return {"state": "researched", "why": ""}
+    if questions and all(question["status"] == "not_researched" for question in questions):
+        return {"state": "not_assessed", "why": _NOT_YET}
     return {"state": "not_assessed", "why": _NOT_FINISHED if questions else _NO_QUESTIONS}
 
 

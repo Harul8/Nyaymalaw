@@ -15,7 +15,7 @@
   "nm/core_engine/calculation.py": "557b2800cb86433a23b80e602207072173a7221e457455c0e9485a0de0172928",
   "nm/core_engine/understanding.py": "4e0938c7c3741396b7e008d2f90d5437f3c121930c1ab83bbab46fac37931099",
   "nm/core_engine/questions.py": "cbd01082cd170d417592c440dbc77d0d55c56fe466c81624698e5ebf73dd409d",
-  "nm/core_engine/matter_board.py": "77facbbad08ccbb1520fda0ff823e0a643b84c549f5edd2e0619b318df305426",
+  "nm/core_engine/matter_board.py": "153262faef2f6852e85db8c8e6dbaea112093c90201c30fdb8f93dabff49f4a6",
   "nm/core_engine/checklist.py": "8769979354ea31f38ec161f7e036dab94934e8e5842eaf70742ceac59ada5bae"
  },
  "exceptions": {
@@ -68,6 +68,9 @@
    "nm/core_engine/answer_sections.py",
    "nm/core_engine/response_rendering.py",
    "nm/core_engine/response_review.py"
+  ],
+  "18 (D297; plan AN.48 register, column 10)": [
+   "nm/core_engine/matter_board.py"
   ]
  }
 }
