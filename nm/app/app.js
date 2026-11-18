@@ -275,7 +275,8 @@ function sessionEnded(message) {
 
 // THE DRAFT IS FROZEN, NOT DISCARDED. An advocate half-way through a brief
 // when the session lapses has typed the most expensive thing on the screen. Its words are taken into the open conversation's
-// intent, which the device's draft keeping holds; the sign-in that follows no longer reads a draft kept here (plan AN.57, D292).
+// intent, which the device's draft keeping holds; the sign-in that follows reopens that conversation from the page's address and
+// takes the words back with it (plan AN.48, D305).
 function keepDraft() {
   snapshotIntent();
 }
@@ -703,13 +704,15 @@ async function restorePendingChat(chatId) {
 // A CONVERSATION'S UNSENT WORDS COME BACK WITH IT (found mending the browser journeys, 15 Nov 2026). They are kept on the device as
 // they are typed ("Saved on this device"), but the page read them back only from Recover a draft, which a conversation does not
 // offer: after a reload they were kept and could not be had. Opening a conversation whose message box is empty takes back the last
-// words saved for it, and says so. A saved message still waiting to be sent or confirmed is left to Recover a draft, which follows it.
+// words saved for it, and says so. A saved message still waiting to be sent or confirmed is left to the conversation, which follows
+// it. Plan AN.48 (D305): a new matter's words (chatId null) come back the same way when the page loads or the advocate signs in - since
+// Recover a draft went (AN.57, D292) nothing read them back.
 async function takeBackSavedWords(chatId) {
   const context = activeIntent;
   const session = state.sessionGeneration;
-  const mine = () => session === state.sessionGeneration && activeIntent === context && context.chatId === chatId
+  const mine = () => session === state.sessionGeneration && activeIntent === context && (context.chatId || null) === chatId
     && !context.text.trim() && !context.pending.length;
-  if (!chatId || !context || !mine()) return;
+  if (!context || !mine()) return;
   try {
     await draftUnlock;
     const vault = draftVault;
@@ -719,7 +722,7 @@ async function takeBackSavedWords(chatId) {
     // A draft kept before plan AN.48 (D307) may name a matter saved before conversations: it is never this conversation's.
     const saved = drafts
       .filter((kept) => kept.intent.advocate === state.advocate && kept.intent.workspace === state.workspace
-        && kept.intent.chatId === chatId && !kept.intent.matterId && String(kept.intent.text || '').trim()
+        && (kept.intent.chatId || null) === chatId && !kept.intent.matterId && String(kept.intent.text || '').trim()
         && !(kept.intent.pending || []).length)
       .sort((a, b) => b.savedAt - a.savedAt)[0];
     if (!saved) return;
@@ -728,8 +731,76 @@ async function takeBackSavedWords(chatId) {
     restoreIntent();
     paintSend();
     showDraftRestored();
-  } catch (error) { /* the words stay in the device's keeping, for Recover a draft */ }
+  } catch (error) { /* the words stay in the device's keeping */ }
 }
+
+/* ------------------------------------------------- the conversation in the address --- */
+
+// A RELOAD REOPENS THE CONVERSATION IN PROGRESS (plan AN.48, D300 and D305; the owner, 18 Nov 2026: "yes, as is from where it stopped").
+// Which conversation is open was held only in the page's memory, so every load of the page - a reload, a sign-in after the session
+// ended - opened a new matter. The conversation shown is now named in the page's address after a '#', which the browser never sends
+// to the server: no new page and no new route. A load or a sign-in whose address names a conversation reopens it as it is saved
+// (P46) through the same reading the history uses - its saved turns and board, a step still being worked on followed, a stop with its
+// Continue and Discard, what waits to be sent, the unsent words kept on this device. One that cannot be opened (deleted, another's,
+// unreadable) opens a new matter, which says so. Sign out takes the conversation out of the address.
+const CHAT_MARK = /^#chat=([^#&]{1,600})$/;
+
+function addressedChat() {
+  try {
+    const match = String(window.location.hash || '').match(CHAT_MARK);
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setAddress(hash) {
+  try {
+    if (String(window.location.hash || '') === hash) return;
+    history.replaceState(null, '', `${window.location.pathname}${window.location.search}${hash}`);
+  } catch { /* the address is a convenience: the page works without it */ }
+}
+
+// The address follows what is shown: the conversation open, or no conversation (a new matter, the history). It is left as it is while a
+// conversation named in it is being reopened, and an address that names no conversation (a reset link's, #admin) is never touched.
+function markAddress() {
+  if (state.reopening) return;
+  const chatId = $('pane-advise').dataset.view === 'opening' ? shownChatId() : null;
+  if (chatId) setAddress(`#chat=${encodeURIComponent(chatId)}`);
+  else if (addressedChat() !== null) setAddress('');
+}
+
+function forgetAddress() {
+  if (addressedChat() !== null) setAddress('');
+}
+
+async function reopenAddressed(chatId) {
+  const session = state.sessionGeneration;
+  state.reopening = chatId;
+  setWorkView('opening');
+  $('thread').replaceChildren(stateBlock('building', 'Opening the conversation…'));
+  // Words typed before it opens would be replaced by the conversation's own: the box waits for it.
+  $('message').readOnly = true;
+  let failed = null;
+  try {
+    await restorePendingChat(chatId);
+  } catch (error) {
+    failed = error;
+  } finally {
+    $('message').readOnly = false;
+    if (state.reopening === chatId) state.reopening = null;
+  }
+  if (session !== state.sessionGeneration || (failed && failed.obsolete)) return;
+  if (activeIntent && activeIntent.chatId === chatId) { markAddress(); return; }
+  // The advocate went elsewhere meanwhile, or it could not be opened: only a page still waiting on it opens a new matter.
+  if (activeIntent || $('pane-advise').dataset.view !== 'opening') return;
+  startMatter();
+  takeBackSavedWords(null);
+  $('thread').prepend(stateBlock('unbuildable', 'The conversation this page had open could not be opened again'
+    + (failed ? `: ${failed.message}` : '.') + ' It is not changed. Open it from the conversation history.'));
+}
+
+/* ------------------------------------------- the end of the conversation in the address --- */
 
 // The answer being worked on, followed by a page that did not send it (a reload, another tab, a restart): it is the answer this page
 // waits for, so that the ring stops it (D78) and what is written meanwhile waits for it (D76-D77), as for one this page sent.
@@ -4884,6 +4955,7 @@ function updateWorkspace() {
   $('pane-advise').classList.toggle('empty-chat',
     $('pane-advise').dataset.view === 'opening' && !state.turns.length);
   paintSend();
+  markAddress();
 }
 
 /* ------------------------------------------------------------------ send --- */
@@ -6849,12 +6921,13 @@ function showApplication(advocate, workspace, professionalApproval) {
   $('gate').hidden = true;
   $('masthead').hidden = false;
   state.ended = false;
-  // Owner decisions, 15 and 16 Oct 2026: no Home page and no tabs. A sign-in opens a new matter, its board beside it. A sign-in
-  // after a session ended part-way through a brief went back to that brief only where it was a matter saved before
-  // conversations, which is no longer opened (plan AN.57, D292); the brief's words stay in the device's keeping. Going back to a
-  // conversation is the owner's open question D300.
+  // Owner decisions, 15 and 16 Oct 2026: no Home page and no tabs. A sign-in opens a new matter, its board beside it - unless the
+  // page's address names the conversation that was open, which is reopened from where it stopped (plan AN.48, D300 and D305): a
+  // reload, or a sign-in after the session ended part-way through. A new matter takes back its own unsent words.
   showTab('advise');
-  startMatter();
+  const addressed = addressedChat();
+  if (addressed) reopenAddressed(addressed);
+  else startMatter();
   loadHealth();
   loadUsage();
   showAdminEntry();
@@ -6863,6 +6936,8 @@ function showApplication(advocate, workspace, professionalApproval) {
   // work, and did work even when they resumed an already-open file. The list
   // is read at its actual entry point; it must never reuse an old result.
   draftUnlock = unlockDrafts();
+  // A new matter takes back its own unsent words once this account's drafts are open (D305).
+  if (!addressed) takeBackSavedWords(null);
 }
 
 // HOW MUCH USAGE IS LEFT (owner decisions O21-O24; plans P53, AN.17). The server works out the
@@ -7245,6 +7320,7 @@ async function signOut() {
   }
   intentContexts.clear();
   clearPrivileged();
+  forgetAddress();
   forgetRetirement();
   state.signOut = 'signing_out';
   const token = { session: state.sessionGeneration, accepting: true, task: null, online: null,

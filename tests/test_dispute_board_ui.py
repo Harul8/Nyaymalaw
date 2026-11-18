@@ -36,6 +36,8 @@ PAGE_TESTS = [
     # Plan AN.48 (D301): the answers window attaches files of the kinds NM reads; (D298) the watch of a step hears its own step.
     "files_go_with_what_nm_is_told.mjs",
     "a_step_watch_hears_its_own_step.mjs",
+    # Plan AN.48 (D305): a reload reopens the conversation in progress, named in the page's address.
+    "a_reload_reopens_the_conversation.mjs",
 ]
 #: Run, with the cases it is given, by tests/test_the_screen_never_folds_a_disclosure.py.
 RUN_ELSEWHERE = {"render_turn_partition.mjs"}
