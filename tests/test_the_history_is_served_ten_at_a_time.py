@@ -3,8 +3,13 @@ decisions P35, O29).
 
 Whose a saved file is, and what the history shows of it, is known only by opening it; a long conversation is tens of
 megabytes. The route now reads the small line kept for each file, derives one from the file only when none is kept for
-the file as it is now, and serves the advocate's history ten at a time, conversations first and then the earlier matter
-records, each newest first. Through the real HTTP edge with the served fixture.
+the file as it is now, and serves the advocate's history ten at a time, newest first. Through the real HTTP edge with the
+served fixture.
+
+Plan AN.48 (D307; the owner, 18 Nov 2026): the history lists conversations only. A matter saved before conversations was
+listed after them for screens deleted under D292 (AN.57); it is no longer listed, and its line is still kept beside its file
+so that the history never opens it again to learn it is no conversation. The pages are walked with conversations, and earlier
+matters are saved beside them to show they are never listed or counted.
 """
 from __future__ import annotations
 
@@ -14,7 +19,7 @@ import os
 import pytest
 
 from nm.app import api
-from nm.core_engine.conversation import HEADER, chat_matter_id
+from nm.core_engine.conversation import chat_matter_id
 from nm.work_the_file.matter_contracts import Matter
 from tests.test_core_served import OTHER, OWNER, served, source_url, successful  # noqa: F401 -- the fixture
 
@@ -37,9 +42,24 @@ def a_chat(served, turn="turn-1", **changes):
     return successful(served, turn_id=turn, **changes)
 
 
+def conversations(served, count, *, who=OWNER, first=0):
+    """Conversations of this advocate, each saved a minute after the one before, oldest first: their chat ids."""
+    client = served.client if who == OWNER else served.login(who)
+    ids = []
+    for index in range(first, first + count):
+        reply = client.post("/api/turn", json={"message": f"Conversation {index:02d}.", "turn_id": f"turn-{who}-{index}"})
+        assert reply.status_code == 200, reply.text
+        chat_id = reply.json()["chat_id"]
+        stamp = 1_700_000_000 + index * 60
+        os.utime(served.store._path(chat_matter_id(who, chat_id)), (stamp, stamp))
+        ids.append(chat_id)
+    return ids
+
+
 def listed(page):
-    """What a page shows, in the order shown: chat ids, then matter ids."""
-    return [chat["chat_id"] for chat in page["chats"]] + [matter["matter_id"] for matter in page["matters"]]
+    """What a page shows, in the order shown: chat ids. A page never carries an earlier matter (D307)."""
+    assert "matters" not in page and "row_count" not in page
+    return [chat["chat_id"] for chat in page["chats"]]
 
 
 def watched(served, monkeypatch):
@@ -62,43 +82,40 @@ def the_lines(served):
 
 # ------------------------------------------------------------------ the pages ---
 
-def test_without_a_limit_the_whole_history_is_served_as_before(served):
+def test_without_a_limit_the_whole_history_is_served_and_an_earlier_matter_is_not_in_it(served):
     chat = a_chat(served)
-    old = old_matters(served, OWNER, 3)
+    old_matters(served, OWNER, 3)
     work = served.client.get("/api/work").json()
     assert work["state"] == "ok"
-    assert [c["chat_id"] for c in work["chats"]] == [chat["chat_id"]]
-    assert [m["matter_id"] for m in work["matters"]] == old[::-1], "earlier matter records, newest first"
-    assert (work["chat_count"], work["row_count"], work["total"]) == (1, 3, 4)
+    assert listed(work) == [chat["chat_id"]], "an earlier matter record is not listed (D307)"
+    assert (work["chat_count"], work["total"]) == (1, 1)
     assert (work["offset"], work["has_more"], work["next_offset"]) == (0, False, None)
 
 
-def test_a_page_is_ten_items_conversations_first_then_earlier_matters_each_newest_first(served):
-    chat = a_chat(served)
-    old = old_matters(served, OWNER, 12)
+def test_a_page_is_ten_conversations_newest_first(served):
+    chats = conversations(served, 12)
+    old_matters(served, OWNER, 3, first=90)
     first = served.client.get("/api/work?limit=10&offset=0").json()
-    assert [c["chat_id"] for c in first["chats"]] == [chat["chat_id"]]
-    assert [m["matter_id"] for m in first["matters"]] == old[::-1][:9]
+    assert listed(first) == chats[::-1][:10]
     assert (first["has_more"], first["next_offset"], first["offset"]) == (True, 10, 0)
     second = served.client.get("/api/work?limit=10&offset=10").json()
-    assert second["chats"] == [] and [m["matter_id"] for m in second["matters"]] == old[::-1][9:]
+    assert listed(second) == chats[::-1][10:]
     assert (second["has_more"], second["next_offset"], second["offset"]) == (False, None, 10)
-    stamps = [m["last_updated"] for m in first["matters"] + second["matters"]]
+    stamps = [c["last_updated"] for c in first["chats"] + second["chats"]]
     assert stamps == sorted(stamps, reverse=True)
 
 
 def test_the_counts_are_of_the_whole_history_on_every_page(served):
-    a_chat(served)
-    old_matters(served, OWNER, 12)
+    conversations(served, 12)
+    old_matters(served, OWNER, 5, first=90)
     for offset in (0, 10, 40):
         page = served.client.get(f"/api/work?limit=10&offset={offset}").json()
-        assert (page["chat_count"], page["row_count"], page["total"]) == (1, 12, 13), offset
+        assert (page["chat_count"], page["total"]) == (12, 12), offset
 
 
 def test_walking_the_pages_shows_every_item_once_and_in_the_order_of_the_whole_list(served):
-    a_chat(served)
-    a_chat(served, turn="turn-2", chat_id=None, message="A second conversation.")
-    old_matters(served, OWNER, 9)
+    conversations(served, 11)
+    old_matters(served, OWNER, 4, first=90)
     whole = listed(served.client.get("/api/work").json())
     walked, offset = [], 0
     while offset is not None:
@@ -109,10 +126,16 @@ def test_walking_the_pages_shows_every_item_once_and_in_the_order_of_the_whole_l
 
 
 def test_a_page_past_the_end_is_empty_and_says_nothing_more_follows(served):
-    old_matters(served, OWNER, 3)
+    conversations(served, 3)
     for offset in (3, 4, 500):
         page = served.client.get(f"/api/work?limit=10&offset={offset}").json()
         assert listed(page) == [] and (page["has_more"], page["next_offset"], page["total"]) == (False, None, 3)
+
+
+def test_a_history_of_earlier_matters_only_is_empty(served):
+    old_matters(served, OWNER, 3)
+    page = served.client.get("/api/work?limit=10").json()
+    assert page["state"] == "ok" and listed(page) == [] and (page["chat_count"], page["total"]) == (0, 0)
 
 
 def test_an_empty_history_is_an_empty_page_not_an_error(served):
@@ -129,25 +152,25 @@ def test_a_page_that_cannot_be_meant_is_refused_without_echoing_it(served, query
 
 
 def test_the_largest_page_is_a_hundred(served):
-    old_matters(served, OWNER, 3)
+    conversations(served, 3)
     assert served.client.get("/api/work?limit=100").status_code == 200
 
 
 def test_the_chats_route_pages_the_same_way(served):
-    old = old_matters(served, OWNER, 5)
+    chats = conversations(served, 5)
     page = served.client.get("/api/chats?limit=2&offset=1").json()
-    assert [m["matter_id"] for m in page["matters"]] == old[::-1][1:3]
+    assert listed(page) == chats[::-1][1:3]
     assert (page["has_more"], page["next_offset"], page["total"]) == (True, 3, 5)
 
 
 def test_another_advocates_items_are_never_counted_or_shown(served):
-    mine = old_matters(served, OWNER, 4)
-    theirs = old_matters(served, OTHER, 6, first=50)
-    a_chat(served)
+    mine = conversations(served, 4)
+    theirs = conversations(served, 6, who=OTHER, first=50)
+    old_matters(served, OTHER, 2, first=80)
     page = served.client.get("/api/work?limit=10").json()
-    assert set(listed(page)).isdisjoint(theirs) and page["row_count"] == 4 and page["total"] == 5
+    assert listed(page) == mine[::-1] and page["total"] == 4
     other = served.login(OTHER).get("/api/work?limit=3").json()
-    assert set(listed(other)) == set(theirs[::-1][:3]) and other["row_count"] == 6 and other["chat_count"] == 0
+    assert listed(other) == theirs[::-1][:3] and (other["chat_count"], other["total"]) == (6, 6)
     assert set(mine).isdisjoint(listed(other))
 
 
@@ -159,7 +182,7 @@ def test_a_page_asked_for_by_no_one_is_refused(served):
 
 
 def test_a_session_revoked_while_the_page_is_read_gets_nothing(served, monkeypatch):
-    old_matters(served, OWNER, 3)
+    conversations(served, 3)
     token = served.client.cookies.get("nm_session")
     real = served.store.saved_files
 
@@ -170,7 +193,7 @@ def test_a_session_revoked_while_the_page_is_read_gets_nothing(served, monkeypat
 
     monkeypatch.setattr(served.store, "saved_files", revoke)
     response = served.client.get("/api/work?limit=10")
-    assert response.status_code == 401 and "Earlier matter" not in response.text
+    assert response.status_code == 401 and "Conversation 0" not in response.text
 
 
 # ------------------------------------------------------------ the kept lines ---
@@ -185,21 +208,22 @@ def test_the_first_call_keeps_a_line_for_each_readable_file_and_a_later_start_op
     api._LISTED.clear()
     opened = watched(served, monkeypatch)
     page = served.client.get("/api/work?limit=10").json()
-    assert opened == [], "a kept line is read instead of its file"
-    assert listed(page) == [chat["chat_id"], *old[::-1]]
+    assert opened == [], "a kept line is read instead of its file - an earlier matter's too, which is not listed"
+    assert listed(page) == [chat["chat_id"]]
     assert page["chats"][0]["turn_count"] == 1 and page["chats"][0]["preview"] == "Inspect this reported account."
 
 
 def test_a_file_that_changed_is_derived_again_and_never_served_from_its_old_line(served, monkeypatch):
     from dataclasses import replace
     (mid,) = old_matters(served, OWNER, 1)
-    assert served.client.get("/api/work").json()["matters"][0]["matter"] == "Earlier matter 00"
+    served.client.get("/api/work")
+    assert served.store.kept_line(mid, served.store.signature(mid))["matter"]["matter"] == "Earlier matter 00"
     matter = served.store.load(mid)
     served.store.commit(replace(matter, title="Earlier matter, retitled"), expected_version=matter.version)
     api._LISTED.clear()
     opened = watched(served, monkeypatch)
     page = served.client.get("/api/work").json()
-    assert page["matters"][0]["matter"] == "Earlier matter, retitled" and opened == [mid]
+    assert listed(page) == [] and opened == [mid]
     assert served.store.kept_line(mid, served.store.signature(mid))["matter"]["matter"] == "Earlier matter, retitled"
     opened.clear()
     api._LISTED.clear()
@@ -231,7 +255,7 @@ def test_a_kept_line_that_is_not_what_a_line_should_be_is_derived_again_not_trus
     served.store.keep_line(mid, signature, {"v": api._LINE_VERSION, **damage})
     opened = watched(served, monkeypatch)
     page = served.client.get("/api/work").json()
-    assert opened == [mid] and [m["matter"] for m in page["matters"]] == ["Earlier matter 00"]
+    assert opened == [mid] and listed(page) == []
     assert served.store.kept_line(mid, signature)["matter"]["matter"] == "Earlier matter 00"
 
 
@@ -240,7 +264,7 @@ def test_a_file_that_cannot_be_read_is_said_and_no_line_is_kept_for_it(served):
     (served.store._path(old[0])).write_bytes(b"damaged")
     page = served.client.get("/api/work?limit=10").json()
     assert page["state"] == "partial" and old[0] in page["unavailable"] and old[0] in page["unreadable"]
-    assert listed(page) == [old[1]]
+    assert listed(page) == [], "the readable one is an earlier matter, and is not listed"
     assert the_lines(served) == [old[1]]
 
 
@@ -258,7 +282,11 @@ def test_a_conversation_whose_receipts_fail_is_said_and_no_line_is_kept_for_it(s
 
 
 def test_a_line_that_could_not_be_kept_does_not_fail_the_request_and_is_logged_without_words(served, monkeypatch, caplog):
-    old = old_matters(served, OWNER, 2)
+    chats = conversations(served, 2)
+    old_matters(served, OWNER, 2, first=90)
+    for line in served.store._lines.glob("*.nm"):
+        line.unlink()
+    api._LISTED.clear()
 
     def refuse(*_args):
         raise PermissionError("the folder is read-only; the first message was Privileged words")
@@ -266,12 +294,13 @@ def test_a_line_that_could_not_be_kept_does_not_fail_the_request_and_is_logged_w
     monkeypatch.setattr(served.store, "keep_line", refuse)
     with caplog.at_level(logging.WARNING, logger="nm.history"):
         page = served.client.get("/api/work?limit=10")
-    assert page.status_code == 200 and listed(page.json()) == old[::-1]
+    assert page.status_code == 200 and listed(page.json()) == chats[::-1]
     assert "PermissionError" in caplog.text and "Privileged" not in caplog.text and "read-only" not in caplog.text
 
 
 def test_a_second_call_in_the_same_process_reads_neither_lines_nor_files(served, monkeypatch):
-    old_matters(served, OWNER, 3)
+    conversations(served, 2)
+    old_matters(served, OWNER, 3, first=90)
     served.client.get("/api/work?limit=10")
     opened = watched(served, monkeypatch)
     real = served.store.kept_line
@@ -388,8 +417,8 @@ def test_a_file_that_changes_while_its_line_is_derived_gets_no_line_kept_for_the
         return matter
 
     monkeypatch.setattr(served.store, "load", load_then_change)
-    page = served.client.get("/api/work").json()
-    assert page["matters"][0]["matter"] == "Earlier matter 00", "what was read is what is shown for this call"
+    assert listed(served.client.get("/api/work").json()) == []
     assert served.store.kept_line(mid, before) is None and mid not in api._LISTED
     monkeypatch.setattr(served.store, "load", real)
-    assert served.client.get("/api/work").json()["matters"][0]["matter"] == "Changed while it was being listed"
+    served.client.get("/api/work")
+    assert served.store.kept_line(mid, served.store.signature(mid))["matter"]["matter"] == "Changed while it was being listed"

@@ -1,10 +1,10 @@
-"""A matter address that names nothing is 'not found', never a server error (plan AN.53, 53j2; D225; the review's F-41).
+"""No address of the server opens a matter saved before conversations (plan AN.48, D307; the owner, 18 Nov 2026).
 
-The earlier matter address handed whatever was written in it to the store, which refuses a name that is no storage name by
-raising; the advocate was answered with a server error. And the advocate's own matter that could not be opened was a server
-error too (the limit 53b2 left). The address now answers 'not found' for a name no saved file of the advocate's bears - a
-malformed one among them - and says of the advocate's own damaged matter that it could not be read, as a conversation's address
-does. Offline: the served app with stand-in models; no browser.
+The earlier matter's address answered 'not found' for a name no saved file of the advocate's bears, 'could not be read' for the
+advocate's own damaged matter, and 409 for their own whole one (plan AN.53, 53j2; D225). Only the screens deleted under D292
+(AN.57) called it, so it is removed: whatever is written in it, by whoever, is 'not found' - never a server error, never a word
+about whether such a matter is there - and the matter's file stays as it was. Offline: the served app with stand-in models; no
+browser.
 """
 from __future__ import annotations
 
@@ -29,30 +29,25 @@ def own(served):
 @pytest.mark.parametrize("name", NO_STORAGE_NAME)
 def test_a_name_that_is_no_storage_name_is_not_found(own, address, name):
     served, _matter_id = own
-    answer = served.client.get(address.format(name))
-    assert answer.status_code == 404 and answer.json()["detail"] == "Matter not available."
+    assert served.client.get(address.format(name)).status_code == 404
 
 
 @pytest.mark.parametrize("address", ADDRESSES)
-def test_the_neighbours_answer_as_before(own, address):
+def test_the_advocates_own_matter_and_anothers_are_not_found_alike_and_kept(own, address):
     served, matter_id = own
-    assert served.client.get(address.format("m_never_saved")).status_code == 404, "a well-formed name of nothing"
-    assert served.client.get(address.format(matter_id)).status_code == 409, "the advocate's own matter, whole"
-    assert served.login(OTHER).get(address.format(matter_id)).status_code == 404, "another's matter"
+    before = served.store.load(matter_id)
+    answers = [served.client.get(address.format(matter_id)), served.login(OTHER).get(address.format(matter_id)),
+               served.client.get(address.format("m_never_saved"))]
+    assert [answer.status_code for answer in answers] == [404, 404, 404]
+    assert len({answer.text for answer in answers}) == 1, "the answer says nothing of whether such a matter is there"
+    assert served.store.load(matter_id) == before
 
 
 @pytest.mark.parametrize("address", ADDRESSES)
-def test_the_advocates_own_damaged_matter_is_said_to_be_unreadable_and_to_no_other(own, address):
+def test_a_damaged_file_is_not_found_by_anyone(own, address):
     served, matter_id = own
     (served.store._matters / f"{matter_id}.nm").write_bytes(b"not a saved matter, and longer than the file was")
-    answer = served.client.get(address.format(matter_id))
-    assert answer.status_code == 503 and answer.json()["detail"] == "This matter could not be read reliably."
-    assert served.login(OTHER).get(address.format(matter_id)).status_code == 404
-
-
-@pytest.mark.parametrize("address", ADDRESSES)
-def test_a_damaged_file_nobody_is_recorded_as_owning_is_not_found_by_anyone(own, address):
-    served, _matter_id = own
     (served.store._matters / "m_of_nobody.nm").write_bytes(b"not a saved matter")
     for client in (served.client, served.login(OTHER)):
-        assert client.get(address.format("m_of_nobody")).status_code == 404
+        for name in (matter_id, "m_of_nobody"):
+            assert client.get(address.format(name)).status_code == 404

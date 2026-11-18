@@ -406,18 +406,28 @@ def test_the_turn_request_has_no_field_to_assert_an_identity_with(client):
     assert r.status_code == 401, r.text
 
 
+#: The routes that hold an advocate's matters. Plan AN.48 (D307): a matter is a conversation since the owner's decisions of 15 and
+#: 16 Oct 2026, so its routes are a conversation's, a deleted conversation's, its documents', its turns' and the history; the earlier
+#: matter's own address was removed with the screens that called it, and stays in the sweep should one come back.
+MATTER_ROUTES = ("/api/matters", "/api/chats", "/api/deleted-chats", "/api/documents", "/api/work", "/api/turn",
+                 "/api/turn-progress", "/api/turn-events", "/api/turn-question")
+
+
+def _matter_routes(app) -> list:
+    return [route for route in app.routes if isinstance(getattr(route, "methods", None), set)
+            and any(route.path == root or route.path.startswith(root + "/") for root in MATTER_ROUTES)]
+
+
 def _unguarded_matter_routes(app, caller) -> list[str]:
-    """Every `/api/matters*` route that answers WITHOUT a session.
+    """Every matter route that answers WITHOUT a session.
 
     Extracted from the sweep below so a positive control can drive it over an
     app that deliberately carries one. A sweep whose walk cannot be exercised
     is a sweep whose empty result nobody has ever seen.
     """
     found = []
-    for route in app.routes:
-        path = getattr(route, "path", "")
-        if not path.startswith("/api/matters"):
-            continue
+    for route in _matter_routes(app):
+        path = route.path
         # Exercise the registered verb and a routable value for EVERY path
         # parameter. A GET against a PUT route proves only a 405, not auth.
         from uuid import UUID
@@ -456,6 +466,8 @@ def test_every_matter_route_requires_a_session(client):
     from nm.app.api import app
 
     client.cookies.clear()
+    # A walk that matched nothing passes too, so the population is counted: the conversation's routes are swept.
+    assert len(_matter_routes(app)) >= 25 and any(route.path == "/api/chats/{chat_id}" for route in _matter_routes(app))
     unguarded = _unguarded_matter_routes(app, client)
 
     assert not unguarded, (

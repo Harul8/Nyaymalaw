@@ -468,8 +468,10 @@ def test_partial_board_keeps_its_warning_with_or_without_readable_matters(
         body["state"] = "partial"
         body["unreadable"] = body["unavailable"] = ["synthetic-unreadable-file"]
         if not keep_rows:
-            body["chats"], body["matters"] = [], []
-        body["row_count"] = len(body["chats"]) + len(body["matters"])
+            body["chats"] = []
+        # The history lists conversations only (plan AN.48, D307): an earlier matter is neither listed nor counted.
+        assert "matters" not in body and "row_count" not in body
+        body["row_count"] = len(body["chats"])
         mutations.append(body)
         route.fulfill(response=response, json=body)
 

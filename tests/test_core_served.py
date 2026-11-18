@@ -122,7 +122,7 @@ def test_public_turn_saves_exact_input_reopens_and_reads_exact_sources_without_c
         assert viewed == source and inspection['source_id'] == source['id']
         assert read.headers["cache-control"] == "no-store"
     work = served.client.get("/api/work").json()
-    assert work["state"] == "ok" and work["chat_count"] == 1 and not work["matters"]
+    assert work["state"] == "ok" and work["chat_count"] == 1 and "matters" not in work
     assert work["chats"][0]["preview"] == message
     replay = successful(served, message=message, expected_version=0)
     assert replay == {**reply, "replayed": True}
@@ -271,12 +271,15 @@ def test_unknown_saved_renderer_is_not_upgraded_or_released(served):
     assert len(served.model.calls) == 9
 
 
-def test_old_matter_is_listed_as_history_without_reinterpretation(served):
+def test_old_matter_is_kept_neither_listed_nor_opened_nor_reinterpreted(served):
+    # Plan AN.48 (D307): it was listed as history and answered 409; the history lists conversations only, and no address opens it.
     matter = Matter.create(OWNER, "Historic matter")
     served.store.commit(matter, expected_version=0)
+    before = served.store.load(matter.id)
     work = served.client.get("/api/work").json()
-    assert work["matters"][0]["state"] == "historical" and not work["chats"]
-    assert served.client.get(f"/api/matters/{matter.id}").status_code == 409
+    assert "matters" not in work and not work["chats"] and work["total"] == 0
+    assert served.client.get(f"/api/matters/{matter.id}").status_code == 404
+    assert served.store.load(matter.id) == before
     assert not served.model.calls
 
 

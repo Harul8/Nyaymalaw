@@ -2484,12 +2484,16 @@ def prepare_history():
 def work(advocate_id: Advocate, request: Request,
          limit: Annotated[int | None, Query(ge=1, le=_HISTORY_PAGE_MAX)] = None,
          offset: Annotated[int, Query(ge=0)] = 0):
-    """The advocate's history: conversations first, then earlier matter records, each newest first.
-    With a limit, one page of it (owner decision O29, 26 Oct 2026: ten at a time): the counts are of
-    the whole history, and has_more and next_offset say whether, and where, the next page begins.
-    Without one, all of it."""
+    """The advocate's history: their conversations, newest first. With a limit, one page of it (owner decision O29, 26 Oct 2026:
+    ten at a time): the count is of the whole history, and has_more and next_offset say whether, and where, the next page begins.
+    Without one, all of it.
+
+    PLAN AN.48 (D307; the owner, 18 Nov 2026): CONVERSATIONS ONLY. A matter saved before conversations was listed after them for
+    screens that opened it; those screens were deleted (AN.57, D292), so it is no longer listed. Its file stays stored, untouched,
+    and its line is still kept beside it (`_listed`), so that the history never opens such a file again to find it is not a
+    conversation."""
     store = application().store
-    chats, matters, unavailable = [], [], []
+    chats, unavailable = [], []
     # Plan AN.53 (53b, D217): the store's listing for this advocate - no file recorded as another's is in it, so none of
     # another's is opened and no line of another's is read. `owned` is True where the store's record says the file is this
     # advocate's, and None where no owner is recorded and the file itself says whose it is.
@@ -2512,20 +2516,16 @@ def work(advocate_id: Advocate, request: Request,
             continue
         elif line.get('unavailable'):
             unavailable.append(matter_id)
-        elif 'matter' in line:
-            matters.append({**line['matter'], 'last_updated': saved_at})
-        elif line['chat']:
+        elif line.get('chat'):
             chats.append({**line['chat'], 'last_updated': saved_at})
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
-    total = len(chats) + len(matters)
+    total = len(chats)
     start, end = (offset, offset + limit) if limit is not None else (0, total)
     more = end < total
     return {'state': 'partial' if unavailable else 'ok', 'chats': chats[start:end],
-            'matters': matters[max(start - len(chats), 0):max(end - len(chats), 0)],
-            'chat_count': len(chats), 'row_count': len(matters), 'unreadable': unavailable,
-            'unavailable': unavailable, 'total': total, 'offset': start, 'has_more': more,
-            'next_offset': end if more else None}
+            'chat_count': total, 'unreadable': unavailable, 'unavailable': unavailable, 'total': total, 'offset': start,
+            'has_more': more, 'next_offset': end if more else None}
 
 @app.get('/api/chats')
 def chats(advocate_id: Advocate, request: Request,
@@ -3590,30 +3590,9 @@ def _how_read(rows, source_id):
         return f'Read by AI from a scan or photo{partly}: check it against your original.'
     return "Read from the file's own text on this computer."
 
-@app.get('/api/matters/{matter_id}')
-@app.get('/api/matters/{matter_id}/transcript')
-def historical_matter(matter_id: str, advocate_id: Advocate, request: Request):
-    store = application().store
-    try:
-        matter = store.load_for(matter_id, advocate_id)
-    except _UNREADABLE as exc:
-        # Plan AN.53 (53j2, D225): the store refuses a name that is no storage name, and a file it cannot open, by raising. Which
-        # it was is the store's to say: a name no saved file recorded as this advocate's bears is not there (a malformed one among
-        # them, and a damaged file nobody is recorded as owning, said to no advocate since 53b1); their own, damaged, is said so.
-        if not _session_current(request, advocate_id):
-            raise HTTPException(401, 'not signed in') from exc
-        try:
-            own = any(name == matter_id and known for name, _signature, _saved, known in store.saved_files_for(advocate_id))
-        except OSError:
-            own = False
-        if not own:
-            raise HTTPException(404, 'Matter not available.') from exc
-        raise HTTPException(503, 'This matter could not be read reliably.') from exc
-    if not _session_current(request, advocate_id):
-        raise HTTPException(401, 'not signed in')
-    if matter is None:
-        raise HTTPException(404, 'Matter not available.')
-    raise HTTPException(409, 'This matter belongs to the earlier brain. Its saved data is retained; opening it in the rebuilt brain is not available yet.')
+# PLAN AN.48 (D307; the owner, 18 Nov 2026): the address that answered a request to open a matter saved before conversations, and
+# its transcript, is removed. Only the screens deleted under D292 (AN.57) called it, and it only ever said that such a matter could
+# not be opened. Those matters' files stay stored, untouched; no address of this server opens one.
 
 def _may_see_the_admin_area(request: Request) -> bool | str:
     """True for an account the server's settings name as an admin (plan AN.46, D117). Nobody signed in is sent to the one sign-in

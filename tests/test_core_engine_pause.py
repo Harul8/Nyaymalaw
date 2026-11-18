@@ -50,7 +50,9 @@ def test_paused_route_still_checks_browser_request_origin(client):
     assert response.status_code == 403
 
 
-def test_history_is_retained_and_only_its_owner_can_see_it(client, wired):
+def test_an_earlier_matter_is_retained_untouched_and_neither_listed_nor_opened(client, wired):
+    # Plan AN.48 (D307): the history lists conversations only and no address opens a matter saved before conversations; its file
+    # is kept as it was. It once checked that such a matter was listed to its owner alone and answered 409 to them.
     own = wired.store.commit(Matter.create("adv_demo", "Owned historical matter"),
                              expected_version=0)
     foreign = wired.store.commit(Matter.create("another_advocate", "Foreign private matter"),
@@ -58,11 +60,10 @@ def test_history_is_retained_and_only_its_owner_can_see_it(client, wired):
     before = wired.store.load(own.id)
     response = client.get("/api/work")
     assert response.status_code == 200
-    rows = response.json()["matters"]
-    assert [row["matter_id"] for row in rows] == [own.id]
-    assert rows[0]["state"] == "historical"
-    assert client.get(f"/api/matters/{own.id}").status_code == 409
-    assert client.get(f"/api/matters/{foreign.id}").status_code == 404
+    listed = response.json()
+    assert "matters" not in listed and listed["chats"] == [] and listed["total"] == 0
+    for matter in (own, foreign):
+        assert client.get(f"/api/matters/{matter.id}").status_code == 404
     assert wired.store.load(own.id) == before
 
 
