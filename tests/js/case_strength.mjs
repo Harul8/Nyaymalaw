@@ -520,4 +520,27 @@ assert.ok(none.textContent.includes('NM could not set out what would make this c
   const theirs = context.renderOtherSideItem(several.other_side[0], dispute, null).map((node) => node.textContent).join('\n');
   assert.ok(!theirs.includes('The law they would rely on'), 'no held law of theirs: no block for it');
 }
+
+// AN ANSWER OF SEVERAL DISPUTES SHOWS EACH ONE'S CASE (plan AN.48, D299). The page shows a statement said twice once; it compared
+// some fields only, so the second dispute's case - the same kind and words, "What makes the case stronger" - was folded into the
+// first's and not drawn. Two parts are now one only where everything they carry is the same.
+{
+  const second = { ...view, elements: [{ ...view.elements[1], element: 'Payment of the rent', label: 'Rent paid' }] };
+  const caseOf = (id, name, given) => label('CASE', 'What makes the case stronger', { case: given, dispute: { id, name } });
+  const answerOf = (elements) => context.renderTurn({ brief: 'What do we need?', answer: { turn_id: 't9', chat_id: 'c1', elements,
+    metrics: { gates_fired: [], outcome: 'ok', latency_ms: 1, llm_calls: 1, tokens: { in: 1, out: 1 }, cost_usd: 0, violations: [],
+      tier_downgrades: [] } } });
+  const two = walk(answerOf([label('HEADING', 'The boundary dispute'), caseOf('D1', 'The boundary dispute', view),
+    label('HEADING', 'The rent dispute'), caseOf('D2', 'The rent dispute', second)])).filter(has('answer-case'));
+  assert.equal(two.length, 2, 'each dispute\'s case is drawn');
+  assert.ok(two[1].textContent.includes('Payment of the rent') && !two[0].textContent.includes('Payment of the rent'),
+    'each beside its own dispute');
+  // The same statement said twice is still shown once.
+  const said = label('SUMMARY', 'The notice went in time.');
+  const times = (elements) => walk(answerOf(elements)).filter((node) => String(node._text || '').includes('The notice went in time.'))
+    .length;
+  assert.equal(times([said]), 1);
+  assert.equal(times([said, { ...said, text: 'The notice went in time. ' }]), 1, 'said twice, shown once');
+  assert.equal(times([said, { ...said, refs: ['another'] }]), 2, 'resting on other sources, shown twice');
+}
 console.log('case_strength.mjs: ok');

@@ -3046,20 +3046,18 @@ function renderTurn(entry) {
   // The validated answer already has a reading order. Present its prose,
   // not its internal section/type/signal taxonomy, and never reclassify it
   // with another model. Metadata remains available in the response record.
+  // A statement said twice is shown once - and two parts are one only where everything they carry is the same (D299, plan AN.48).
+  // Comparing some of their fields folded the case of every later dispute into the first's: its kind and its words, "What makes the
+  // case stronger", are the same; whose case it is, and the case, are not.
+  const sameKey = (el) => JSON.stringify({ ...el, text: String(el.text || '').trim() }, (name, value) => (
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? Object.fromEntries(Object.keys(value).sort().map((key) => [key, value[key]])) : value));
   const rows = [];
   for (const el of spoken) {
-    const same = (el.signal && el.signal !== 'none') ? -1
-      : rows.findIndex((r) => r.el.kind === el.kind
-                           && r.el.thread === el.thread
-                           && r.el.section === el.section
-                           && r.el.text.trim() === el.text.trim()
-                           && JSON.stringify(r.el.refs) === JSON.stringify(el.refs)
-                           && JSON.stringify(r.el.source) === JSON.stringify(el.source)
-                           && r.el.disclosure === el.disclosure
-                           && r.el.by_when === el.by_when
-                           && r.el.no_deadline_reason === el.no_deadline_reason);
+    const key = (el.signal && el.signal !== 'none') ? null : sameKey(el);
+    const same = key === null ? -1 : rows.findIndex((r) => r.key === key);
     if (same >= 0) rows[same].said += 1;
-    else rows.push({ el, said: 1 });
+    else rows.push({ el, key, said: 1 });
   }
   renderParts(wrap, groupAnswerElements(rows.map((row) => row.el)), entry, renderElement);
   for (const paragraph of composed) renderParagraph(wrap, paragraph);

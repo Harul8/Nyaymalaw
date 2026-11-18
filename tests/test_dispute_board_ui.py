@@ -33,6 +33,9 @@ PAGE_TESTS = [
     "a_conversation_is_deleted.mjs",
     # Plan AN.51 (51e, D199, D253): the limits of an answer's search, in code's words, folded under the answer.
     "search_said.mjs",
+    # Plan AN.48 (D301): the answers window attaches files of the kinds NM reads; (D298) the watch of a step hears its own step.
+    "files_go_with_what_nm_is_told.mjs",
+    "a_step_watch_hears_its_own_step.mjs",
 ]
 #: Run, with the cases it is given, by tests/test_the_screen_never_folds_a_disclosure.py.
 RUN_ELSEWHERE = {"render_turn_partition.mjs"}
