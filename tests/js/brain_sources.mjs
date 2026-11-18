@@ -86,10 +86,12 @@ assert.equal(windowClasses.has('reading'), false);
 }
 
 const stale = reader.open(answer, element, 0, 0, opener);
+// A passage is read through its conversation only: the earlier matter's address is gone (plan AN.48, D307), and an answer that
+// still named one is read through its conversation all the same.
 const current = reader.open({...answer, matter_id:'saved-matter'}, element, 1, 0, opener);
 nodes.get('brain-source-reader').handlers.get('close')();
 assert.equal(nodes.get('brain-source-reader').open, true);
-assert.equal(reads[2].url, '/api/matters/saved-matter/turns/source-turn/brain-sources/1/0');
+assert.equal(reads[2].url, `/api/chats/${answer.chat_id}/turns/source-turn/brain-sources/1/0`);
 reads[2].resolve(saved); await current;
 reads[1].resolve({...saved, text:'Old selection'}); await stale;
 assert.equal(passageText(), source.text);

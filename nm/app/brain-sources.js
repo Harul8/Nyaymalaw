@@ -626,10 +626,10 @@ window.NmBrainSources = (() => {
   async function open(answer, element, elementIndex, sourceIndex, opener, viaBack = false, phrase = null) {
     const sources = Array.isArray(element.sources) ? element.sources : [element.source];
     const source = sources[sourceIndex];
-    if (!source?.brain || !answer.turn_id || (!answer.matter_id && !answer.chat_id)) return;
-    const owner = answer.matter_id
-      ? `matters/${encodeURIComponent(answer.matter_id)}`
-      : `chats/${encodeURIComponent(answer.chat_id)}`;
+    // Plan AN.48 (D307): a passage is read through its conversation; the earlier matter's address, which no answer still names, is
+    // gone from the server.
+    if (!source?.brain || !answer.turn_id || !answer.chat_id) return;
+    const owner = `chats/${encodeURIComponent(answer.chat_id)}`;
     remember({show: (back) => open(answer, element, elementIndex, sourceIndex, opener, back, phrase)}, viaBack);
     const read = begin(source.label, opener, '', kindOf(source));
     const owns = () => active === read && generation === read.generation
@@ -695,7 +695,7 @@ window.NmBrainSources = (() => {
   function bound(answer, element, source) {
     return source.brain === true && words(source.id) && words(source.digest)
       && words(source.label) && words(source.locator) && words(source.text)
-      && answer.turn_id && (answer.matter_id || answer.chat_id)
+      && answer.turn_id && answer.chat_id
       && Array.isArray(answer.elements) && answer.elements.indexOf(element) >= 0
       && Array.isArray(element.refs) && element.refs.includes(source.locator);
   }
