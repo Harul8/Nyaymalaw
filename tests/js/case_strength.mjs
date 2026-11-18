@@ -184,11 +184,13 @@ const board = { facts: [], related_points: [] };
 const card = context.renderDisputeCard(dispute, board, 1);
 const cardText = card.textContent;
 for (const part of ['1 · The boundary dispute', '1 of 2 shown by the papers', 'What the law requires',
-  'Possession for the period the law requires', 'Notice before the suit', '1 to get', 'The other side will rely on (1)']) {
+  'Possession for the period the law requires', 'Notice before the suit', '1 to get', 'The other side will rely on', 'Their own later entry in the record']) {
   assert.ok(cardText.includes(part), part);
 }
-// Plan AN.49 (49c; D180): on the board the other side is one line with its count; what they rely on is in the pane.
-assert.ok(!cardText.includes('Their own later entry in the record'), 'the other side is one line on the board');
+// D302 (plan AN.48; in place of D180's one line with its count): on the board the other side is a heading and its checklist, each
+// thing one line (here in its own words: saved before it had a short name), opening alone in the pane.
+assert.ok(!cardText.includes('The other side will rely on (1)'), 'no line with a count');
+assert.ok(cardText.indexOf('What the law requires') < cardText.indexOf('The other side will rely on'), 'under what the law requires');
 assert.ok(!cardText.includes('NM found nothing this dispute needs'), 'a case is never read as an empty checklist');
 const detail = context.renderDisputeDetail(dispute, board);
 const detailText = detail.map((node) => node.textContent).join('\n');
@@ -227,7 +229,8 @@ assert.ok(none.textContent.includes('NM could not set out what would make this c
   const card = context.renderDisputeCard(labelled, board, 1);
   const rows = walk(card).filter((node) => node.tagName === 'BUTTON' && has('item')(node));
   assert.deepEqual(Array.from(rows, (row) => row.children[1].children[0].textContent),
-    ['Possession for twelve years', 'Notice before the suit'], 'short names; a saved case\'s own words where none');
+    ['Possession for twelve years', 'Notice before the suit', 'Their later entry'],
+    'short names, the other side\'s too (D302); a saved case\'s own words where none');
   assert.ok(!card.textContent.includes('The revenue entries show it'), 'the detail is in the pane, not on the board');
   const said = (pane) => pane.content.map((node) => node.textContent).join('\n');
   const within = (pane, test) => pane.content.flatMap(walk).filter(test);
@@ -266,14 +269,10 @@ assert.ok(none.textContent.includes('NM could not set out what would make this c
   assert.equal(message.value, 'About "Notice before the suit" (The boundary dispute):\n'
     + 'About "Notice before the suit" (The boundary dispute): this is not available.');
 
-  // What the other side will rely on: one line on the board that opens its list (49c), where each thing opens alone, with what answers it.
-  const [theirLine] = walk(card).filter((node) => node.tagName === 'BUTTON' && has('board-line')(node));
-  assert.equal(theirLine.textContent, 'The other side will rely on (1)');
-  theirLine.handlers.click();
-  pane = opened.at(-1);
-  assert.equal(pane.title, 'The other side will rely on');
-  assert.equal(pane.kind, 'Dispute 1');
-  const [theirs] = within(pane, (node) => node.tagName === 'BUTTON' && has('item')(node));
+  // What the other side will rely on (D302): a checklist on the board, each thing opening alone in the pane, with what answers it.
+  const theirLines = walk(card).filter((node) => node.tagName === 'BUTTON' && has('item--other')(node));
+  assert.equal(theirLines.length, 1);
+  const [theirs] = theirLines;
   assert.equal(theirs.children[1].children[0].textContent, 'Their later entry');
   theirs.handlers.click();
   pane = opened.at(-1);
@@ -367,7 +366,7 @@ assert.ok(none.textContent.includes('NM could not set out what would make this c
   };
   const gatheredDispute = { ...dispute, checklist: { ...dispute.checklist, case: gathered } };
   const card = context.renderDisputeCard(gatheredDispute, board, 1);
-  const lines = walk(card).filter((node) => node.tagName === 'BUTTON' && has('item')(node));
+  const lines = walk(card).filter((node) => node.tagName === 'BUTTON' && has('item')(node) && !has('item--other')(node));
   assert.deepEqual(lines.map((row) => row.children[1].children.map((part) => part.textContent)), [
     ['Whether the possession was open'], ['Possession', '1 of 2 shown'], ['Notice', '0 of 1 shown']], 'three lines for the case');
   assert.deepEqual(lines.map((row) => row.className),
@@ -377,7 +376,11 @@ assert.ok(none.textContent.includes('NM could not set out what would make this c
   assert.ok(at('NM’s second look at this list could not be made') < at('This is NM’s working list: code looked for each quotation')
     && at('This is NM’s working list:') < at('Most needs attention now') && at('Most needs attention now') < at('What the law requires'),
     'how it was checked stands above its lines');
-  for (const part of ['1 of 3 shown by the papers', '1 to get', 'The other side will rely on (1)']) at(part);
+  for (const part of ['1 of 3 shown by the papers', '1 to get']) at(part);
+  // D302: the other side's checklist follows what the law requires, as the board's third heading.
+  assert.ok(at('What the law requires') < at('The other side will rely on'));
+  assert.deepEqual(walk(card).filter((node) => node.tagName === 'BUTTON' && has('item--other')(node))
+    .map((row) => row.children[1].children[0].textContent), ['Their later entry']);
   assert.ok(!cardText.includes('a second look checked it'), 'no second look is claimed where none was made');
   assert.ok(!cardText.includes('Possession for twelve years'), 'the requirements are under their headings');
 

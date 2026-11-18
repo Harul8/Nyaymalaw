@@ -5207,7 +5207,7 @@ function renderDecidingItem(item, view, dispute, place) {
 // will rely on, as one line with its mark that opens alone in the reading pane - or, for a case of the gathered version, what most
 // decides it and its headings (49e). The board's card draws them under its dispute; the whole-dispute view draws the same lines
 // inside its fold, so a point is opened the same way from either.
-function caseLines(view, dispute, place, { otherAsLine = false } = {}) {
+function caseLines(view, dispute, place) {
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -5227,16 +5227,9 @@ function caseLines(view, dispute, place, { otherAsLine = false } = {}) {
   if (other.length) {
     const theirs = make('ul', 'checklist');
     for (const item of other) theirs.appendChild(caseOtherLine(item, dispute, place));
-    if (otherAsLine) {
-      // Plan AN.49 (49c; D180): on the board the other side is one line with its count; its list opens in the reading pane, where
-      // each thing opens alone as before.
-      const all = make('button', 'board-line', `The other side will rely on (${other.length})`);
-      all.type = 'button';
-      all.addEventListener('click', () => window.NmBrainSources.showContent('The other side will rely on', [theirs], all, false, place));
-      out.push(all);
-    } else {
-      out.push(make('p', 'group', 'The other side will rely on'), theirs);
-    }
+    // D302 (plan AN.48; the owner, 18 Nov 2026, in place of D180's one line with its count): what the other side will rely on is a
+    // heading and its checklist, as what the law requires and what most needs attention are, each line opening alone in the pane.
+    out.push(make('p', 'group', 'The other side will rely on'), theirs);
   }
   return out;
 }
@@ -5316,7 +5309,7 @@ function renderDisputeCard(dispute, board, number = null, fold = null) {
         : caseNoneLine(view)));
       return section;
     }
-    const lines = caseLines(view, dispute, number ? `Dispute ${number}` : dispute.name, { otherAsLine: true });
+    const lines = caseLines(view, dispute, number ? `Dispute ${number}` : dispute.name);
     if (caseGathered(view)) {
       // Plan AN.49 (49e; D185): with the gathered account, code's line on how it was checked - and that the second look was not made,
       // where it was not - stands above its lines.

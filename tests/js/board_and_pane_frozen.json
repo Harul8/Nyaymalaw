@@ -84,7 +84,29 @@
         ]
        ]
       ],
-      "button.board-line \"The other side will rely on (1)\"",
+      "p.group",
+      [
+       "ul.checklist",
+       [
+        [
+         "li",
+         [
+          [
+           "button.item.item--other \"Their later entry\"",
+           [
+            "span.st.st--other",
+            [
+             "span.item-words",
+             [
+              "span.t.short"
+             ]
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
       "button.ghost.case-tell \"Tell NM about these\""
      ]
     ]
@@ -294,29 +316,21 @@
    ]
   },
   {
-   "title": "The other side will rely on",
-   "kind": "The boundary dispute",
+   "title": "Their later entry",
+   "kind": "The other side will rely on · The boundary dispute",
    "content": [
+    "p.dispute-why",
     [
-     "ul.checklist",
+     "section.req-block",
      [
-      [
-       "li",
-       [
-        [
-         "button.item.item--other \"Their later entry\"",
-         [
-          "span.st.st--other",
-          [
-           "span.item-words",
-           [
-            "span.t.short"
-           ]
-          ]
-         ]
-        ]
-       ]
-      ]
+      "h4 \"What answers it\"",
+      "p"
+     ]
+    ],
+    [
+     "div.actions",
+     [
+      "button.act.primary \"Tell NM what answers it\""
      ]
     ]
    ]
