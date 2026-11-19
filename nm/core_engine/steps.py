@@ -34,8 +34,8 @@ WAITS = (*NEXT, ASKED)
 #: The first calls of the finish step: while finishing is not allowed they are not sent - the turn stops before the check across the
 #: analyses, or before the overview where there is nothing to check across (48a contract).
 FINISHING = frozenset({"core_response_cross_check", "core_response_overview"})
-#: What the advocate may give at a stop (48a3, 48b): the next step for every dispute, research or the analyses for the disputes
-#: named, end to end, or done; and (plan AN.52, D282) a dispute's failed searches made again.
+#: Go-aheads at a stop: an unambiguous next step, research or analysis for selected disputes or
+#: explicitly for all, end to end, done, or a retry of failed searches for one dispute (D282).
 GOS = ("next", "research", "write", "end_to_end", "done", "search_again")
 _FIELDS = {"mode", "allowed", "n", "waiting"}
 #: What a go-ahead record may add (48b: the disputes named; 48c: the messages heard while the matter waited; 48e: each step's
@@ -61,8 +61,7 @@ _HEARD = {"text", "taken", "said", "at"}
 
 #: What a stop says comes next where every dispute is taken together, in plain words (48a4).
 NEXT_SAID = {
-    "research": "Next: research the law - for one dispute, several or all of them.",
-    "write": "Next: write and check the analysis - for one dispute, several or all of those researched.",
+    "research": "Next: choose a dispute to research.",
     "finish": "Next: check the analyses against each other, write the overview and save the answer.",
 }
 #: The history's line for a conversation waiting for the advocate (D164).
@@ -314,7 +313,8 @@ def _newly(state, go):
 
 def given(go, choice, *, held, disputes=None):
     """The go-ahead the advocate gives a waiting turn (48a3, 48b): "research" or "write" for the disputes named (None: every
-    dispute that step can now take), "next" (the next step for every dispute), "end_to_end" (every remaining step for every dispute,
+    dispute that step can now take), "next" (the unambiguous next step), "end_to_end" (every remaining
+    step for every dispute,
     without stopping, D135) or "done" (finish with what is written, D147). Returns the go-ahead for the next run, or None for Done
     before any analysis is written - the matter is then saved as it stands, with no step run. ValueError where the turn does not
     wait, the choice is not one its stop offers, or a dispute named is not one it can take that step for."""
@@ -346,7 +346,17 @@ def given(go, choice, *, held, disputes=None):
         return {"mode": MODE, "allowed": ["research", "write"] if name in state["written"] else ["research"], "n": go["n"] + 1,
                 "waiting": None, "disputes": None if state["whole"] else [name], "again": [name], **_carried(go)}
     if choice == "next":
-        choice = "research" if unresearched else "write" if unwritten else "done"
+        if unwritten:
+            choice, eligible = "write", unwritten
+        elif unresearched:
+            choice, eligible = "research", unresearched
+        else:
+            choice, eligible = "done", []
+        if eligible and not state["whole"]:
+            targets = eligible if disputes is None else disputes
+            if len(targets) != 1:
+                raise ValueError("Choose one dispute for the next step, or explicitly choose all")
+            disputes = targets
     if choice in ("research", "write"):
         open_now = unresearched if choice == "research" else unwritten
         if not open_now or disputes is not None and (state["whole"] or not set(disputes) <= set(open_now)):
@@ -449,7 +459,7 @@ class Gate:
 
 def card(held, asked=None):
     """What the stop says (48a4, 48b, 48d), from the saved record alone: after which step it waits, what was done and what comes
-    next, the go-aheads it offers - each dispute's next step, the same for all of them at once, End to end and Done - what NM
+    next, the go-aheads it offers (individual disputes first, explicit batch choices, End to end and Done), what NM
     noticed that the advocate did not ask about, offered, never done (D164), and NM's questions with the answers given so far
     (asked: the window's sealed state, questions.Asking.state). None where the turn does not wait."""
     after = waiting_of(held)
@@ -490,14 +500,15 @@ def card(held, asked=None):
         if unwritten:
             gos.append({"choice": "write", "disputes": None, "said": "Go ahead: write the answer"})
     else:
-        if len(unresearched) > 1:
-            gos.append({"choice": "research", "disputes": None, "said": "Research all"})
+        gos += [{"choice": "write", "disputes": [name], "said": f"Write the analysis: {names[name]}"}
+                for name in unwritten]
         gos += [{"choice": "research", "disputes": [name],
                  "said": f"Research what is new: {names[name]}" if name in newly else f"Research: {names[name]}"}
                 for name in unresearched]
+        if len(unresearched) > 1:
+            gos.append({"choice": "research", "disputes": None, "said": "Research all disputes"})
         if len(unwritten) > 1:
             gos.append({"choice": "write", "disputes": None, "said": "Write all researched"})
-        gos += [{"choice": "write", "disputes": [name], "said": f"Write the analysis: {names[name]}"} for name in unwritten]
     if unresearched or unwritten:
         gos.append({"choice": "end_to_end", "disputes": None, "said": "End to end"})
     gos.append({"choice": "done", "disputes": None, "said": (

@@ -59,11 +59,11 @@ def test_each_step_stops_for_the_advocate_and_done_saves_the_answer_end_to_end_w
     assert not research_made(model), "nothing is researched before the advocate's go-ahead"
     assert not scripted.payloads("core_response_writer")
 
-    researched = waits(store, model, go(understood, "next"), "researched")
+    researched = waits(store, model, go(understood, "research"), "researched")
     assert set(researched["steps"]["parts"]) == {"D1", "D2"} and researched["steps"]["answered"] is None
     assert research_made(model) and not scripted.payloads("core_response_writer"), "researched, nothing written"
 
-    written = waits(store, model, go(researched, "next"), "written")
+    written = waits(store, model, go(researched, "write"), "written")
     assert len(written["steps"]["answered"]["sections"]) == 2 and written["steps"]["answered"]["cross_check"] is None
     assert len(scripted.payloads("core_response_writer")) == 2
     assert not scripted.payloads("core_response_cross_check") and not scripted.payloads("core_response_overview")
@@ -91,7 +91,10 @@ def test_one_dispute_is_researched_and_written_while_the_other_waits_then_the_ot
     model = through_turns(scripted)
     understood = waits(store, model, steps.first(), "understood")
     offered = [(g["choice"], g["disputes"]) for g in steps.card(understood)["gos"]]
-    assert offered == [("research", None), ("research", ["D1"]), ("research", ["D2"]), ("end_to_end", None), ("done", None)]
+    assert offered == [
+        ("research", ["D1"]), ("research", ["D2"]), ("research", None),
+        ("end_to_end", None), ("done", None),
+    ]
 
     first = waits(store, model, go(understood, "research", ["D1"]), "researched")
     assert set(first["steps"]["parts"]) == {"D1"}, "only the dispute named is researched"
@@ -182,7 +185,7 @@ def test_each_step_claims_an_attempt_of_its_own_and_a_waiting_turn_is_not_releas
         run(store, model, go=steps.first(), attempts=attempts)
     understood = held(store)
     with pytest.raises(ConversationRefused):
-        run(store, model, go=go(understood, "next"), attempts=attempts)
+        run(store, model, go=go(understood, "research"), attempts=attempts)
     import sqlite3
     with sqlite3.connect(store._root / "attempts.sqlite") as db:
         rows = db.execute("select state, code from turn_attempts").fetchall()

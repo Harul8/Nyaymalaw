@@ -45,9 +45,9 @@ def test_each_step_says_its_tentative_time_and_keeps_it_beside_the_time_it_took(
     assert timed[("research", ("D1",))] == tentative.said(tentative.seconds("research", 1))
     assert timed[("done", ())] is None, "Done before an analysis runs no step"
 
-    researched, _ = waits(store, model, steps.given(understood["go"], "next", held=understood))
+    researched, _ = waits(store, model, steps.given(understood["go"], "research", held=understood))
     assert [entry["n"] for entry in researched["go"]["times"]] == [1, 2]
-    written, _ = waits(store, model, steps.given(researched["go"], "next", held=researched))
+    written, _ = waits(store, model, steps.given(researched["go"], "write", held=researched))
     response = run(store, model, go=steps.given(written["go"], "done", held=written))
     assert [entry["steps"] for entry in response["metrics"]["steps_timed"]] == [
         ["understand"], ["research"], ["write"], ["finish"]], "kept with the answer once it is saved"

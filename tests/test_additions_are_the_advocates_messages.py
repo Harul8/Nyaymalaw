@@ -109,6 +109,6 @@ def test_an_answer_given_at_a_stop_is_the_advocates_message_too(served):
     scripted_answers(served, Scripted())
     served.app.propose_questions = proposer(proposal(depends=["D2"]))
     served.client.post("/api/turn", json=SENT)
-    go(served, "next")
+    go(served, "research")
     served.client.post("/api/turn/answers", json={"chat_id": CHAT, "turn_id": "turn-1", "answers": {"q1": {"chosen": ["The seller"]}}})
     assert [entry["text"] for entry in held(served)["added"]] == ['Answer to NM\'s question "Whom do you act for?": The seller']

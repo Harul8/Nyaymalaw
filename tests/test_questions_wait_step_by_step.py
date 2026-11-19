@@ -37,7 +37,7 @@ def researched_with_a_question(served, scripted):
     scripted_answers(served, scripted)
     served.app.propose_questions = proposer(proposal(depends=["D2"]))
     assert served.client.post("/api/turn", json=SENT).json()["detail"]["code"] == "waiting"
-    assert go(served, "next").json()["detail"]["code"] == "waiting"
+    assert go(served, "research").json()["detail"]["code"] == "waiting"
     card = stop(served)["waiting"]
     assert card["after"] == "researched" and [q["question"] for q in card["questions"]] == ["Whom do you act for?"]
     assert card["questions"][0]["answer"] is None
@@ -53,7 +53,7 @@ def test_a_question_shown_at_a_stop_is_answered_there_and_the_writing_reads_the_
     taken = answer(served, {"q1": {"chosen": ["The seller"]}})
     assert taken.status_code == 409 and taken.json()["detail"]["heard"]["taken"] == "answer"
     assert stop(served)["waiting"]["questions"][0]["answer"] == {"chosen": ["The seller"], "other": ""}
-    written = go(served, "next")
+    written = go(served, "write")
     assert written.json()["detail"]["code"] == "waiting" and stop(served)["waiting"]["after"] == "written"
     assert written_for(scripted, "D1") and written_for(scripted, "D2")
     assert "The seller" in json.dumps(written_for(scripted, "D2"), ensure_ascii=False)
@@ -62,7 +62,7 @@ def test_a_question_shown_at_a_stop_is_answered_there_and_the_writing_reads_the_
 def test_the_writing_a_question_touches_stops_for_the_answer_and_goes_on_by_itself_once_it_is_given(served):
     scripted = Scripted()
     researched_with_a_question(served, scripted)
-    asked = go(served, "next")
+    asked = go(served, "write")
     assert asked.json()["detail"]["code"] == "waiting" and stop(served)["waiting"]["after"] == steps.ASKED
     assert written_for(scripted, "D1") and not written_for(scripted, "D2"), "no default: the touched dispute waits"
     card = stop(served)["waiting"]
@@ -113,8 +113,9 @@ def test_codes_question_during_research_ends_the_step_and_it_resumes_once_answer
     with pytest.raises(ConversationRefused):
         run(store, model, go=steps.first(), propose=lambda *args: [], desk=Desk())
     understood = shown_of(store.load(chat_matter_id("owner", stored_chat("owner", None, "t1"))))
+    go_ahead = steps.given(understood["go"], "research", held=understood)
     with pytest.raises(ConversationRefused) as stopped:
-        run(store, model, go=steps.given(understood["go"], "next", held=understood), propose=lambda *args: [], desk=Desk())
+        run(store, model, go=go_ahead, propose=lambda *args: [], desk=Desk())
     assert stopped.value.code == "waiting"
     matter = store.load(chat_matter_id("owner", stored_chat("owner", None, "t1")))
     record = shown_of(matter)

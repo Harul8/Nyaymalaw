@@ -38,7 +38,9 @@ def test_a_message_read_as_step_by_step_stops_after_the_understanding_and_is_rea
     assert "way" not in served.client.get(f"/api/chats/{CHAT}").json()["pending"]
     assert not scripted.payloads("core_response_writer")
     # A go-ahead runs its step without reading the message again.
-    went = served.client.post("/api/turn/go", json={"chat_id": CHAT, "turn_id": "turn-1", "choice": "next"})
+    went = served.client.post("/api/turn/go", json={
+        "chat_id": CHAT, "turn_id": "turn-1", "choice": "research",
+    })
     assert went.status_code == 409 and len(served.model.ways) == 1
 
 

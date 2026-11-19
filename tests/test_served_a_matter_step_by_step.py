@@ -32,11 +32,13 @@ def test_a_message_sent_step_by_step_stops_at_each_step_and_done_saves_the_answe
     assert [chat.get("waiting") for chat in listed] == ["Waiting for you: research"]
     assert not scripted.payloads("core_response_writer")
 
-    researched = go(served, "next")
+    researched = go(served, "research")
     assert researched.status_code == 409 and researched.json()["detail"]["code"] == "waiting"
     assert waiting(served)["waiting"]["after"] == "researched" and not scripted.payloads("core_response_writer")
+    assert go(served, "next").json()["detail"]["code"] == "not_offered"
+    assert not scripted.payloads("core_response_writer")
 
-    written = go(served, "next")
+    written = go(served, "write")
     assert written.status_code == 409 and waiting(served)["waiting"]["after"] == "written"
     assert scripted.payloads("core_response_writer") and not scripted.payloads("core_response_cross_check")
     assert [g["choice"] for g in waiting(served)["waiting"]["gos"]] == ["done"]
@@ -47,6 +49,39 @@ def test_a_message_sent_step_by_step_stops_at_each_step_and_done_saves_the_answe
     reopened = served.client.get(f"/api/chats/{CHAT}").json()
     assert "pending" not in reopened and [turn["turn_id"] for turn in reopened["turns"]] == ["turn-1"]
     assert go(served, "next").json()["detail"]["code"] == "not_waiting"
+
+
+def test_next_requires_a_dispute_when_more_than_one_can_be_researched(served):
+    scripted = Scripted()
+    scripted_answers(served, scripted)
+    assert served.client.post("/api/turn", json=SENT).status_code == 409
+    stop = waiting(served)["waiting"]
+    calls_before = list(served.model.calls)
+
+    ambiguous = go(served, "next")
+    assert ambiguous.status_code == 409 and ambiguous.json()["detail"]["code"] == "not_offered"
+    assert waiting(served)["waiting"] == stop
+    assert served.model.calls == calls_before
+    assert stop["gos"][0]["choice"] == "research" and stop["gos"][0]["disputes"] == ["D1"]
+
+    selected = served.client.post("/api/turn/go", json={
+        "chat_id": CHAT, "turn_id": "turn-1", "choice": "research", "disputes": ["D1"],
+    })
+    assert selected.status_code == 409 and selected.json()["detail"]["code"] == "waiting"
+    reviewed = waiting(served)["waiting"]
+    assert reviewed["after"] == "researched"
+    assert [(d["id"], d["researched"]) for d in reviewed["disputes"]] == [
+        ("D1", True), ("D2", False),
+    ]
+    assert reviewed["gos"][0]["choice"] == "write" and reviewed["gos"][0]["disputes"] == ["D1"]
+    assert not scripted.payloads("core_response_writer")
+
+    assert go(served, "next").json()["detail"]["code"] == "waiting"
+    after = waiting(served)["waiting"]
+    assert [(d["id"], d["researched"], d["written"]) for d in after["disputes"]] == [
+        ("D1", True, True), ("D2", False, False)]
+    assert len(scripted.payloads("core_response_writer", "D1")) == 1
+    assert not scripted.payloads("core_response_writer", "D2")
 
 
 def test_end_to_end_at_a_stop_runs_the_rest_and_done_before_an_analysis_saves_it_as_it_stands(served):
