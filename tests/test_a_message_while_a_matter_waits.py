@@ -91,6 +91,38 @@ def test_a_go_ahead_the_stop_does_not_offer_is_asked_again_then_taken_as_unclear
     assert steps.waiting_of(held(served)) == "understood" and held(served)["steps"]["parts"] == {}
 
 
+@pytest.mark.parametrize(('choice', 'disputes'), [('research', []), ('end_to_end', ['D1'])])
+def test_a_reading_with_unresolved_scope_never_starts_whole_matter_work(served, choice, disputes):
+    waiting_matter(served)
+    proposal = judged(kind='go', choice=choice, disputes=disputes)
+    reader = Reader(proposal, proposal)
+    reading(served, reader)
+    calls = list(served.model.calls)
+
+    original = 'Take this dispute through, please.'
+    reply = say(served, original)
+    assert reply.status_code == 409 and reply.json()['detail']['heard']['taken'] == 'unclear'
+    assert len(reader.asked) == 2 and 'why_it_cannot_be_taken' in reader.asked[1]
+    record = held(served)
+    assert steps.waiting_of(record) == 'understood' and record['steps']['parts'] == {}
+    assert record['go']['heard'][-1]['text'] == original
+    assert served.model.calls == calls
+
+
+def test_an_explicit_batch_research_message_stops_before_any_analysis(served):
+    waiting_matter(served)
+    reader = Reader(judged(kind='go', choice='research_all'))
+    reading(served, reader)
+
+    reply = say(served, 'Research the law on every dispute in this matter.')
+    assert reply.status_code == 409 and reply.json()['detail']['code'] == 'waiting'
+    record = held(served)
+    assert set(record['steps']['parts']) == {'D1', 'D2'} and record['steps']['answered'] is None
+    assert steps.waiting_of(record) == 'researched' and len(reader.asked) == 1
+    assert {'choice': 'research_all', 'disputes': None, 'said': 'Research all disputes'} in (
+        reader.asked[0]['where_the_matter_stands']['can_be_asked_for'])
+
+
 def test_information_joins_the_matter_as_the_advocates_own_message_and_nothing_is_redone(served):
     """48h (D159) refines 48c: information is kept as the advocate's message after the latest one; the matter is not understood
     again for it."""

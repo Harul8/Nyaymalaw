@@ -29,8 +29,9 @@ log = logging.getLogger(__name__)
 OPERATION = "core_message_reader"
 #: What a message is (48c).
 KINDS = ("go", "information", "correction", "rethink", "question", "unclear")
-#: The go-aheads the reader may give, as a stop offers them (steps.GOS; plan AN.52, D282: a dispute's failed searches made again).
-CHOICES = ("research", "write", "next", "end_to_end", "done", "search_again")
+#: Distinguish an explicit batch in a message from a targeted action missing its targets.
+BATCH_CHOICES = {"research_all": "research", "write_all": "write"}
+CHOICES = (*stepwise.GOS, *BATCH_CHOICES)
 #: The words NM says of a message where the reader gave none code can show, by kind.
 SAID = {"go": "Taken as your go-ahead.", "information": "Taken as new information for the matter.",
         "correction": "Taken as a correction of what NM read.", "rethink": "Taken as a request to rethink the matter.",
@@ -38,15 +39,13 @@ SAID = {"go": "Taken as your go-ahead.", "information": "Taken as new informatio
         "unclear": "NM could not tell how you meant this message."}
 ASK = "Should NM take this as information for the matter, as your go-ahead, or as a new question?"
 
-PROMPT = """You are an Indian advocate's junior, working through a matter with them step by step. The matter is waiting for the advocate: you receive where it stands - its disputes, what has been done for each, and what the advocate can ask for next - the advocate's earlier messages in it, and the advocate's new message.
+PROMPT = """Message: The advocate has sent a message while an Indian matter waits for them. You receive their new words and earlier words from the waiting turn, the disputes and work at the stop, server-offered go-aheads, and NM's derived reading by item ID.
 
-Purpose: take the message the way the advocate meant it, so that the work goes on as they want and nothing they said is lost.
+Purpose: Propose how to take the new message at this stop, preserving the advocate's scope and words.
 
-Outcome: kind - what the message is: go (a go-ahead for the work: research or the analysis for disputes it names, the next step, everything remaining end to end, a search that failed made again for the dispute it names, or that the matter is done); information (facts or papers added to the matter); correction (it corrects something we read from the papers or understood of the matter); rethink (it asks us to understand the matter again, or changes what is asked); question (a new question that is not about this matter); or unclear, where you cannot tell. For a go-ahead, the choice and the disputes it names, by their ids, from what can be asked for next. For information or a correction, the disputes it touches by their ids (none where it touches the matter as a whole), whether it is critical - whether work already done or about to be done would be wrong or incomplete without it - and for a correction what it corrects, in a few words, and new_questions - the legal questions it raises that a dispute's research has not asked (each with the dispute's id, the question as a lawyer would put it, why it is needed and the law to check first), none where it raises none - with item - the id of what we read that it corrects, from what we read
-of the matter (a fact or an event of the papers' timeline), or empty where it corrects none of them - and value, the corrected
-value in the advocate's words. Then said: in a sentence or two, to the advocate, how you took the message, so that they can correct you. Where it is unclear, ask: the one short question that would settle it.
+Look for: What the advocate authorises now, which dispute or step their words refer to, and whether the offered go-ahead matches. Use research or write for the selected disputes, and next for the next step when it is clear. Use research_all or write_all only when the advocate expressly asks for that step for all eligible disputes. An instruction to research all disputes, even if it says to research them end to end, authorises research alone. Use end_to_end only for explicit authority to run every remaining step of the whole matter. Use search_again for a failed search the advocate wants made again, and done when they ask to finish. Keep a named target where it controls the scope. If the target or action is unresolved, or the stop offers no matching action, ask for the distinction that would settle it. Treat reported or quoted directions as someone else's words unless adopted by the advocate. Identify new facts and corrections from the advocate's account. A correction may refer to NM's reading as its target, while its factual basis comes from the advocate or their original sources.
 
-Work in a loop: read the message against where the matter stands, decide what it is, check your reading against the advocate's exact words and the disputes as named, correct it, then answer."""
+Outcome: Return one judgement with kind, choice, disputes, critical, corrects, item, value, new_questions, said and ask. The kind is go for an offered go-ahead, information for facts or papers added to the matter, correction for a change to NM's reading, rethink for a new understanding or change of task, question for a new question outside the matter, or unclear. With go return its choice and the owned IDs of the disputes it selects, or an empty list for a whole-matter or explicit batch action. For information or correction give the disputes touched and whether the change is critical because it affects work done or about to be done. With correction give what is corrected, the ID of the item if identified, and the advocate's exact corrected words if supplied. With information or correction list any new_questions, each with its dispute ID, legal question, why it matters and law to check first. Use empty fields where inapplicable. In said explain your reading briefly. In ask give a single question only when the meaning is unclear."""
 SCHEMA = {"type": "object", "additionalProperties": False,
           "required": ["kind", "choice", "disputes", "critical", "corrects", "item", "value", "new_questions", "said", "ask"],
           "properties": {"kind": {"type": "string", "enum": list(KINDS)},
@@ -75,12 +74,40 @@ def material(held, message):
                                         "disputes": card.get("disputes") or [],
                                         # 48i: the legal questions each dispute's research asks, so that a new one can be told.
                                         "questions_each_dispute_asks": asked_questions(held),
-                                        "can_be_asked_for": [{"choice": go["choice"], "disputes": go.get("disputes"),
-                                                              "said": go["said"]} for go in card.get("gos") or ()]},
+                                        "can_be_asked_for": _offered(card)},
             "earlier_messages": [text for text in earlier if text.strip()],
             # 48g: what NM read of the matter, by id, so that a correction can name what it changes.
             "what_we_read": read_items(held),
             "new_message": message}
+
+
+def _offered(card):
+    batch = {action: choice for choice, action in BATCH_CHOICES.items()}
+    return [{"choice": batch.get(go["choice"], go["choice"])
+             if card.get("disputes") and go.get("disputes") is None else go["choice"],
+             "disputes": go.get("disputes"), "said": go["said"]} for go in card.get("gos") or ()]
+
+
+def _go_scope(choice, named, held, state):
+    """Resolve only a scope that the server's saved stop makes unique."""
+    if choice in (*BATCH_CHOICES, "end_to_end", "done") and named:
+        raise ValueError("A named dispute cannot authorise a whole-matter action")
+    if state["whole"] and named:
+        eligible = {item["dispute"] for item in asked_questions(held) if item["questions"]}
+        if len(named) != 1 or named[0] not in eligible:
+            raise ValueError("The named dispute is not the scope of this answer")
+        return choice, None
+    if choice in BATCH_CHOICES:
+        if not any(go["choice"] == choice for go in _offered(stepwise.card(held) or {})):
+            raise ValueError("This stop does not offer that batch action")
+        return BATCH_CHOICES[choice], None
+    if choice in ("research", "write") and not state["whole"] and not named:
+        targets = [go["disputes"] for go in _offered(stepwise.card(held) or {})
+                   if go["choice"] == choice]
+        if len(targets) != 1:
+            raise ValueError("Choose the dispute or an explicitly requested batch action")
+        return choice, targets[0]
+    return choice, named or None
 
 
 def asked_questions(held):
@@ -121,11 +148,8 @@ def admitted(data, held):
                  "corrects": (data.get("corrects") or "").strip() if isinstance(data.get("corrects"), str) else "",
                  "item": "", "value": "", "new_questions": [], "said": " ".join(said.split()), "ask": ""}
     if kind == "go":
-        choice = data.get("choice")
-        disputes = [name for name in named if name in state["order"]] or None
-        if state["whole"] or choice not in ("research", "write", "search_again"):
-            disputes = None
         try:
+            choice, disputes = _go_scope(data.get("choice"), named, held, state)
             go = stepwise.given(held["go"], choice, held=held, disputes=disputes)
         except (ValueError, KeyError, TypeError) as exc:
             return None, f"that go-ahead is not one this stop offers ({exc})"
