@@ -305,6 +305,19 @@ def _paragraph(style, text, extra=""):
     return f'<w:p><w:pPr><w:pStyle w:val="{style}"/></w:pPr>{_runs(text)}{extra}</w:p>'
 
 
+#: A paragraph of a Word file, and its text as runs, for another document NM makes in this file's styles (AN.67, the draft).
+paragraph, runs = _paragraph, _runs
+#: The A4 page every such file is set on.
+_SECTION = ('<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1418" w:right="1304" '
+            'w:bottom="1418" w:left="1304" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>')
+
+
+def document_xml(body):
+    """A Word document of the paragraphs given, on the A4 page."""
+    return (f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document {_W}><w:body>'
+            + "".join(body) + _SECTION + "</w:body></w:document>")
+
+
 def _source_heading(source):
     locator = source["locator"]
     if source["kind"] == "judgment" and locator.isdecimal():
@@ -354,10 +367,7 @@ def _document_xml(note):
             body.append(_paragraph("SourceTitle", source["heading"]))
             body.extend(_paragraph("Quote", passage) for passage in source["passages"])
     body.append(_paragraph("Meta", note["provenance"]))
-    section = ('<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1418" w:right="1304" '
-               'w:bottom="1418" w:left="1304" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>')
-    return (f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document {_W}><w:body>'
-            + "".join(body) + section + "</w:body></w:document>")
+    return document_xml(body)
 
 
 _STYLES = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -386,21 +396,27 @@ _APP = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Nyaymalaw</Application></Properties>'''
 
 
-def _core(note, created):
+def _core(title, created):
     return ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<cp:coreProperties '
             'xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" '
             'xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" '
             'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
-            f'<dc:title>{escape(_NOT_XML.sub("", note["file_name"]))}</dc:title><dc:creator>Nyaymalaw</dc:creator>'
+            f'<dc:title>{escape(_NOT_XML.sub("", title))}</dc:title><dc:creator>Nyaymalaw</dc:creator>'
             f'<dcterms:created xsi:type="dcterms:W3CDTF">{created}</dcterms:created></cp:coreProperties>')
 
 
 def docx(note, saved_at):
     """The note as a Word file; the same note always gives the same bytes."""
+    return word_file(_document_xml(note), note["file_name"], saved_at)
+
+
+def word_file(document, title, saved_at):
+    """A Word file of document (document_xml) in this file's styles, titled title and dated saved_at - the moment what it holds was
+    saved, never the moment it is made - so that the same document always gives the same bytes."""
     created = datetime.fromisoformat(saved_at).astimezone(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30")
     parts = [("[Content_Types].xml", _TYPES), ("_rels/.rels", _RELS),
-             ("word/_rels/document.xml.rels", _DOCUMENT_RELS), ("word/document.xml", _document_xml(note)),
-             ("word/styles.xml", _STYLES), ("docProps/core.xml", _core(note, created)), ("docProps/app.xml", _APP)]
+             ("word/_rels/document.xml.rels", _DOCUMENT_RELS), ("word/document.xml", document),
+             ("word/styles.xml", _STYLES), ("docProps/core.xml", _core(title, created)), ("docProps/app.xml", _APP)]
     out = io.BytesIO()
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as archive:
         for name, text in parts:

@@ -16,17 +16,19 @@ allowance, or when the writer or the reviewer cannot be asked. What is still at 
 see: the draft is for the advocate's review (SEQ.7), never sent by NM.
 
 The saved draft keeps its template, each round - a writing with what code found of it, or a review with what code admitted of it -
-and the parts as they stand; on reading it is checked again from those alone (P46). The Word export (23c) and the request that
-starts a draft (23d) build on it.
+and the parts as they stand; on reading it is checked again from those alone (P46). Piece 23c: the saved draft as a Word file,
+from what it saved and nothing else. The request that starts a draft (23d) builds on it.
 """
 from __future__ import annotations
 
 import json
 import re
 from copy import deepcopy
+from datetime import datetime
 
-from nm.core_engine import answer_sources, reasoning, response_writer
+from nm.core_engine import answer_sources, reasoning, research_note, response_writer
 from nm.core_engine import rounds as runner
+from nm.shared.clock_contracts import IST
 from nm.shared.model_port import (
     ModelError,
     Prompt,
@@ -243,11 +245,12 @@ def _admitted(returned, template, draft, sources):
     return found, beside
 
 
-def _told(finding):
-    """A finding of the review as the writer and the advocate are told it."""
+def _told(finding, *, cited=True):
+    """A finding of the review as the writer and the advocate are told it: in the Word file without the IDs of the passages,
+    which mean nothing there (cited False)."""
     words = f" (the words {finding['said']!r})" if finding["said"] else ""
-    cited = f" See {', '.join(finding['source_ids'])}." if finding["source_ids"] else ""
-    return f"An independent review found that this part {FINDS[finding['kind']]}{words}: {finding['why'].strip()}{cited}"
+    see = f" See {', '.join(finding['source_ids'])}." if cited and finding["source_ids"] else ""
+    return f"An independent review found that this part {FINDS[finding['kind']]}{words}: {finding['why'].strip()}{see}"
 
 
 def _drafted(draft, proposal, faults):
@@ -482,3 +485,52 @@ def shown(record):
                       for part in record["parts"]],
             "beside": [f"The review also said: {finding['why'].strip() or FINDS[finding['kind']]}" for finding in record["beside"]],
             "reviewed": None if record["reviewed"] else NOT_REVIEWED}
+
+
+#: A particular not given, highlighted where it goes in the Word file, for the advocate to fill.
+_HIGHLIGHT = '<w:rPr><w:highlight w:val="yellow"/></w:rPr>'
+#: Said at the foot of a draft's Word file.
+DRAFTED = ("Drafted by Nyaymalaw for your review from the conversation, its papers and the law NM holds. NM has not sent it: read it "
+           "against the papers before it goes out.")
+#: Said of a part code still finds at fault, in the Word file, where its own words name passages by IDs that mean nothing there.
+STILL_AT_FAULT = "NM's own checks still find that this part does not stand as the papers and the held law give it; check it against them."
+
+
+def word(record, saved_at):
+    """The saved draft as a Word file (23c), from what the draft saved and nothing else (record: a draft validate has read;
+    saved_at: when it was saved): its title, each part's heading and paragraphs as they stand, a particular not given highlighted
+    where it goes, and after the document, apart from it, what is still for the advocate to settle - the particulars needed, what
+    code and the review still find, what the review said of no part, and whether the draft as it stands was reviewed. The same
+    saved draft always gives the same bytes. Returns (the file's name, without its extension; its bytes)."""
+    template = record["template"]
+    said = {item["id"]: item["said"] for part in template["parts"] for item in part["particulars"]}
+    titles = {part["id"]: part["title"] for part in template["parts"]}
+    moment = datetime.fromisoformat(saved_at).astimezone(IST)
+    body = [research_note.paragraph("Title", template["title"]),
+            research_note.paragraph("Meta", f"Draft for your review · saved {moment.day} {moment:%B %Y}")]
+    notes = []
+    for part in record["parts"]:
+        title = titles[part["part_id"]]
+        body.append(research_note.paragraph("Heading2", title))
+        needed = []
+        for paragraph in part["paragraphs"]:
+            pieces, at = [], 0
+            for match in _MARK.finditer(paragraph["text"]):
+                pieces.append(research_note.runs(paragraph["text"][at:match.start()]))
+                pieces.append(research_note.runs(f"[particular needed: {said.get(match.group(1), match.group(1))}]", _HIGHLIGHT))
+                needed.append(said.get(match.group(1), match.group(1)))
+                at = match.end()
+            pieces.append(research_note.runs(paragraph["text"][at:]))
+            body.append(research_note.paragraph("Normal", "", "".join(pieces)))
+        notes += [f"{title}: the papers do not give {item}." for item in dict.fromkeys(needed)]
+        notes += [f"{title}: {STILL_AT_FAULT}"] if part["faults"] else []
+        notes += [f"{title}: {_told(finding, cited=False)}" for finding in part["findings"]]
+    notes += [f"The review also said: {finding['why'].strip() or FINDS[finding['kind']]}" for finding in record["beside"]]
+    notes += [] if record["reviewed"] else [NOT_REVIEWED]
+    if notes:
+        body += [research_note.paragraph("Heading1", "For your review"),
+                 research_note.paragraph("Meta", "Not part of the document: remove these notes before it is sent.")]
+        body += [research_note.paragraph("Normal", f"• {note}") for note in notes]
+    body.append(research_note.paragraph("Meta", DRAFTED))
+    name = f"Draft {moment:%Y-%m-%d} - " + (" ".join(re.sub(r"[^\w\s-]", "", template["title"]).split())[:60].strip() or "document")
+    return name, research_note.word_file(research_note.document_xml(body), name, saved_at)

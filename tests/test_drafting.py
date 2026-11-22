@@ -1,10 +1,13 @@
-"""Plan AN.67, D323 (pieces 23a and 23b): a document drafted part by part from a versioned template on the shared loop runner, code's
+"""Plan AN.67, D323 (pieces 23a to 23c): a document drafted part by part from a versioned template on the shared loop runner, code's
 checks of every part, the independent review of the whole draft, the rewrite of the parts at fault and the review again, the saved
-draft checked again from what it kept, and the draft as shown.
+draft checked again from what it kept, and the draft as shown and as a Word file.
 
 The template and the matter are invented for the test; no template is held until the owner agrees one (AN.67)."""
+import io
 import json
+import zipfile
 from copy import deepcopy
+from xml.etree import ElementTree
 
 import pytest
 
@@ -360,3 +363,54 @@ def test_the_writer_and_the_reviewer_are_told_the_purpose_and_work_in_a_loop():
         assert "Purpose:" in said and "Outcome:" in said and "Work in a loop" in said
     assert "[[its id]]" in drafting.WRITER and "work none out" in drafting.WRITER
     assert all(kind in drafting.REVIEWER for kind in drafting.FINDS)
+
+
+SAVED_AT = "2026-11-22T10:00:00+00:00"
+
+
+def word_paragraphs(data):
+    """Each paragraph of a Word file's document as (its text, whether any of it is highlighted)."""
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        assert archive.testzip() is None
+        root = ElementTree.fromstring(archive.read("word/document.xml"))
+    w = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+    return [("".join(t.text or "" for t in p.iter(f"{w}t")), p.find(f".//{w}highlight") is not None)
+            for p in root.iter(f"{w}p")]
+
+
+def test_the_saved_draft_is_a_word_file_of_the_draft_with_what_is_left_for_the_advocate_apart(matter):
+    ctx, sources = matter
+    record = drafting.write(Writer({"parts": [facts(), demand()]}, NOTHING), TEMPLATE, ctx, sources)
+    name, data = drafting.word(record, SAVED_AT)
+    assert name == "Draft 2026-11-22 - Notice of demand"
+    assert word_paragraphs(data) == [
+        ("Notice of demand", False), ("Draft for your review · saved 22 November 2026", False),
+        ("Facts", False), ("The cheque for Rs. 50,000 was returned unpaid on 10 January 2026, marked funds insufficient.", False),
+        ("Demand", False),
+        ("Asha Verma is called upon to pay the amount within the time the Act allows, at [particular needed: the drawer's address].",
+         True),
+        ("For your review", False), ("Not part of the document: remove these notes before it is sent.", False),
+        ("• Demand: the papers do not give the drawer's address.", False), (drafting.DRAFTED, False)]
+    # Saved and reopened, the draft gives the same file, byte for byte.
+    again = drafting.validate(json.loads(json.dumps(record)), ctx, sources, templates=HELD)
+    assert drafting.word(again, SAVED_AT) == (name, data)
+
+
+def test_the_word_file_says_what_code_and_the_review_still_find_and_names_no_passage_by_its_id(matter):
+    ctx, sources = matter
+    tries = [facts(amount=f"Rs. {n},000") for n in (1, 2, 3)]
+    record = drafting.write(Writer({"parts": [tries[0], demand()]}, {"parts": [tries[1]]}, {"parts": [tries[2]]},
+                                   {"findings": [found("demand", why="The demand does not say how much."),
+                                                 found("elsewhere", why="The notice has no date.")]}),
+                            TEMPLATE, ctx, sources)
+    notes = [text for text, _ in word_paragraphs(drafting.word(record, SAVED_AT)[1]) if text.startswith("• ")]
+    assert notes == [f"• Facts: {drafting.STILL_AT_FAULT}", "• Demand: the papers do not give the drawer's address.",
+                     "• Demand: An independent review found that this part leaves out what it needs and the conversation "
+                     "gives: The demand does not say how much.", "• The review also said: The notice has no date."]
+    unreviewed = drafting.write(Writer({"parts": [facts(), demand()]}, ModelError("scripted")), TEMPLATE, ctx, sources)
+    assert [text for text, _ in word_paragraphs(drafting.word(unreviewed, SAVED_AT)[1])][-2] == f"• {drafting.NOT_REVIEWED}"
+    # A title the file's XML or name cannot hold as it stands.
+    odd = deepcopy(record)
+    odd["template"]["title"] = "Notice & <demand>\x01"
+    name, data = drafting.word(odd, SAVED_AT)
+    assert name == "Draft 2026-11-22 - Notice demand" and word_paragraphs(data)[0] == ("Notice & <demand>", False)
