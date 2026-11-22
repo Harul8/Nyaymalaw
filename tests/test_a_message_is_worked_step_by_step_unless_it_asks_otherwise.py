@@ -7,7 +7,7 @@ application and scripted readers - no claim about how the real model reads real 
 import pytest
 
 from nm.core_engine import message_reader, shown_words, steps as stepwise
-from nm.core_engine.conversation import stored_chat
+from nm.core_engine.conversation import chat_matter_id, shown_of, stored_chat
 from nm.shared.model_port import Completion, ModelResult, ProviderUnavailable, Usage
 from tests.test_core_answer_sections import Scripted, scripted_answers
 from tests.test_core_served import OWNER, served  # noqa: F401 - pytest fixture
@@ -61,6 +61,34 @@ def test_a_message_that_asks_otherwise_is_worked_straight_through_and_code_says_
     # The reading is one of the turn's own calls, metered with it; no step's time was said, so none is kept.
     assert [call["operation"] for call in reply.json()["metrics"]["calls"]].count(message_reader.WAY_OPERATION) == 1
     assert "steps_timed" not in reply.json()["metrics"]
+
+
+def test_a_fresh_research_only_route_saves_every_dispute_and_pauses(served, monkeypatch):
+    scripted = Scripted()
+    scripted_answers(served, scripted)
+    requested = {**SENT, 'message': 'Research the law on both disputes and show me the authorities before analysis.'}
+    readings = []
+
+    def way(_calls, message, **_context):
+        readings.append(message)
+        return {'how': 'research_all', 'said': ''}
+
+    monkeypatch.setattr(message_reader, 'way', way)
+    reply = served.client.post('/api/turn', json=requested)
+    assert reply.status_code == 409 and reply.json()['detail']['code'] == 'waiting'
+    assert readings == [requested['message']]
+    held = shown_of(served.store.load(chat_matter_id(OWNER, CHAT)))
+    assert held['go']['allowed'] == ['understand', 'research']
+    assert set(held['steps']['parts']) == {'D1', 'D2'} and held['steps']['answered'] is None
+    assert not scripted.payloads('core_response_writer')
+
+    reopened = served.login().get(f'/api/chats/{CHAT}').json()
+    card = reopened['pending']['stopped']['waiting']
+    assert card['after'] == 'researched'
+    assert [(item['id'], item['researched'], item['written']) for item in card['disputes']] == [
+        ('D1', True, False), ('D2', True, False),
+    ]
+    assert readings == [requested['message']]
 
 
 def test_the_page_is_told_how_a_message_worked_straight_through_asked_for_it(served):

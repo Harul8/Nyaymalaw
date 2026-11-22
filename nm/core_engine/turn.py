@@ -1044,10 +1044,9 @@ def saved_rows(matter, advocate_id):
 
 
 def _worked_as_asked(calls, context, go, gate, keeper, report, way):
-    """Plan AN.58 (D287): how the message asks to be worked, read once as its work begins. Where it asks for the work end to end,
-    or for one specific thing, the run goes straight through - the gate takes every step - and code's words saying so are saved
-    at once on the turn's record for the page. Returns the go-ahead the run works on: straight's, or go as it was. A reading that
-    fails leaves the message step by step; a usage limit goes on to the turn's own handling of it."""
+    """Read how the message asks to be worked once as it starts. AN.61 (D309): an explicit request to research every dispute
+    lets the opening run through research and then stops for review. AN.58 (D287): the existing end-to-end and specific routes
+    run straight through. Save the admitted opening scope on the pending turn. A failed reading leaves the scope unchanged."""
     transcript = context.payload()["conversation"]
     earlier = [f"{row['speaker']} ({row['record_role']})\n{row['text']}" for row in transcript]
     try:
@@ -1057,9 +1056,13 @@ def _worked_as_asked(calls, context, go, gate, keeper, report, way):
     except ModelError as exc:
         log.warning("How the message asks to be worked could not be read; it is worked step by step: %s", type(exc).__name__)
         return go
-    if reading["how"] not in stepwise.WAYS:
+    how = reading["how"]
+    if how == "research_all":
+        go = {**go, "allowed": ["understand", "research"]}
+    elif how in stepwise.WAYS:
+        go = stepwise.straight(go, how, reading["said"])
+    else:
         return go
-    go = stepwise.straight(go, reading["how"], reading["said"])
     gate.through(go)
     if keeper.now(lambda held: held.update(go=go)):
         keeper.saved += 1
@@ -1098,8 +1101,9 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     the advocate's next go-ahead; each step claims an attempt of its own (D150). None: end to end, exactly as before.
     way (plan AN.58, D287): how a message sent step by step and not sent before asks to be worked (message_reader.way), read once
     on the turn's own calls after the message is saved and before any other work; a message that asks for the work end to end, or
-    for one specific thing, is worked straight through, and code's words saying so are kept on its record for the page. None: not
-    read - a go-ahead, Continue, a message at a stop, or a turn run without steps.
+    for one specific thing, is worked straight through, and code's words saying so are kept on its record for the page.
+    AN.61 (D309): research_all permits the opening and research only. None: not read - a go-ahead, Continue, a message at a stop,
+    or a turn run without steps.
     steered_with (plan AN.48, 48c): the advocate's words that make the matter be thought again while it waited - each {"text",
     "documents", "at"}, as a steer is - joining it as their words; the matter is understood again with them (D149's rethink).
     appended (48h, D159): what the advocate added while the matter waited, kept as their own messages after the latest one;
