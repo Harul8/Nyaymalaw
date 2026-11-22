@@ -67,15 +67,17 @@ SCHEMA = {"type": "object", "additionalProperties": False,
 
 def material(held, message):
     """What the reader reads: where the matter stands (its stop - what was done, what comes next, each dispute's state, the
-    go-aheads offered), the advocate's earlier messages in it, and the new message. Nothing else."""
+    go-aheads offered), the advocate's earlier messages in it, any saved exchanges while waiting, and the new message."""
     card = stepwise.card(held) or {}
     earlier = [held.get("message") or "", *(steer.get("text") or "" for steer in held.get("steers") or ())]
+    exchanges = [{"advocate": entry["text"], "nm": entry["said"]} for entry in (held.get("go") or {}).get("heard", ())]
     return {"where_the_matter_stands": {"done": card.get("done_said"), "next": card.get("next_said"),
                                         "disputes": card.get("disputes") or [],
                                         # 48i: the legal questions each dispute's research asks, so that a new one can be told.
                                         "questions_each_dispute_asks": asked_questions(held),
                                         "can_be_asked_for": _offered(card)},
             "earlier_messages": [text for text in earlier if text.strip()],
+            **({"waiting_exchanges": exchanges} if exchanges else {}),
             # 48g: what NM read of the matter, by id, so that a correction can name what it changes.
             "what_we_read": read_items(held),
             "new_message": message}

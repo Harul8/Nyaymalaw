@@ -176,6 +176,28 @@ def test_an_unclear_message_is_asked_about(served):
         "Is this a new fact for the lease dispute?")
 
 
+def test_a_waiting_reply_is_read_with_the_exact_exchange_it_answers(served):
+    waiting_matter(served)
+    original = 'That action first, please.\nThe other dispute can wait.'
+    question = 'Do you mean research the first dispute?'
+    reply_words = 'Yes, that one.'
+    reader = Reader(judged(kind='unclear', ask=question), judged(kind='go', choice='research', disputes=['D1']))
+    reading(served, reader)
+
+    first = say(served, original)
+    nm_words = first.json()['detail']['heard']['said']
+    assert nm_words.endswith(question) and held(served)['steps']['parts'] == {}
+    assert served.login().get(f'/api/chats/{CHAT}').status_code == 200
+
+    second = say(served, reply_words)
+    payload = reader.asked[1]
+    assert payload['new_message'] == reply_words
+    assert payload['waiting_exchanges'] == [{'advocate': original, 'nm': nm_words}]
+    assert len(reader.asked) == 2
+    assert second.json()['detail']['code'] == 'waiting'
+    assert set(held(served)['steps']['parts']) == {'D1'} and held(served)['steps']['answered'] is None
+
+
 def test_a_reader_that_cannot_be_reached_loses_no_message(served):
     waiting_matter(served)
     reading(served, Reader(ProviderUnavailable("Synthetic outage")))
