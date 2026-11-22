@@ -17,10 +17,13 @@ import re
 import threading
 import unicodedata
 from concurrent.futures import Future, ThreadPoolExecutor
+from contextlib import nullcontext
 from copy import deepcopy
 from datetime import date
 
 from nm.core_engine import figures, reasoning
+from nm.core_engine import rounds as runner
+from nm.core_engine.calls import ALLOWANCE as TURN_ALLOWANCE, CorrectionUnavailable
 from nm.core_engine.replay_scope import known, once
 from nm.core_engine.retrieval import SearchUnavailable, _digest, _valid_location, in_force, validate_search
 from nm.core_engine.understanding import REFERENCE, TEXT, TYPOGRAPHY, advocate_messages, select, source_catalogue
@@ -3315,7 +3318,7 @@ def retrieve_parts(plan, searcher, context, model=None, *, progress=None, starte
         # v16 (plan AN.35, piece 35d): once, the law still missing for the dispute's questions, and (piece 35e) the judgments the
         # papers cite that its questions need; from v17 (plan AN.36, D35) made before any judgment is read in full, so that the
         # cited ones have first claim on the five.
-        further, judgments = _further(model, searcher, plan, searches, picks, report, cited_now(), context)
+        further, judgments = _further(model, searcher, plan, searches, picks, report, cited_now(), context, dispute_id)
         return _part(plan, dispute_id, searches, failures, picks, judgments, further=further, meant=meant)
     # Piece 35e: the judgments the papers and messages cite, looked up once for every dispute.
     cited = cited_judgments(context, case_index) if any(
@@ -3349,7 +3352,7 @@ FURTHER = """You are a senior Indian litigation lawyer. A matter has been broken
 
 Purpose: before the dispute is answered, its law should be complete. For each question, judge as a lawyer would whether what was chosen answers it: the provision that states the governing rule, its exceptions and conditions, the time limit and the procedure where they matter, and the judgments that decide the point.
 
-Outcome: for each question whose governing law is still missing, say in missing what is missing, and name it: in sections, the sections to read by their number, each on its own, by its Act's short title and year and its number as the Act numbers it (a section, an article, an order and rule); in phrases, the words a statute or a court would use for what is missing, each a different way in. Leave out a question whose law is already there; ask only for law the question needs, not for what would merely add to it. This is the one further search for the dispute: what it finds is chosen from as before, and nothing is searched again.
+Outcome: for each question whose governing law is still missing, say in missing what is missing, and name it: in sections, the sections to read by their number, each on its own, by its Act's short title and year and its number as the Act numbers it (a section, an article, an order and rule); in phrases, the words a statute or a court would use for what is missing, each a different way in. Leave out a question whose law is already there; ask only for law the question needs, not for what would merely add to it. What you name is searched for and chosen from as before, and the dispute then comes back to you with what was found, so that law the new provisions or judgments point to - a section they make their rule subject to, a definition they rely on, a judgment they follow - can be asked for in turn. When nothing a question needs is missing, name nothing for it.
 
 The judgments the papers and the advocate's messages cite come after the questions, each under its number (CJ1, CJ2 ...) with where it is cited and how our library stands on it: held, held more than once, not held, or not checked. For each question, name in cited the held ones a lawyer must read to answer it; each is then read whole, or as an extract when it is long. Name none that does not bear on the question, and none we do not hold.
 
@@ -3454,43 +3457,50 @@ def _cited_cases(asked, labels, cited, skip):
 
 
 def _further_text(plan, searches, labels, picks):
-    """Each searched question of a dispute with what its picks chose and said, as the further search's call reads it."""
+    """Each searched question of a dispute with what its picks chose and said, as the further search's call reads it - from D320 each
+    chosen provision and judgment paragraph in its own words, so that the law it points to can be seen."""
     lines = [f"Matter: {plan['proposal']['understanding']['summary']}"]
     for work in plan["work"]:
         if work["id"] not in labels:
             continue
         label, search = labels[work["id"]], searches[work["id"]]
         lines.append(f"\n{label}: {work['question']}")
-        for kind, title in (("provision", "Provisions chosen"), ("judgment", "Judgment paragraphs chosen")):
-            offered = {candidate["id"]: candidate for candidate in _offered(search, kind)}
-            chosen = [offered[identity] for identity in picks[kind]["chosen"].get(work["id"], []) if identity in offered]
-            lines.append(f"  {title}:" + ("" if chosen else " none"))
-            for candidate in chosen:
-                source = candidate["source"]
-                if kind == "provision":
-                    heading = re.sub(r"\s+", " ", source.get("section_title") or "")[:140]
-                    lines.append(f"    {candidate['title']}, section {candidate['locator']}: {heading}.")
-                else:
-                    words = re.sub(r"\s+", " ", source.get("full_text") or "").strip()[:300]
-                    at = judgment_place(candidate["locator"])
-                    lines.append(f"    {candidate['title']}{', ' + at if at else ''}: {words}")
-            note = next((item["note"] for item in (picks[kind]["proposal"] or {}).get("questions", ())
-                         if item["question_id"] == label), "")
-            if note.strip():
-                lines.append(f"  What was said of them: {' '.join(note.split())}")
-        for entry in search.get("named", ()):
-            if entry["state"] != "read":
-                lines.append(f"  Named and not read: {entry['act']}, {entry['section']} ("
-                             + {"ambiguous": "held more than once", "not_held": "not held in our library",
-                                "unavailable": "could not be read"}[entry["state"]] + ").")
+        lines.extend(_chosen_said(search, picks, work["id"], label))
     return "\n".join(lines)
 
 
-def _further_wanted(asked, plan, labels):
+def _chosen_said(search, picks, work_id, label):
+    """What a question's picks chose from one of its searches and said of it, and the sections it named and could not read."""
+    lines = []
+    for kind, title in (("provision", "Provisions chosen"), ("judgment", "Judgment paragraphs chosen")):
+        offered = {candidate["id"]: candidate for candidate in _offered(search, kind)}
+        chosen = [offered[identity] for identity in picks[kind]["chosen"].get(work_id, []) if identity in offered]
+        lines.append(f"  {title}:" + ("" if chosen else " none"))
+        for candidate in chosen:
+            if kind == "provision":
+                lines.append(f"    {candidate['title']}, section {candidate['locator']}:")
+                lines.extend(f"      {line.strip()}" for line in candidate["text"].splitlines() if line.strip())
+            else:
+                at = judgment_place(candidate["locator"])
+                lines.append(f"    {candidate['title']}{', ' + at if at else ''}: {' '.join(candidate['text'].split())}")
+        note = next((item["note"] for item in (picks[kind]["proposal"] or {}).get("questions", ())
+                     if item["question_id"] == label), "")
+        if note.strip():
+            lines.append(f"  What was said of them: {' '.join(note.split())}")
+    for entry in search.get("named", ()):
+        if entry["state"] != "read":
+            lines.append(f"  Named and not read: {entry['act']}, {entry['section']} ("
+                         + {"ambiguous": "held more than once", "not_held": "not held in our library",
+                            "unavailable": "could not be read"}[entry["state"]] + ").")
+    return lines
+
+
+def _further_wanted(asked, plan, labels, number=None):
     """What a dispute's further search asks of each question (v16), as work items made from its answer: its phrases, and the
     sections it names, each read by its number (a reference naming several read as each it names) - a question named twice keeps
     its first entry, and one that names nothing is searched for nothing. Where it names sections and no phrase, the words it gave
-    for what is missing are searched beside them. Deterministic in its inputs, so that replay re-derives it."""
+    for what is missing are searched beside them. Deterministic in its inputs, so that replay re-derives it. number (D320): the
+    later round it is asked in, which its searches are named by."""
     by_label = {label: work_id for work_id, label in labels.items()}
     works = {work["id"]: work for work in plan["work"]}
     wanted = {}
@@ -3506,9 +3516,9 @@ def _further_wanted(asked, plan, labels):
             phrases = [" ".join(item["missing"].split())]
         if not phrases:
             continue
-        wanted[work_id] = {**works[work_id], "enquiries": [{"query_id": f"{work_id}:further{number}", "text": text}
-                                                           for number, text in enumerate(phrases, 1)],
-                           "named": [{"act": act, "section": section} for act, section in named]}
+        wanted[work_id] = {**works[work_id], "enquiries": [
+            {"query_id": f"{work_id}:further{at}" if number is None else f"{work_id}:round{number}.{at}", "text": text}
+            for at, text in enumerate(phrases, 1)], "named": [{"act": act, "section": section} for act, section in named]}
     return wanted
 
 
@@ -3526,26 +3536,9 @@ def _no_further(state, reason=None):
             "cited": [], "cited_read": []}
 
 
-def _further(model, searcher, plan, searches, picks, report, cited=(), context=None):
-    """A dispute's further search (v16, piece 35d): one call names the law still missing for each question; code searches once for
-    what it names, the two picks choose among only what is new to each question, and the judgments chosen are read, each judgment
-    once. A failed call leaves it unavailable, said; a failed search is kept as that question's failure; nothing is searched again.
-    From v17 (plan AN.36, D35) the judgments are read here, after the call, within the dispute's five read in full: the cited ones it
-    chose first, then the first pick's, then the further pick's. Returns (the further search, the first pick's judgments read)."""
-    labels = _labels(plan, searches)
-
-    def first(skip=frozenset(), limit=None):
-        return _read_judgments(searcher, plan, searches, picks["judgment"], skip=skip, limit=limit)
-    if not labels:
-        return _no_further("not_needed"), first()
-    if model is None:
-        return _no_further("unavailable", "No model for the further search"), first()
-    try:
-        asked = _call(model, "core_research_further", FURTHER, _further_text(plan, searches, labels, picks)
-                      + (_cited_text(cited, context) if cited else ""), FURTHER_SCHEMA, "further")
-    except (ModelError, SchemaViolation) as exc:
-        return _no_further("unavailable", type(exc).__name__), first()
-    wanted = _further_wanted(asked, plan, labels)
+def _searched_for(searcher, wanted):
+    """What the searches a further search or a later round asks for found, by question, and each that failed, with why: each
+    question's searches made once, together."""
     found, failures = {}, {}
     planned = [(work, search_queries(work), search_instruments(work), search_named(work)) for work in wanted.values()]
     if planned and searcher is None:
@@ -3562,6 +3555,31 @@ def _further(model, searcher, plan, searches, picks, report, cited=(), context=N
                 found[work["id"]] = validate_search(future.result(), queries, instruments, named)
             except (SearchUnavailable, ValueError, OSError, RuntimeError, KeyError, TypeError) as exc:
                 failures[work["id"]] = {"stage": "search", "reason": str(exc) or type(exc).__name__}
+    return found, failures
+
+
+def _further(model, searcher, plan, searches, picks, report, cited=(), context=None, dispute_id=None):
+    """A dispute's further search (v16, piece 35d): one call names the law still missing for each question; code searches once for
+    what it names, the two picks choose among only what is new to each question, and the judgments chosen are read, each judgment
+    once. A failed call leaves it unavailable, said; a failed search is kept as that question's failure.
+    From v17 (plan AN.36, D35) the judgments are read here, after the call, within the dispute's five read in full: the cited ones it
+    chose first, then the first pick's, then the further pick's. From D320 (plan AN.65, AN.72) the dispute then comes back in later
+    rounds while law is still named as missing (_later_rounds). Returns (the further search, the first pick's judgments read)."""
+    labels = _labels(plan, searches)
+
+    def first(skip=frozenset(), limit=None):
+        return _read_judgments(searcher, plan, searches, picks["judgment"], skip=skip, limit=limit)
+    if not labels:
+        return _no_further("not_needed"), first()
+    if model is None:
+        return _no_further("unavailable", "No model for the further search"), first()
+    try:
+        asked = _call(model, "core_research_further", FURTHER, _further_text(plan, searches, labels, picks)
+                      + (_cited_text(cited, context) if cited else ""), FURTHER_SCHEMA, "further")
+    except (ModelError, SchemaViolation) as exc:
+        return _no_further("unavailable", type(exc).__name__), first()
+    wanted = _further_wanted(asked, plan, labels)
+    found, failures = _searched_for(searcher, wanted)
     fresh = {work_id: _fresh(search, searches.get(work_id)) for work_id, search in found.items()}
     # The picks of what is new say no stage of their own: the turn is still choosing the dispute's law.
     # v18 (piece 36e): the further pick keeps only what is left of each question's five provisions.
@@ -3575,8 +3593,264 @@ def _further(model, searcher, plan, searches, picks, report, cited=(), context=N
     read = _read_judgments(searcher, plan, fresh, chosen["judgment"],
                            skip=set(claimed) | {entry["case_id"] for entry in judgments},
                            limit=IN_FULL - len(cited_read) - len(judgments))
-    return ({"state": "evaluated", "proposal": asked, "reason": None, "searches": found, "failures": failures, "picks": chosen,
-             "judgments": read, "cited": deepcopy(list(cited)), "cited_read": cited_read}, judgments)
+    further = {"state": "evaluated", "proposal": asked, "reason": None, "searches": found, "failures": failures, "picks": chosen,
+               "judgments": read, "cited": deepcopy(list(cited)), "cited_read": cited_read}
+    later, stopped = _later_rounds(model, searcher, plan, searches, picks, judgments, further, dispute_id)
+    return {**further, "rounds": later, "rounds_stopped": stopped}, judgments
+
+
+# --- D320 (plan AN.65, AN.72; revising D30): the dispute comes back while law is still named as missing, on the shared runner ---
+
+#: The instructions of each later round: the dispute's law, now with what the searches since have found.
+ROUND = """You are a senior Indian litigation lawyer. A matter has been broken into legal questions, and for one of its disputes our research has searched the statutes and the judgments we hold for each question, chosen what answers it, and then searched again for the law that was still missing. You receive the dispute's questions, each with the provisions and the judgment paragraphs first chosen for it in their own words, and then each search made since for what was missing: what it asked for, and what was chosen from what it found, in their own words.
+
+Purpose: before the dispute is answered, its law should be complete. Law found by the later searches can itself point to law the question needs: a section it makes its rule subject to, a definition it relies on, an exception, a time limit or a procedure it refers to, a judgment it follows or explains.
+
+Outcome: for each question whose governing law is still missing, say in missing what is missing, and name it: in sections, the sections to read by their number, each on its own, by its Act's short title and year and its number as the Act numbers it (a section, an article, an order and rule); in phrases, the words a statute or a court would use for what is missing, each a different way in. Leave out a question whose law is now there; ask only for law the question needs, not for what would merely add to it, and not again for what was searched for before. What you name is searched for and chosen from as before, and the dispute comes back to you while something is still missing. When nothing a question needs is missing, name nothing for it.
+
+Work in a loop: read each question with all that was chosen for it, decide what is still missing, check that each section you name and each phrase you give would find law the question needs that is not already chosen or searched for, correct what does not, then give the whole."""
+ROUND_SCHEMA = _object({"questions": {"type": "array", "items": _object({
+    "question_id": STRING, "missing": STRING, "sections": {"type": "array", "items": NAMED_SECTION}, "phrases": STRINGS})}})
+#: What a later round keeps: what it asked for and, where that was searched, what was found, chosen and read. One that asked for
+#: nothing new keeps only what it asked for, and is the last.
+_ROUND_FIELDS = {"proposal", "searches", "failures", "picks", "judgments"}
+#: A further search's fields from D320: its later rounds, and why they stopped (rounds.STOPS).
+_ROUNDS_KEPT = {"rounds", "rounds_stopped"}
+#: The research versions whose records may hold later rounds. The version is not raised for them (D320): a record without them is
+#: read exactly as before, so that a plan saved at a stop and a follow-up's earlier research are read as they were.
+LATER_ROUNDS = FEW_SECTIONS
+
+
+def _said(text):
+    return " ".join(str(text).split()).casefold()
+
+
+def _brought(picks):
+    """Whether a search's picks chose anything new: what a round must bring for the dispute to come back again."""
+    return any(ids for kind in _PICK_FIELDS for ids in picks[kind]["chosen"].values())
+
+
+def _stages(further, later):
+    """Each search made for what was missing, in order - the further search's, then each later round's that searched: (its number,
+    what it found, its failures, its picks, what it asked for)."""
+    return [(1, further["searches"], further["failures"], further["picks"], further["proposal"]),
+            *((number, entry["searches"], entry["failures"], entry["picks"], entry["proposal"])
+              for number, entry in enumerate(later, 2) if "searches" in entry)]
+
+
+def _merged(found):
+    """One question's searches read as one, in order (D320): everything any of them offered."""
+    if len(found) == 1:
+        return found[0]
+    merged = dict(found[0])
+    for key in ("candidates", "connected", "named_found", "connections", "issues"):
+        if any(key in search for search in found):
+            merged[key] = [item for search in found for item in search.get(key, ())]
+    return merged
+
+
+def _asked_before(plan, searches, wanted):
+    """What each question has been searched for (D320): the phrases and the sections its first search and each search for what was
+    missing (wanted: what each asked of each question) searched, as (phrases, sections) by work id, each as said."""
+    asked = {}
+    for work in [*(work for work in plan["work"] if work["id"] in searches), *(item for each in wanted for item in each.values())]:
+        phrases, sections = asked.setdefault(work["id"], (set(), set()))
+        phrases.update(_said(enquiry["text"]) for enquiry in work["enquiries"])
+        sections.update((_said(entry["act"]), _said(entry["section"])) for entry in work.get("named") or ())
+    return asked
+
+
+def _round_wanted(asked, plan, labels, number, before):
+    """What a later round's answer asks of each question (D320): its phrases and sections as the further search's are made, less what
+    the question was searched for before (before: _asked_before); a question that asks only for that asks for nothing. A section named
+    afresh is searched beside the words given for it, even where those were searched before. Returns (what it named, what of that is
+    new)."""
+    named = _further_wanted(asked, plan, labels, number)
+    new = {}
+    for work_id, work in named.items():
+        phrases, sections = before.get(work_id, (set(), set()))
+        enquiries = [enquiry for enquiry in work["enquiries"] if _said(enquiry["text"]) not in phrases]
+        reads = [entry for entry in work["named"] if (_said(entry["act"]), _said(entry["section"])) not in sections]
+        if enquiries or reads:
+            new[work_id] = {**work, "enquiries": enquiries or work["enquiries"], "named": reads}
+    return named, new
+
+
+def _round_context(searches, picks, judgments, further, later):
+    """What a later round's picks and reading stand on (D320): everything offered for each question before it, as one search; the
+    provisions each question has chosen; and every judgment the dispute reads."""
+    offered = {work_id: [search] for work_id, search in searches.items()}
+    for _, found, *_ in _stages(further, later):
+        for work_id, search in found.items():
+            offered.setdefault(work_id, []).append(search)
+    chosen = {}
+    for made in [picks, *(stage[3] for stage in _stages(further, later))]:
+        for work_id, ids in made["provision"]["chosen"].items():
+            chosen.setdefault(work_id, []).extend(ids)
+    read = [*further["cited_read"], *judgments, *further["judgments"],
+            *(entry for each in later for entry in each.get("judgments", ()))]
+    return {work_id: _merged(found) for work_id, found in offered.items()}, chosen, read
+
+
+def _round_text(plan, searches, labels, picks, further, later):
+    """A later round's dispute as its call reads it (D320): each question with what was first chosen for it in its own words, then
+    each search for what was missing, with what it asked of each question and what was chosen from what it found."""
+    lines = [_further_text(plan, searches, labels, picks)]
+    for number, found, failures, made, proposal in _stages(further, later):
+        lines.append(f"\nSearch {number} for what was missing:")
+        said = {}
+        for item in proposal["questions"]:
+            said.setdefault(item["question_id"], item)
+        shown = _labels(plan, found)
+        for work in plan["work"]:
+            if work["id"] not in found and work["id"] not in failures:
+                continue
+            label = labels[work["id"]]
+            lines.append(f"{label}, what was missing: {' '.join(said.get(label, {}).get('missing', '').split())}")
+            if work["id"] in failures:
+                lines.append("  The search could not be made.")
+                continue
+            search = found[work["id"]]
+            lines.append("  Searched for: " + "; ".join(f'"{query["text"]}"' for query in search["queries"]))
+            if search.get("named"):
+                lines.append("  Sections named: " + "; ".join(f"{entry['act']}, {entry['section']}" for entry in search["named"]))
+            lines.extend(_chosen_said(search, made, work["id"], shown[work["id"]]))
+    return "\n".join(lines)
+
+
+def _backstop(model, dispute_id):
+    """What each later round takes before it is paid for (D320): one from the turn's durable total of corrections (calls.TurnCalls),
+    so that the rounds end at the turn's backstop. A model port without that total (a stand-in) has that many rounds of its own.
+    Returns (the spend, the scope it is taken in)."""
+    spend_one, scope = getattr(model, "spend", None), getattr(model, "scope", None)
+    if callable(spend_one) and callable(scope):
+        def spend():
+            try:
+                spend_one("core_research_further", mismatch={"purpose": "A later round of the dispute's research (D320).",
+                                                             "dispute_id": dispute_id})
+            except CorrectionUnavailable as exc:
+                raise runner.Backstop(str(exc)) from exc
+        return spend, scope(f"research.rounds.{dispute_id or 'dispute'}", allowance=TURN_ALLOWANCE)
+    taken = [0]
+
+    def spend():
+        if taken[0] >= TURN_ALLOWANCE:
+            raise runner.Backstop("The turn's rounds are used")
+        taken[0] += 1
+    return spend, nullcontext()
+
+
+def _kept(done):
+    """The runner's rounds as the record keeps them: what each asked for and what came of it."""
+    return [{"proposal": entry["proposal"]} if entry["actions"] is None else {"proposal": entry["proposal"], **entry["outcome"]}
+            for entry in done]
+
+
+def _later_rounds(model, searcher, plan, searches, picks, judgments, further, dispute_id):
+    """D320 (plan AN.65, AN.72; revising D30): the dispute comes back while law is still named as missing. Each later round is shown
+    the dispute's questions with all that was chosen for them in their own words and each search since, and names what is still
+    missing; code searches for what it names that was not searched for before, the picks choose among what is new to each question
+    within its five provisions, and the judgments chosen are read within the dispute's five read in full, each once. The shared
+    runner (rounds.py) stops them: when nothing is named, when only what was searched before is, when a round chooses nothing new,
+    at the turn's backstop, or when a round's call cannot be made. Returns (the later rounds as kept, why they stopped)."""
+    labels = _labels(plan, searches)
+    first = _further_wanted(further["proposal"], plan, labels)
+    if not first:
+        return [], {"why": runner.NOTHING_MISSING, "reason": None}
+    if not _brought(further["picks"]):
+        return [], {"why": runner.NOTHING_NEW, "reason": None}
+
+    sent = []
+
+    def ask(done):
+        user = _round_text(plan, searches, labels, picks, further, _kept(done))
+        # D322: each round's request opens with the one before it, whole - marked, as this one is, for the next round to read.
+        before = sent[-1] if sent and user.startswith(sent[-1]) and len(sent[-1]) < len(user) else ""
+        sent.append(user)
+        asked = _call(model, "core_research_further", ROUND, user, ROUND_SCHEMA, "further",
+                      marks=((len(before),) if before else ()) + (len(user),))
+        require_schema(asked, ROUND_SCHEMA)
+        return asked
+
+    def admit(proposal, done):
+        named, new = _round_wanted(proposal, plan, labels, len(done) + 2,
+                                   _asked_before(plan, searches, [first, *(entry["actions"] for entry in done)]))
+        return (new, None) if new else (None, runner.REPEATED if named else runner.NOTHING_MISSING)
+
+    def carry_out(wanted, done):
+        offered, chosen, read = _round_context(searches, picks, judgments, further, _kept(done))
+        found, failures = _searched_for(searcher, wanted)
+        fresh = {work_id: _fresh(search, offered.get(work_id)) for work_id, search in found.items()}
+        room = {work_id: max(0, SECTIONS_A_QUESTION - len(chosen.get(work_id, ()))) for work_id in fresh}
+        made = (_picked(model, plan, fresh, lambda *_, **__: None, room) if fresh
+                else {kind: pick(None, plan, {}, kind) for kind in _PICK_FIELDS})
+        reads = _read_judgments(searcher, plan, fresh, made["judgment"], skip={entry["case_id"] for entry in read},
+                                limit=IN_FULL - len(read))
+        return {"searches": found, "failures": failures, "picks": made, "judgments": reads}
+
+    spend, scope = _backstop(model, dispute_id)
+    with scope:
+        done, stopped = runner.run(ask, admit, carry_out, lambda outcome, done: _brought(outcome["picks"]), spend=spend,
+                                   unavailable=(ModelError, SchemaViolation))
+    return _kept(done), stopped
+
+
+def _validate_rounds(further, plan, searches, judgments, picks, dispute_id, contract):
+    """D320: a dispute's later rounds as saved, each checked against everything before it as the further search is - what it asked
+    for and what of that was new, what was searched and found, what its picks chose from what was new, the judgments read - and why
+    the rounds stopped."""
+    later, stopped = further["rounds"], further["rounds_stopped"]
+    if (not isinstance(later, list) or not isinstance(stopped, dict) or set(stopped) != {"why", "reason"}
+            or stopped["why"] not in runner.STOPS
+            or (stopped["reason"] is None) == (stopped["why"] in (runner.BACKSTOP, runner.UNAVAILABLE))
+            or stopped["reason"] is not None and (not isinstance(stopped["reason"], str) or not stopped["reason"].strip())):
+        raise ValueError("A dispute's later rounds do not say why they stopped")
+    labels = _labels(plan, searches)
+    wanted = [_further_wanted(further["proposal"], plan, labels)]
+    if not wanted[0] or not _brought(further["picks"]):
+        if later or stopped["why"] != (runner.NOTHING_MISSING if not wanted[0] else runner.NOTHING_NEW):
+            raise ValueError("A further search that brought nothing new has no later round")
+        return
+    for at, entry in enumerate(later):
+        last = at == len(later) - 1
+        if not isinstance(entry, dict) or "proposal" not in entry:
+            raise ValueError("A later round keeps what it asked for")
+        asked = canonical_schema_data(entry["proposal"], ROUND_SCHEMA)
+        require_schema(asked, ROUND_SCHEMA)
+        if asked != entry["proposal"]:
+            raise ValueError("A later round differs from its answer")
+        named, new = _round_wanted(asked, plan, labels, at + 2, _asked_before(plan, searches, wanted))
+        if not new:
+            if set(entry) != {"proposal"} or not last or stopped["why"] != (runner.REPEATED if named else runner.NOTHING_MISSING):
+                raise ValueError("A later round that asked for nothing new is the last, and says why")
+            return
+        if (set(entry) != _ROUND_FIELDS or not isinstance(entry["searches"], dict) or not isinstance(entry["failures"], dict)
+                or set(entry["searches"]) & set(entry["failures"])
+                or set(entry["searches"]) | set(entry["failures"]) != set(new)):
+            raise ValueError("Each question a later round asks for needs one execution disposition")
+        for failure in entry["failures"].values():
+            if (not isinstance(failure, dict) or set(failure) != {"stage", "reason"} or failure["stage"] != "search"
+                    or not isinstance(failure["reason"], str) or not failure["reason"].strip()):
+                raise ValueError("A later round's failure has no checked disposition")
+        for work_id, search in entry["searches"].items():
+            work = new[work_id]
+            validate_search(search, search_queries(work), search_instruments(work), search_named(work))
+        offered, chosen, read = _round_context(searches, picks, judgments, further, later[:at])
+        fresh = {work_id: _fresh(search, offered.get(work_id)) for work_id, search in entry["searches"].items()}
+        room = {work_id: max(0, SECTIONS_A_QUESTION - len(chosen.get(work_id, ()))) for work_id in fresh}
+        if not isinstance(entry["picks"], dict) or set(entry["picks"]) != set(_PICK_FIELDS):
+            raise ValueError("A later round's picks are not one of each kind")
+        for kind in _PICK_FIELDS:
+            _validate_picks(entry["picks"][kind], plan, fresh, kind, contract, room if kind == "provision" else None)
+        _validate_judgments({dispute_id: entry["judgments"]}, dispute_id, plan, fresh, entry["picks"]["judgment"], contract,
+                            skip={item["case_id"] for item in read}, limit=IN_FULL - len(read))
+        wanted.append(new)
+        if not _brought(entry["picks"]):
+            if not last or stopped["why"] != runner.NOTHING_NEW:
+                raise ValueError("A later round that chose nothing new is the last, and says so")
+            return
+    if stopped["why"] not in (runner.BACKSTOP, runner.UNAVAILABLE):
+        raise ValueError("Later rounds that still brought something new ended at the backstop or a call that could not be made")
 
 
 def _validate_further(further, plan, searches, judgments, dispute_id, contract, context=None, first_pick=None,
@@ -3584,9 +3858,13 @@ def _validate_further(further, plan, searches, judgments, dispute_id, contract, 
     """A dispute's saved further search (v16) checked against its own answer and the dispute's first searches (P46). From v17 (D35)
     the first pick's judgments read are checked here too, after the cited ones that had first claim (first_pick: that pick)."""
     few = contract in FEW_IN_FULL
-    if not isinstance(further, dict) or set(further) != _FURTHER_FIELDS or further["state"] not in ("evaluated", "not_needed",
-                                                                                                      "unavailable"):
+    if not isinstance(further, dict) or set(further) - _ROUNDS_KEPT != _FURTHER_FIELDS or further["state"] not in (
+            "evaluated", "not_needed", "unavailable"):
         raise ValueError("A dispute's further search has no checked disposition")
+    # D320: later rounds are kept whole, by a further search made, of a version that may keep them.
+    if set(further) & _ROUNDS_KEPT and (set(further) & _ROUNDS_KEPT != _ROUNDS_KEPT or further["state"] != "evaluated"
+                                        or contract not in LATER_ROUNDS):
+        raise ValueError("Only a further search made keeps its later rounds, and both what they were and why they stopped")
     labels = _labels(plan, searches)
     if further["state"] != "evaluated":
         if (further["proposal"] is not None or further["searches"] or further["failures"] or further["judgments"]
@@ -3657,6 +3935,9 @@ def _validate_further(further, plan, searches, judgments, dispute_id, contract, 
     _validate_judgments({dispute_id: further["judgments"]}, dispute_id, plan, fresh, further["picks"]["judgment"], contract,
                         skip=set(claimed) | {entry["case_id"] for entry in judgments},
                         limit=IN_FULL - len(further["cited_read"]) - len(judgments))
+    if _ROUNDS_KEPT <= set(further):
+        _validate_rounds(further, plan, searches, judgments, {"provision": first_provisions, "judgment": first_pick}, dispute_id,
+                         contract)
 
 
 def _cited_unsure_kept(entry):
@@ -3684,19 +3965,33 @@ def _validate_meant(meant, plan, searches, dispute_id):
 
 def further_searches(record):
     """Each further search of a v16 record, as (its question's work id, the search as its picks were shown it), in the plan's
-    order: what it found that was new to its question (piece 35d). [] for earlier records."""
+    order: what it found that was new to its question (piece 35d). From D320 a question searched for again in later rounds has one
+    further search: what each of them found that was new to it, in order. [] for earlier records."""
     further = record.get("further") or {}
     order = [work["id"] for work in record["plan"]["work"]]
-    found = {work_id: search for entry in further.values() for work_id, search in entry["searches"].items()}
-    return [(work_id, _fresh(found[work_id], record["searches"].get(work_id))) for work_id in order if work_id in found]
+    found = {}
+    for entry in further.values():
+        for stage in [entry["searches"], *(each["searches"] for each in entry.get("rounds", ()) if "searches" in each)]:
+            for work_id, search in stage.items():
+                found.setdefault(work_id, []).append(search)
+    shown = {}
+    for work_id, made in found.items():
+        before, fresh = ([record["searches"][work_id]] if work_id in record["searches"] else []), []
+        for search in made:
+            fresh.append(_fresh(search, _merged(before) if before else None))
+            before.append(search)
+        shown[work_id] = _merged(fresh)
+    return [(work_id, shown[work_id]) for work_id in order if work_id in shown]
 
 
 def judgments_read(record):
     """The judgments each dispute of a record reads: those its picks chose and, from v16, those its further picks chose and the
-    judgments the papers cite that it chose to read (piece 35e)."""
+    judgments the papers cite that it chose to read (piece 35e); from D320, then those its later rounds chose."""
     further = record.get("further") or {}
     return {dispute_id: [*entries, *(further.get(dispute_id) or {}).get("judgments", ()),
-                         *(further.get(dispute_id) or {}).get("cited_read", ())]
+                         *(further.get(dispute_id) or {}).get("cited_read", ()),
+                         *(entry for each in (further.get(dispute_id) or {}).get("rounds", ())
+                           for entry in each.get("judgments", ()))]
             for dispute_id, entries in (record.get("judgments") or {}).items()}
 
 
@@ -3822,9 +4117,11 @@ def picks_of(record, kind=None):
 
 
 def chosen(record, kind="provision"):
-    """What a record's picks of a kind chose, by work item - from v16 with what its further picks chose, after."""
+    """What a record's picks of a kind chose, by work item - from v16 with what its further picks chose, after, and from D320 what
+    its later rounds' picks chose."""
     out = {}
-    further = [entry["picks"][kind] for entry in (record.get("further") or {}).values()]
+    further = [pick[kind] for entry in (record.get("further") or {}).values()
+               for pick in [entry["picks"], *(each["picks"] for each in entry.get("rounds", ()) if "picks" in each)]]
     for pick in [*picks_of(record, kind), *further]:
         for work_id, ids in pick["chosen"].items():
             kept = out.setdefault(work_id, [])

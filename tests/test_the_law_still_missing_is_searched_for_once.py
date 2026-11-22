@@ -5,8 +5,11 @@ relevant judgments ... We don't want to get into a spiral where we retrieve umpt
 and then keep on reading all of them." After a dispute's two picks one call is shown each question with what was chosen for it and
 what the picks said was missing, and names, for a question whose governing law is still missing, the sections to read by their
 number and the phrases to search; code searches once for those, the picks choose among only what was not already offered for that
-question, and the judgments chosen are read with the rest, each once. A question with nothing missing searches nothing; there is no
-second round. The matter and its law are invented.
+question, and the judgments chosen are read with the rest, each once. A question with nothing missing searches nothing.
+
+D320 (owner, 22 Nov 2026, revising D30): the dispute then comes back while law is still named as missing; a later round that asks
+again only for what was searched for before ends the rounds, and nothing is searched again. tests/test_research_rounds.py holds the
+rounds themselves. The matter and its law are invented.
 """
 import re
 from copy import deepcopy
@@ -45,8 +48,9 @@ def library():
 
 def missing_time(user):
     label = re.search(r"^(Q\d+): ", user, re.M).group(1)
-    return {"questions": [{"question_id": label, "missing": "When time runs for the suit.", "sections": [],
-                           "phrases": [FURTHER_WORDS], "cited": []}]}
+    asked = {"question_id": label, "missing": "When time runs for the suit.", "sections": [], "phrases": [FURTHER_WORDS]}
+    # D320: a later round is shown what was searched for since, and here asks for the same again.
+    return {"questions": [asked if "Search 1 for what was missing:" in user else {**asked, "cited": []}]}
 
 
 def researched(model):
@@ -60,9 +64,12 @@ def test_the_law_still_missing_is_searched_for_once_and_only_what_is_new_is_chos
     model = Model(further=missing_time)
     ctx, plan, record, asked = researched(model)
     assert record["contract"] == research.CONTRACT == "core_research_v18"
-    assert operations(model).count("core_research_further") == 1, "once for the dispute"
+    # D320: the dispute came back once; asking only for what was searched before, it ended the rounds, and nothing was searched again.
+    assert operations(model).count("core_research_further") == 2, "the further search, then one later round"
     assert len(asked) == 2, "the first searches, then the one further search"
     further, work_id = record["further"]["D1"], plan["work"][0]["id"]
+    assert further["rounds_stopped"] == {"why": "repeated", "reason": None}
+    assert [set(entry) for entry in further["rounds"]] == [{"proposal"}]
     assert further["state"] == "evaluated" and set(further["searches"]) == {work_id}
     assert [query["text"] for query in further["searches"][work_id]["queries"]] == [FURTHER_WORDS]
     # The picks were offered only what was new to the question.
@@ -93,6 +100,7 @@ def test_a_dispute_whose_law_is_there_searches_nothing_further():
     ctx, plan, record, asked = researched(Model())
     further = record["further"]["D1"]
     assert further["state"] == "evaluated" and further["searches"] == {} and further["judgments"] == []
+    assert (further["rounds"], further["rounds_stopped"]) == ([], {"why": "nothing_missing", "reason": None})
     assert {kind: pick["state"] for kind, pick in further["picks"].items()} == {"provision": "not_needed",
                                                                                 "judgment": "not_needed"}
     assert len(asked) == 1 and research.validate(record, plan, ctx) == record
@@ -109,8 +117,10 @@ def test_a_further_search_that_cannot_be_made_is_said_and_the_rest_stands():
 
 def test_the_further_search_is_asked_for_in_plain_words_and_each_section_it_names_is_read_by_its_number():
     words = " ".join(research.FURTHER.split())
-    for part in ("Purpose:", "Outcome:", "Work in a loop", "This is the one further search for the dispute",
-                 "nothing is searched again", "ask only for law the question needs"):
+    # D320: the sentence that made this the dispute's only further search now says the dispute comes back.
+    assert "This is the one further search for the dispute" not in words
+    for part in ("Purpose:", "Outcome:", "Work in a loop", "the dispute then comes back to you with what was found",
+                 "When nothing a question needs is missing, name nothing for it.", "ask only for law the question needs"):
         assert part in words, part
     assert reasoning.STEPS["further"] == ("medium", False)
     # v19 (AN.48, 48i) searches further as v18 does: v18 whose plan holds the questions added since (entered 14 Nov 2026, D227).
