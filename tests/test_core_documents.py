@@ -145,13 +145,50 @@ def test_a_text_file_keeps_its_form_feed_pages_and_skips_empty_ones(desk):
     assert documents.needs_transcription(record) == []
 
 
-@pytest.mark.parametrize("state", ["held", "unavailable"])
-def test_a_file_the_check_does_not_clear_is_neither_read_nor_kept(desk, tmp_path, state):
-    desk.checker = Checker(state, "the check did not clear it")
+def test_a_file_the_check_holds_is_neither_read_nor_kept(desk, tmp_path):
+    desk.checker = Checker("held", "the check did not clear it")
     record = desk.receive(ADVOCATE, "note.txt", b"words")
     assert record["pages"] == [] and originals(tmp_path, record) == []
     assert documents.summary(record)["state"] == "held"
-    assert desk.load(ADVOCATE, documents.reference(record))["check"]["state"] == state
+    assert desk.load(ADVOCATE, documents.reference(record))["check"]["state"] == "held"
+    # A paper the check held is never checked again.
+    desk.checker = Checker()
+    assert desk.checked_again(ADVOCATE, documents.reference(record)) == record and desk.checker.seen == []
+
+
+def test_a_file_no_check_could_be_made_of_is_kept_sealed_unread_and_read_once_a_later_check_clears_it(desk, tmp_path):
+    """Plan AN.60 (D280): where no malware check runs, the paper is kept, said to be unchecked - never held - and read nowhere until
+    a later check clears it; then it is read here as any paper is, as a new record."""
+    desk.checker = Checker("unavailable", "no malware checker is set up on this installation")
+    record = desk.receive(ADVOCATE, "note.txt", b"The cheque was returned unpaid.")
+    ref = documents.reference(record)
+    assert record["pages"] == [] and originals(tmp_path, record) != []
+    assert documents.summary(record)["state"] == "unchecked"
+    with pytest.raises(DocumentRefused, match="could not be checked for malware yet"):
+        documents.turn_material([record])
+    with pytest.raises(DocumentRefused, match="not cleared"):
+        desk.original(ADVOCATE, ref)
+    # Still no check: the paper is as it was.
+    assert desk.checked_again(ADVOCATE, ref) == record
+    desk.checker = Checker()
+    cleared = desk.checked_again(ADVOCATE, ref)
+    assert cleared["check"]["state"] == "clear" and cleared["document_id"] == record["document_id"]
+    assert [page["text"] for page in cleared["pages"]] == ["The cheque was returned unpaid."]
+    assert documents.summary(cleared)["state"] == "read"
+    assert desk.load(ADVOCATE, documents.reference(cleared)) == cleared and desk.load(ADVOCATE, ref) == record
+    assert documents.turn_material([cleared])[0]["pages"][0]["text"] == "The cheque was returned unpaid."
+    # Another advocate cannot have it checked.
+    with pytest.raises(DocumentRefused):
+        desk.checked_again(OTHER, ref)
+
+
+def test_a_kept_file_a_later_check_holds_loses_its_original(desk, tmp_path):
+    desk.checker = Checker("unavailable", "no malware checker is set up on this installation")
+    record = desk.receive(ADVOCATE, "note.txt", b"words")
+    desk.checker = Checker("held", "flagged")
+    held = desk.checked_again(ADVOCATE, documents.reference(record))
+    assert held["check"] == {"state": "held", "reason": "flagged", "checker": "recorded-check"} and held["pages"] == []
+    assert originals(tmp_path, record) == [] and documents.summary(held)["state"] == "held"
 
 
 def test_unsupported_and_oversized_files_are_refused_before_any_check(desk, monkeypatch):

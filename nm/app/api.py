@@ -3190,6 +3190,22 @@ def reading_document_status(document_ref: str, advocate_id: Advocate, request: R
     return JSONResponse(shown, headers={'Cache-Control': 'no-store'})
 
 
+@app.post('/api/documents/{document_ref}/check', dependencies=[CsrfProtected])
+def check_document_again(document_ref: str, advocate_id: Advocate, request: Request):
+    """A paper kept because no malware check could be made of it, checked again (plan AN.60, D280): what the advocate is shown of it
+    now - read, where the check clears it (its new record); held, where it does not; or as it was, where the check still cannot be
+    made. The page asks this when the advocate sends the paper or presses Check again."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    try:
+        record = _document_desk().checked_again(advocate_id, document_ref)
+    except document_rules.DocumentRefused as exc:
+        raise HTTPException(404, {'why': str(exc), 'code': 'document_unavailable'}) from exc
+    except OSError as exc:
+        raise HTTPException(503, {'why': 'The paper could not be checked just now. Try again.', 'code': 'document_storage'}) from exc
+    return JSONResponse(document_rules.summary(record), headers={'Cache-Control': 'no-store'})
+
+
 @app.get('/api/documents/{document_ref}/recording')
 def document_recording(document_ref: str, advocate_id: Advocate, request: Request):
     """A voice note's original, for the advocate who sent it to play back."""

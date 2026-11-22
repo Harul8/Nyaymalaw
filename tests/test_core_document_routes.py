@@ -80,12 +80,21 @@ def test_an_unsupported_or_unnamed_file_is_refused_plainly(served, desk, name, d
     assert desk.checker.seen == []
 
 
-def test_without_a_configured_malware_checker_a_document_is_held_unread(served):
+def test_without_a_configured_malware_checker_a_document_is_kept_unread_and_checked_again_when_asked(served):
+    """Plan AN.60 (D280): kept, said to be unchecked, and read once a check asked for later clears it."""
     reply = upload(served.client)
     assert reply.status_code == 201
     shown = reply.json()
-    assert shown["state"] == "held" and shown["pages_read"] == 0
+    assert shown["state"] == "unchecked" and shown["pages_read"] == 0
     assert shown["check"]["reason"] == "no malware checker is set up on this installation"
+    address = f"/api/documents/{shown['document_ref']}/check"
+    again = served.client.post(address)
+    assert again.status_code == 200 and again.json() == shown and again.headers["cache-control"] == "no-store"
+    assert served.client.post(address, headers={"x-nm-csrf": "wrong"}).status_code == 403
+    assert served.login(OTHER).post(address).status_code == 404
+    served.app.documents.checker = Checker()
+    cleared = served.login(OWNER).post(address).json()
+    assert cleared["state"] == "read" and cleared["pages_read"] == 1 and cleared["document_ref"] != shown["document_ref"]
 
 
 def test_the_advocate_has_waiting_scanned_pages_read_under_their_own_permission(served, desk, monkeypatch):

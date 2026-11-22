@@ -322,8 +322,9 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .attachment-name { font-weight: 600; overflow-wrap: anywhere; }
 .attachment-status { color: var(--ink-3); overflow-wrap: anywhere; }
 .attachment.uploading .attachment-status, .attachment.reading_scans .attachment-status { color: var(--accent); }
-.attachment.held, .attachment.failed { border-color: var(--signal); }
-.attachment.held .attachment-status, .attachment.failed .attachment-status { color: var(--signal); }
+.attachment.held, .attachment.failed, .attachment.unchecked { border-color: var(--signal); }
+.attachment.held .attachment-status, .attachment.failed .attachment-status,
+.attachment.unchecked .attachment-status { color: var(--signal); }
 .attachment-remove { min-width: 2.75rem; min-height: 2.75rem; font-size: 1.1rem; }
 .attachment-stop { min-height: 2.75rem; font-weight: 600; color: var(--signal); }
 .attachment-again { min-height: 2.75rem; font-weight: 600; white-space: nowrap; }

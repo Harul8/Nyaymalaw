@@ -202,14 +202,51 @@ class DocumentDesk:
         if len(body) > MAX_DERIVATIVE_BYTES:
             raise DocumentRefused("This document holds more text than can be kept for one document. "
                                   "Send the relevant pages instead.")
-        # Nothing is stored until the whole record is known: a refusal leaves nothing behind.
+        # Nothing is stored until the whole record is known: a refusal leaves nothing behind. A paper the check held is never
+        # kept; one it could not be made of is kept sealed, unread, to be checked again (plan AN.60, D280).
         where = space(advocate_id)
         self.prepare_space(where)
-        if state == "clear":
+        if state in ("clear", documents.UNCHECKED):
             for start in range(0, len(data), CHUNK):
                 self.originals.put(where, f"{document_id}-{start // CHUNK}", data[start:start + CHUNK])
         self.texts.put(where, documents.reference(record), body)
         return record
+
+    def checked_again(self, advocate_id, ref):
+        """A paper kept because no malware check could be made of it (plan AN.60, D280), checked again from its sealed original:
+        cleared, it is read here as a paper received is and stored as a new record; held, its original is erased and the record
+        says so; where the check still cannot be made, the record is as it was. Any other paper is returned as it is."""
+        record = self.load(advocate_id, ref)
+        if record["check"]["state"] != documents.UNCHECKED:
+            return record
+        data = self._original(advocate_id, record)
+        with (self.activity.held("scan") if self.activity is not None else nullcontext()):
+            state, reason = self.checker.check(data)
+            if state == documents.UNCHECKED:
+                return record
+            pages, observed, failure = (self._read(advocate_id, record["document_id"], record["format"], data, record["sha256"])
+                                        if state == "clear" else ([], None, None))
+        renewed = documents.receipt(
+            document_id=record["document_id"], name=record["name"], fmt=record["format"], sha256=record["sha256"],
+            size=record["size"], received_at=record["received_at"],
+            check={"state": state, "reason": reason, "checker": self.checker.name},
+            pages=pages, observed_pages=observed, failure=failure)
+        body = json.dumps(renewed, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        if len(body) > MAX_DERIVATIVE_BYTES:
+            raise DocumentRefused("This document holds more text than can be kept for one document. "
+                                  "Send the relevant pages instead.")
+        where = space(advocate_id)
+        if state != "clear":
+            # Held: its original goes before the record that says so is kept, so that what was found is never left behind.
+            try:
+                stuck = self.originals.erase(where, record["document_id"])
+            except OSError:
+                stuck = True
+            if stuck:
+                _log.warning("A paper a later malware check held could not have its original erased; it is tried again")
+                raise DocumentRefused("This document could not be checked just now. Try again.")
+        self.texts.put(where, documents.reference(renewed), body)
+        return renewed
 
     def papers_kept(self, advocate_id):
         """How many papers the advocate's own space keeps: each once, however many records of its text it has (a paper read again

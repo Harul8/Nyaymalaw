@@ -5010,6 +5010,13 @@ async function send(message, { fromBox = false } = {}) {
     && ['unknown', 'not_committed', 'sending'].includes(entry.state)
     && entry.refusal?.retryable !== false);
   if (pending) { consumeComposer(pending); await deliver(pending); return; }
+  // Plan AN.60 (D280): a paper no malware check could be made of is checked again now, and the message waits for it.
+  const unchecked = attachments.filter((item) => item.status === 'unchecked');
+  if (unchecked.length) {
+    unchecked.forEach((item) => { checkAgain(item); });
+    holdSend(message, { fromBox });
+    return;
+  }
   // The documents attached under the brief travel with this message only.
   const blocked = attachmentsBlockSend({ reading: false });
   if (blocked) { $('attachments-status').textContent = blocked; return; }
@@ -5544,7 +5551,7 @@ function discardQueued(intent, item) {
 function queuedFilesSaid(files) {
   if (!files.length) return '';
   const reading = files.filter((item) => READING_STATES.includes(item.status)).length;
-  const unusable = files.filter((item) => ['held', 'failed'].includes(item.status)).length;
+  const unusable = files.filter((item) => ['held', 'failed', 'unchecked'].includes(item.status)).length;
   const count = (n, what) => `${n} ${what}${n === 1 ? '' : 's'}`;
   if (unusable) return `${count(unusable, 'file')} could not be used`;
   if (reading) return `reading ${count(reading, 'file')}…`;
@@ -5827,7 +5834,7 @@ function wanted(item) {
 
 // The documents a message would carry: all but those held or failed, which cannot be sent.
 function documentsCarried() {
-  return attachments.filter((item) => !['held', 'failed'].includes(item.status)).length;
+  return attachments.filter((item) => !['held', 'failed', 'unchecked'].includes(item.status)).length;
 }
 
 // Whether the message already carries all it can. If it does, the advocate is told, and what came after the first ones is not
@@ -5921,6 +5928,8 @@ function documentStatus(item) {
       : 'Reading scanned pages with AI…';
   }
   if (item.status === 'failed') return `Not attached: ${item.note}`;
+  if (item.status === 'checking') return 'Checking for malware…';
+  if (item.status === 'unchecked') return UNCHECKED_SAID;
   const summary = item.summary;
   if (item.status === 'held') return `Held, not read: ${summary.check.reason}`;
   if (summary.recording) {
@@ -5979,6 +5988,15 @@ function attachmentChip(item) {
     again.setAttribute('aria-label', item.summary.recording
       ? `Ask the AI to transcribe ${item.name} again` : `Ask the AI to read the unread pages of ${item.name} again`);
     again.addEventListener('click', () => readWaiting(item));
+    chip.appendChild(again);
+  }
+  if (item.status === 'unchecked') {
+    const again = document.createElement('button');
+    again.type = 'button';
+    again.className = 'ghost attachment-again';
+    again.textContent = 'Check again';
+    again.setAttribute('aria-label', `Check ${item.name} for malware again`);
+    again.addEventListener('click', () => checkAgain(item));
     chip.appendChild(again);
   }
   const remove = document.createElement('button');
@@ -6063,7 +6081,29 @@ async function uploadAttachment(file) {
     await readWaiting(item);
     return;
   }
-  settle(item.summary.state === 'held' ? 'held' : 'ready');
+  settle(settledAs(item.summary));
+}
+
+// Plan AN.60 (D280): a paper no malware check could be made of - none runs just now - is kept by the server, unread. It is checked
+// again when the advocate sends the message or presses Check again, and read once the check clears it.
+const UNCHECKED_SAID = 'Kept, not read yet: it could not be checked for malware just now. NM checks it again when you send.';
+function settledAs(summary) {
+  return summary.state === 'held' ? 'held' : summary.state === 'unchecked' ? 'unchecked' : 'ready';
+}
+
+async function checkAgain(item) {
+  item.status = 'checking';
+  if (wanted(item)) renderAttachments();
+  try {
+    item.summary = await api(`/api/documents/${encodeURIComponent(item.summary.document_ref)}/check`, { method: 'POST' });
+  } catch { /* it stays as it was: kept, and not read */ }
+  if (!['held', 'unchecked'].includes(item.summary.state) && item.summary.waiting_for_ai > 0 && wanted(item)) {
+    await readWaiting(item);
+    return;
+  }
+  item.status = settledAs(item.summary);
+  if (wanted(item)) renderAttachments();
+  releaseHeld();
 }
 
 // The AI reads what waits for it: scanned pages, or a recording. While anything still
@@ -6115,7 +6155,7 @@ async function readWaiting(item) {
       : `${what}: ${error.message}`;
   }
   item.progress = null;
-  settle(item.summary.state === 'held' ? 'held' : 'ready');
+  settle(settledAs(item.summary));
   loadUsage();
   releaseHeld();
 }
@@ -6186,6 +6226,12 @@ function attachmentsBlockSend({ reading = true } = {}) {
   if (attachments.some((item) => ['held', 'failed'].includes(item.status))) {
     return 'Remove the documents that could not be used before sending.';
   }
+  const unchecked = attachments.filter((item) => item.status === 'unchecked');
+  if (unchecked.length) {
+    const them = unchecked.length === 1 ? 'it' : 'them';
+    return `${unchecked.map((item) => item.name).join(', ')} could not be checked for malware yet, so NM has not read ${them}. `
+      + `NM keeps ${them}: send again once the check is running, or remove ${them}.`;
+  }
   const carried = documentsCarried();
   if (carried > DOCUMENTS_PER_MESSAGE) {
     return `A message can carry at most ${DOCUMENTS_PER_MESSAGE} documents; remove ${carried - DOCUMENTS_PER_MESSAGE} before sending.`;
@@ -6200,7 +6246,7 @@ function attachmentsBlockSend({ reading = true } = {}) {
 // sent another way (added while NM was answering, or answers to NM's questions), those words. It does not go, and Send works again with
 // the reason under the files, if a file read meanwhile could not be used or came back with pages not read (D63), or if anything else
 // would stop a pressed Send; nor in another conversation than the one it was sent in, nor once the advocate has signed out (D64).
-const READING_STATES = ['converting', 'uploading', 'reading_scans'];
+const READING_STATES = ['converting', 'uploading', 'reading_scans', 'checking'];
 const HOLD_SAID = 'Your message will go as soon as the files are read.';
 
 function attachmentsReading() {

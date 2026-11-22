@@ -29,6 +29,9 @@ MAX_TURN_CHARACTERS = 400_000
 MAX_TURN_DOCUMENTS = 10
 FORMATS = ("pdf", "docx", "text", "image", *AUDIO)
 CHECK_STATES = ("clear", "held", "unavailable")
+#: Plan AN.60 (D280): a paper the malware check could not be made of - no checker runs just now. It is kept sealed and read once a
+#: later check clears it; until then nothing of it is read, shown or sent.
+UNCHECKED = "unavailable"
 
 
 class DocumentRefused(ValueError):
@@ -153,7 +156,9 @@ def summary(record):
     read = [page for page in record["pages"] if page["state"] == "read"]
     unread = [{"number": page["number"], "reason": page["reason"]} for page in record["pages"]
               if page["state"] == "unread"]
-    if record["check"]["state"] != "clear":
+    if record["check"]["state"] == UNCHECKED:
+        state = "unchecked"
+    elif record["check"]["state"] != "clear":
         state = "held"
     elif not read:
         state = "not_read"
@@ -181,6 +186,9 @@ def turn_material(records):
         raise DocumentRefused("The same document was attached twice.")
     material, total = [], 0
     for record in records:
+        if record["check"]["state"] == UNCHECKED:
+            raise DocumentRefused(f'"{record["name"]}" could not be checked for malware yet, so it is not read. It is kept: '
+                                  "send it again once the check is running.")
         if record["check"]["state"] != "clear":
             raise DocumentRefused(f'"{record["name"]}" was not cleared by the malware check, so it is not read.')
         # A page's first reading stays with the document (piece 4a): the question carries the page's text as it was read last.
