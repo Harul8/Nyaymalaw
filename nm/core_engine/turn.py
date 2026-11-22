@@ -1048,7 +1048,14 @@ def _worked_as_asked(calls, context, go, gate, keeper, report, way):
     lets the opening run through research and then stops for review. AN.58 (D287): the existing end-to-end and specific routes
     run straight through. Save the admitted opening scope on the pending turn. A failed reading leaves the scope unchanged."""
     transcript = context.payload()["conversation"]
-    earlier = [f"{row['speaker']} ({row['record_role']})\n{row['text']}" for row in transcript]
+    # Every saved waiting exchange precedes the final reply of the turn that owns it.
+    waits_before = {f"{row['turn_id']}:nm": row["waiting_messages"] for row in context.rows if "waiting_messages" in row}
+    earlier = []
+    for row in transcript:
+        for exchange in waits_before.get(row["source_id"], ()):
+            earlier.append(f"advocate (waiting_message)\n{exchange['text']}")
+            earlier.append(f"nm (waiting_reply)\n{exchange['said']}")
+        earlier.append(f"{row['speaker']} ({row['record_role']})\n{row['text']}")
     try:
         reading = way(calls, context.message, earlier=earlier, papers=len(context.documents))
     except UsageLimitReached:

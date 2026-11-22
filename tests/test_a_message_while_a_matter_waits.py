@@ -268,6 +268,55 @@ def test_finishing_keeps_the_waiting_words_and_replays_the_saved_response(served
     assert served.login().get(f'/api/chats/{CHAT}').status_code == 409
 
 
+def test_a_new_turn_reads_the_waiting_exchange_after_the_earlier_turn_is_done(served):
+    from nm.core_engine import follow_up
+
+    waiting_matter(served)
+    repeated = 'Keep the two issues separate.\nSave the second for later.'
+    terminal = 'Save what we have.'
+    reader = Reader(judged(kind='unclear', ask='Which issue do you mean?'),
+                    judged(kind='unclear', ask='Do you mean the first issue?'),
+                    judged(kind='go', choice='done'))
+    reading(served, reader)
+    for words in (repeated, repeated):
+        assert say(served, words).json()['detail']['heard']['taken'] == 'unclear'
+    assert say(served, terminal).json()['committed'] == 'committed'
+
+    def saved():
+        return served.login().get(f'/api/chats/{CHAT}').json()['turns'][0]
+
+    before = saved()
+    row, = checked_rows(served.store.load(chat_matter_id(OWNER, CHAT)), OWNER)
+    exchanges = row['waiting_messages']
+    assert [entry['text'] for entry in exchanges] == [repeated, repeated, terminal]
+    inner = served.model.structured
+
+    def structured(prompt, schema, tier, **kwargs):
+        if prompt.operation == follow_up.OPERATION:
+            return ModelResult(None, {'kind': 'changes_matter', 'new_questions': [], 'said': ''},
+                               tier, 'synthetic', 'fixture', Usage(1, 1, 0), 0, completion=Completion.COMPLETE)
+        return inner(prompt, schema, tier, **kwargs)
+
+    served.model.structured = structured
+    followup = 'Use the scope I set when we last stopped.'
+    reply = served.client.post('/api/turn', json={
+        'chat_id': CHAT, 'turn_id': 'fresh-followup', 'message': followup, 'steps': 'interactive',
+    })
+    assert reply.status_code == 409 and reply.json()['detail']['code'] == 'waiting'
+    assert held(served)['steps']['parts'] == {}
+    prior = [f"advocate (original_account)\n{SENT['message']}"]
+    for entry in exchanges:
+        prior.extend((f"advocate (waiting_message)\n{entry['text']}", f"nm (waiting_reply)\n{entry['said']}"))
+    prior.append('nm (nm_interpretation)\n' + '\n\n'.join(item['text'] for item in before['elements']))
+    # NM's saved status line for the finished matter is part of the conversation, after its reply.
+    assert row['response']['service_status']
+    prior.append(f"service (service_status)\n{row['response']['service_status']}")
+    assert len(served.model.ways) == 2 and len(reader.asked) == 3
+    assert served.model.ways[-1]['new_message'] == followup
+    assert served.model.ways[-1]['earlier_messages_in_this_conversation'] == prior
+    assert saved() == before
+
+
 def test_a_message_is_taken_only_while_the_matter_waits(served):
     reply = say(served, "Go ahead.")
     assert reply.status_code == 409 and reply.json()["detail"]["code"] == "not_waiting"
