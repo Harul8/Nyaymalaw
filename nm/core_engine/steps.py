@@ -55,8 +55,7 @@ MOST_TIMED = 100
 _TIMED = {"n", "steps", "estimate_s", "actual_s"}
 _MOST_STEPS = 10_000
 _MOST_DISPUTES = 50
-#: The messages heard while a matter waited, kept with it while it is worked on (48c): the most recent, at most so many.
-MOST_HEARD = 30
+#: The messages heard while a matter waited, in the order NM accepted them (48c, D309).
 _HEARD = {"text", "taken", "said", "at"}
 
 #: What a stop says comes next where every dispute is taken together, in plain words (48a4).
@@ -104,7 +103,7 @@ def valid(go):
                 and _way_valid(go.get("way"))
                 and (go.get("again") is None or isinstance(go["again"], list) and len(go["again"]) == 1
                      and isinstance(go["again"][0], str) and bool(go["again"][0].strip()))
-                and isinstance(heard, list) and len(heard) <= MOST_HEARD
+                and isinstance(heard, list)
                 and all(isinstance(entry, dict) and set(entry) == _HEARD and all(isinstance(entry[key], str) for key in _HEARD)
                         and entry["text"].strip() for entry in heard)
                 and isinstance(go["allowed"], list) and go["allowed"] and all(step in STEPS for step in go["allowed"])
@@ -193,9 +192,9 @@ def waited(go, after):
 
 
 def heard(go, text, taken, said):
-    """The go-ahead record with a message heard while the matter waited, and how NM took it (48c, D146): the latest MOST_HEARD."""
+    """Append the advocate's exact message and NM's reading to the waiting record."""
     entry = {"text": text, "taken": taken, "said": said, "at": datetime.now(timezone.utc).isoformat()}
-    return {**go, "heard": [*(go.get("heard") or ()), entry][-MOST_HEARD:]}
+    return {**go, "heard": [*(go.get("heard") or ()), entry]}
 
 
 def _carried(go):
@@ -564,9 +563,9 @@ def _timed_gos(held, gos):
 
 
 def _heard(held):
-    """48c (D146): the messages heard while the matter waited, and how NM took each - the latest five."""
+    """The saved waiting messages in order, with each reading shown alongside its source."""
     return [{"text": entry["text"], "said": entry["said"], "taken": entry["taken"]}
-            for entry in (held["go"].get("heard") or ())][-5:]
+            for entry in (held["go"].get("heard") or ())]
 
 
 def _questions(asked):

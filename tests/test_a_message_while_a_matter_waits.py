@@ -183,6 +183,28 @@ def test_a_reader_that_cannot_be_reached_loses_no_message(served):
     assert steps.waiting_of(held(served)) == "understood"
 
 
+def test_reopening_a_long_wait_keeps_every_heard_message_in_order(served):
+    waiting_matter(served)
+    messages = ['Please keep the deposit separate.\nThis applies throughout.']
+    messages += [f'Update {index}: same scope.' for index in range(1, 30)]
+    messages += ['Please keep the deposit separate.\nThis applies throughout.', 'Last update.']
+    reader = Reader(*(judged(kind='unclear', ask='Which step would you like?') for _ in messages))
+    reading(served, reader)
+    calls_before = list(served.model.calls)
+
+    for words in messages:
+        reply = say(served, words)
+        assert reply.status_code == 409 and reply.json()['detail']['heard']['taken'] == 'unclear'
+
+    record = held(served)
+    assert [entry['text'] for entry in record['go']['heard']] == messages
+    assert record['steps']['parts'] == {} and served.model.calls == calls_before
+    reopened = served.login().get(f'/api/chats/{CHAT}').json()
+    heard_again = reopened['pending']['stopped']['waiting']['heard']
+    assert [entry['text'] for entry in heard_again] == messages
+    assert len(reader.asked) == len(messages)
+
+
 def test_a_message_is_taken_only_while_the_matter_waits(served):
     reply = say(served, "Go ahead.")
     assert reply.status_code == 409 and reply.json()["detail"]["code"] == "not_waiting"
