@@ -1048,9 +1048,10 @@ def _worked_as_asked(calls, context, go, gate, keeper, report, way):
     or for one specific thing, the run goes straight through - the gate takes every step - and code's words saying so are saved
     at once on the turn's record for the page. Returns the go-ahead the run works on: straight's, or go as it was. A reading that
     fails leaves the message step by step; a usage limit goes on to the turn's own handling of it."""
+    transcript = context.payload()["conversation"]
+    earlier = [f"{row['speaker']} ({row['record_role']})\n{row['text']}" for row in transcript]
     try:
-        reading = way(calls, context.message, earlier=[row["message"] for row in context.rows][-5:],
-                      papers=len(context.documents))
+        reading = way(calls, context.message, earlier=earlier, papers=len(context.documents))
     except UsageLimitReached:
         raise
     except ModelError as exc:

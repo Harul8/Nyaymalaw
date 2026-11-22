@@ -87,6 +87,49 @@ def test_a_reading_that_fails_leaves_the_message_step_by_step(served):
     assert sent.status_code == 409 and sent.json()["detail"]["code"] == "waiting"
 
 
+def test_the_way_reader_receives_the_complete_saved_conversation_in_order(served):
+    from nm.core_engine import follow_up
+
+    inner = served.model.structured
+
+    def structured(prompt, schema, tier, **kwargs):
+        if prompt.operation == follow_up.OPERATION:
+            return ModelResult(None, {'kind': 'changes_matter', 'new_questions': [], 'said': ''},
+                               tier, 'synthetic', 'fixture', Usage(1, 1, 0), 0,
+                               completion=Completion.COMPLETE)
+        return inner(prompt, schema, tier, **kwargs)
+
+    served.model.structured = structured
+    previous = [
+        'Please keep any work on the deposit separate from the rent review.',
+        'The client received the letter on Monday.',
+        'There are two signatures on the agreement.',
+        'The second letter came from the agent.',
+        'The premises are still occupied.',
+        'The lease remains in force.',
+    ]
+    chat_id = None
+    for index, text in enumerate(previous, 1):
+        sent = served.client.post('/api/turn', json={
+            'chat_id': chat_id, 'turn_id': f'history-{index}', 'message': text,
+        })
+        assert sent.status_code == 200, sent.text
+        chat_id = sent.json()['chat_id']
+    saved = served.client.get(f'/api/chats/{chat_id}').json()['turns']
+    latest = 'Now proceed within the limits I set at the beginning.'
+    pending = served.client.post('/api/turn', json={
+        'chat_id': chat_id, 'turn_id': 'read-full-scope', 'message': latest, 'steps': 'interactive',
+    })
+    assert pending.status_code == 409 and pending.json()['detail']['code'] == 'waiting'
+    request, = served.model.ways
+    assert request['new_message'] == latest
+    expected = [entry for row in saved for entry in (
+        f"advocate (original_account)\n{row['message']}",
+        'nm (nm_interpretation)\n' + '\n\n'.join(item['text'] for item in row['elements']),
+    )]
+    assert request['earlier_messages_in_this_conversation'] == expected
+
+
 def test_a_message_sent_without_steps_is_not_read_for_its_way(served):
     scripted_answers(served, Scripted())
     reply = served.client.post("/api/turn", json={"message": SENT["message"], "turn_id": "turn-1"})
