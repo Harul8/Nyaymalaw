@@ -290,3 +290,138 @@ def test_the_complete_scan_can_see_an_enum_that_never_checks_itself(tmp_path, mo
             test_every_spoken_enum_called_complete()
     finally:
         planted.unlink()
+
+
+# ==================== every failure is a sentence (plan AN.56, D261) ====================
+#
+# The second review of 17 Nov 2026 found the page saying "HTTP 500", "turn id" and a component's name. A failure shown to the advocate
+# says what happened to their work and what to do: no status number, no identifier, no name of a part of NM. The population is every
+# string the page's scripts can show and every sentence a route answers with; a failure nobody caught is answered by the edge's one
+# sentence with a reference (api.unexpected_failure).
+
+import re  # noqa: E402
+
+#: What a sentence shown to the advocate never says.
+_SPOKEN_AS_A_SYSTEM = re.compile(r"HTTP \$\{|\bHTTP [0-9]{3}\b|\bstatus code\b|\bturn id\b|\bmalware checker\b|\bClamAV\b|"
+                                 r"\bstack trace\b|\bInternal Server Error\b|\btraceback\b", re.I)
+_SCRIPTS = ("nm/app/app.js", "nm/site/site.js")
+NEWLINE, BACKSLASH, QUOTES = chr(10), chr(92), "'" + '"' + "`"
+
+
+def _literals(script: str) -> list[tuple[int, str]]:
+    """The string literals of a script, with their lines: its comments and regular expressions passed over, quotes and template
+    literals alike."""
+    found, at, line, size, last = [], 0, 1, len(script), ""
+    while at < size:
+        two, char = script[at:at + 2], script[at]
+        if two == "//":
+            end = script.find(NEWLINE, at)
+            at = size if end < 0 else end
+        elif two == "/*":
+            end = script.find("*/", at + 2)
+            line += script.count(NEWLINE, at, size if end < 0 else end)
+            at = size if end < 0 else end + 2
+        elif char == "/" and (not last or last in "(,=:[!&|?{};+-*%<>~^" or script[:at].rstrip().endswith("return")):
+            # A regular expression: to its closing slash, past escapes and character classes.
+            at, in_class = at + 1, False
+            while at < size and (in_class or script[at] != "/") and script[at] != NEWLINE:
+                if script[at] == BACKSLASH:
+                    at += 1
+                elif script[at] == "[":
+                    in_class = True
+                elif script[at] == "]":
+                    in_class = False
+                at += 1
+            at += 1
+            last = "/"
+        elif char in QUOTES:
+            start, at = at, at + 1
+            while at < size and script[at] != char:
+                at += 2 if script[at] == BACKSLASH else 1
+            found.append((line, script[start + 1:at]))
+            line += script.count(NEWLINE, start, at)
+            at += 1
+            last = char
+        else:
+            line += char == NEWLINE
+            if not char.isspace():
+                last = char
+            at += 1
+    return found
+
+
+def test_no_message_the_page_can_show_speaks_as_a_system():
+    offenders = []
+    for name in _SCRIPTS:
+        for line, text in _literals((ROOT / name).read_text(encoding="utf-8")):
+            if _SPOKEN_AS_A_SYSTEM.search(text):
+                offenders.append(f"{name}:{line}: {text[:90]!r}")
+    assert not offenders, ("these messages show the advocate a status number, an identifier or a part of NM:\n  "
+                           + "\n  ".join(offenders))
+
+
+def test_no_route_answers_as_a_system():
+    offenders = []
+    for path in sorted((ROOT / "nm" / "app").glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str) and _SPOKEN_AS_A_SYSTEM.search(node.value):
+                said = [parent for parent in ast.walk(tree) if isinstance(parent, ast.Call)
+                        and getattr(parent.func, "id", getattr(parent.func, "attr", None)) in ("HTTPException", "JSONResponse")
+                        and any(child is node for child in ast.walk(parent))]
+                if said:
+                    offenders.append(f"{path.relative_to(ROOT).as_posix()}:{node.lineno}: {node.value[:90]!r}")
+    assert not offenders, "these routes answer the advocate with a status number, an identifier or a part of NM:\n  " + "\n  ".join(offenders)
+
+
+def test_the_page_sweep_can_see_a_status_number_shown(tmp_path, monkeypatch):
+    """Plant the very line the review found, in a copy of the page's script."""
+    shipped = ROOT
+    root = _own_copy(tmp_path, monkeypatch)
+    for name in _SCRIPTS:
+        (root / name).parent.mkdir(parents=True, exist_ok=True)
+        (root / name).write_bytes((shipped / name).read_bytes())
+    with (root / "nm" / "app" / "app.js").open("a", encoding="utf-8") as script:
+        script.write("\n// HTTP 500 in a comment is never shown\nconst planted = `The turn was refused: HTTP ${status}`;\n")
+    with pytest.raises(AssertionError, match="The turn was refused") as refused:
+        test_no_message_the_page_can_show_speaks_as_a_system()
+    assert "never shown" not in str(refused.value)
+
+
+def test_the_route_sweep_can_see_a_status_number_answered(tmp_path, monkeypatch):
+    planted = _own_copy(tmp_path, monkeypatch) / "nm" / "app" / "_answers_as_a_system.py"
+    planted.write_text(block_of((
+        "from fastapi import HTTPException",
+        "",
+        "def refuse():",
+        "    raise HTTPException(500, 'Internal Server Error: the turn id was wrong')",
+    )), encoding="utf8")
+    with pytest.raises(AssertionError, match="the turn id was wrong"):
+        test_no_route_answers_as_a_system()
+
+
+def test_a_failure_nobody_caught_is_one_sentence_with_a_reference_the_log_holds_without_its_words(caplog):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from nm.app import api
+
+    assert api.app.exception_handlers.get(Exception) is api.unexpected_failure
+    probe = FastAPI()
+    probe.add_exception_handler(Exception, api.unexpected_failure)
+
+    @probe.get("/matters/{matter_id}")
+    def broken(matter_id: str):
+        raise ValueError(f"the client's words for {matter_id}")
+
+    with caplog.at_level("ERROR", logger="nm.failure"), TestClient(probe, raise_server_exceptions=False) as client:
+        answer = client.get("/matters/m-private")
+    body = answer.json()
+    assert answer.status_code == 500 and answer.headers["cache-control"] == "no-store"
+    assert re.fullmatch(r"NM-[0-9A-F]{8}", body["reference"])
+    assert body["detail"] == (f"NM met a fault of its own and could not finish this. Try again in a moment; if it happens again, "
+                              f"quote reference {body['reference']} when you report it.")
+    assert not _SPOKEN_AS_A_SYSTEM.search(body["detail"])
+    logged = " ".join(record.getMessage() for record in caplog.records if record.name == "nm.failure")
+    assert body["reference"] in logged and "/matters/{matter_id}" in logged and "ValueError" in logged and "broken" in logged
+    assert "client's words" not in logged and "m-private" not in logged

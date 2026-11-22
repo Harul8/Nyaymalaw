@@ -603,13 +603,13 @@ async function api(path, options, { sessionBound = true } = {}) {
                  + 'where it was.');
   }
   if (!res.ok) {
-    const detail = (body && (body.detail || body.message)) || `HTTP ${res.status}`;
+    const detail = (body && (body.detail || body.message)) || failureSaid(res.status);
     // Structured refusals carry recovery state, not display text. Keep the
     // object for callers, but never turn it into JSON in a visible error.
     const readable = typeof detail === 'string' ? detail
       : [detail?.why, detail?.message].find(value =>
         typeof value === 'string' && value.trim())
-        || `The server could not complete this request (HTTP ${res.status}).`;
+        || failureSaid(res.status);
     const err = new Error(readable);
     err.status = res.status;
     // Keep the STRUCTURE. A withheld turn carries which gate withheld it and
@@ -619,6 +619,17 @@ async function api(path, options, { sessionBound = true } = {}) {
     throw err;
   }
   return body;
+}
+
+// EVERY FAILURE IS A SENTENCE THE ADVOCATE CAN ACT ON (plan AN.56, piece 56c; D261): where an answer carries no sentence of its own -
+// a proxy's page, a body that is not NM's - the page says what happened and what to do, by the kind of failure, and never shows a
+// status number, an identifier or the name of a part of NM.
+function failureSaid(status) {
+  if (status === 413) return 'That was too large for NM to take. Send it in smaller parts.';
+  if (status === 429) return 'NM is being asked for too much at once. Wait a moment, then try again.';
+  if (status === 404) return 'NM no longer has what this asked for. Reload the page to see what it holds now.';
+  if (status >= 500 || !status) return 'NM could not finish this just now. Try again in a moment.';
+  return 'NM could not do this. Try again; if it happens again, reload the page.';
 }
 
 /* --------------------------------------------------------------- health --- */
@@ -1264,12 +1275,12 @@ async function downloadNoteWord(answer, status) {
   try {
     const res = await fetch(`${noteUrl(answer)}.docx`);
     if (!res.ok) {
-      let why = `HTTP ${res.status}`;
+      let why = failureSaid(res.status);
       try {
         const body = await res.json();
         why = (body.detail && (body.detail.why || body.detail)) || why;
       } catch { /* not a JSON refusal */ }
-      throw new Error(typeof why === 'string' ? why : `HTTP ${res.status}`);
+      throw new Error(typeof why === 'string' ? why : failureSaid(res.status));
     }
     const blob = await res.blob();
     const link = document.createElement('a');
@@ -1547,8 +1558,8 @@ function renderTurn(entry) {
       stale: 'This matter moved while you were writing. I have re-read it — '
            + 'check the answer above, then send again if it still applies.',
       unknown: 'I could not tell whether your brief was saved. Sending again '
-             + 'is safe: it carries the same turn id, so if it did land the '
-             + 'server recognises it rather than recording it twice.',
+             + 'is safe: if it did arrive, NM recognises it and does not '
+             + 'record it twice.',
       replay_refused: 'The earlier response remains saved, but cannot be replayed '
                      + 'under the current permission. No new answer was saved or released. '
                      + 'Review the current declaration before making a new request.',

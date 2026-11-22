@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import logging
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 from typing import Mapping
 
@@ -45,6 +46,7 @@ class AdminLibrary:
         self.checks, self.root, self.corpus = checks, Path(root), Path(corpus_dir)
         self._catalogues: dict[Path, tuple[tuple[int, int], dict]] = {}
         self._held: dict[Path, tuple[tuple[int, int], frozenset]] = {}
+        self._acts: dict[Path, tuple[tuple[int, int], tuple]] = {}
 
     # ----------------------------------------------------------------- the Acts catalogue ---
 
@@ -61,6 +63,11 @@ class AdminLibrary:
             if not isinstance(rows, list):
                 return None
             self._held[path] = (key, frozenset(str(r.get("act_id")) for r in rows if isinstance(r, dict) and r.get("act_id")))
+            # The Acts themselves, as the public pages list them (D258): the catalogue's Acts, not its rules or amending Acts.
+            self._acts[path] = (key, tuple(sorted(
+                ((str(r["title"]).strip(), str(r.get("year") or "").strip(), str(r.get("standing") or ""))
+                 for r in rows if isinstance(r, dict) and r.get("kind") == "act" and str(r.get("title") or "").strip()),
+                key=lambda row: (row[0].casefold(), row[1]))))
             by_jurisdiction = Counter(str(r.get("jurisdiction") or "not stated") for r in rows if isinstance(r, dict))
             by_standing = Counter(str(r.get("standing") or "not stated") for r in rows if isinstance(r, dict))
             found = {"acts": len(rows), "by_jurisdiction": self._top(by_jurisdiction), "by_standing": self._top(by_standing)}
@@ -80,6 +87,30 @@ class AdminLibrary:
         if self._catalogue(folder) is None:
             return None
         return self._held[folder / "acts.json"][1]
+
+    def held(self) -> Mapping[str, object] | None:
+        """What the public pages say NM holds (plan AN.56, piece 56a; D258): {"acts": how many Acts the Acts store was built from,
+        "judgments": how many judgments the judgment store holds, "updated": the day either store was last built, corrected or
+        swapped in, "act_list": each Act as (title, year, standing), "changed": when the newest of those records was written, as a
+        time} - from the stores' own lineage records and the Acts catalogue, never typed. None where any of them cannot be read:
+        the pages then say the figures are not available."""
+        retrieval = self.root / ".nm" / "retrieval"
+        try:
+            acts = json.loads((retrieval / "bare_acts.lineage.json").read_text(encoding="utf8"))
+            judgments = json.loads((retrieval / "judgments.lineage.json").read_text(encoding="utf8"))
+            folder = (self.corpus / acts["passage_store"]["path"]).parent
+            changed = max(path.stat().st_mtime for path in (retrieval / "bare_acts.lineage.json",
+                                                             retrieval / "judgments.lineage.json", folder / "acts.json"))
+            count = judgments["built_from"]["summary"]["judgments"]
+            stamps = [acts["recorded_at"], *(entry["at"] for entry in acts.get("corrected") or ()),
+                      judgments.get("swapped_in") or judgments["recorded_at"]]
+            updated = max(datetime.fromisoformat(str(stamp)) for stamp in stamps).date()
+        except (OSError, ValueError, KeyError, TypeError):
+            return None
+        if type(count) is not int or count < 0 or self._catalogue(folder) is None:
+            return None
+        listed = self._acts[folder / "acts.json"][1]
+        return {"acts": len(listed), "judgments": count, "updated": updated, "act_list": listed, "changed": changed}
 
     @staticmethod
     def _top(counts: Counter) -> list[dict]:

@@ -224,6 +224,8 @@ class Application:
             data_classes=(DataClass.OPERATIONAL,))
         # What the held law holds, described (plan AN.46, piece 46l): read from the store's own records and catalogue, never opened.
         library = AdminLibrary(checks=checks, root=self.root, corpus_dir=checks.corpus)
+        # What the public pages say NM holds (plan AN.56, piece 56a; D258): the same reader's public summary, law's descriptions only.
+        self.held_law = library.held
         self.admin_library = PolicedPort(inner=library,
             gate=self._gate, port=AdminLibraryPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL,))

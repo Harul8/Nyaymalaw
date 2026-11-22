@@ -7,7 +7,9 @@ that tree is a public static root, and request text never becomes a file path.
 from __future__ import annotations
 
 import gzip
+import hashlib
 import stat
+from email.utils import formatdate
 from collections.abc import Callable, Mapping
 from pathlib import Path
 from types import MappingProxyType
@@ -58,7 +60,8 @@ class BrowserAssetsRefused(ValueError):
 
 def browser_assets_router(*, asset_paths: Callable[[], Mapping[str, Path]],
                           root: Path,
-                          gated: Mapping[str, Callable[[Request], bool | str]] | None = None) -> APIRouter:
+                          gated: Mapping[str, Callable[[Request], bool | str]] | None = None,
+                          filled: Mapping[str, Callable[[str], tuple[str, float | None]]] | None = None) -> APIRouter:
     """Snapshot the trusted manifest's exact URLs, retaining current file bytes.
 
     The root is supplied by application composition, never an HTTP argument.
@@ -73,8 +76,17 @@ def browser_assets_router(*, asset_paths: Callable[[], Mapping[str, Path]],
     A gate answers True (serve it), False (the 404), or "sign-in": nobody is signed in, so a PAGE is answered with a redirect to the
     workspace's own sign-in (there is one login, the same for every account - an admin is whoever the settings name once signed in),
     and any other file with the 404. The redirect tells nobody anything: the sign-in page is public.
+
+    A FILLED PAGE (plan AN.56, piece 56a; D258) is a declared page whose marked places are filled when it is served, by the function
+    composition gives for it (the public pages' figures of what NM holds, read from the library's own records): the page's text is
+    passed through it at each request and the result is sent, compressed where the browser asks, with a validator of its own bytes
+    and, as its date, the later of the file's and of what filled it (the function gives that time, or None for nothing read), so
+    that a browser revalidating by date alone is never kept on figures since changed. It is still the one declared file.
     """
     gates = MappingProxyType(dict(gated or {}))
+    fills = MappingProxyType(dict(filled or {}))
+    if any(not name.endswith(".html") for name in fills):
+        raise BrowserAssetsRefused("Only a page is filled when it is served")
     owned_root = root.resolve(strict=True)
     packed: dict[str, tuple[tuple[int, int], bytes]] = {}
 
@@ -146,6 +158,15 @@ def browser_assets_router(*, asset_paths: Callable[[], Mapping[str, Path]],
                 raise HTTPException(status_code=404)
         except (OSError, ValueError):
             raise HTTPException(status_code=404) from None
+        filler = fills.get(name)
+        if filler is not None:
+            try:
+                # The bytes as written (a page read as text would lose its line endings), and only they.
+                written = path.read_bytes().decode("utf-8")
+            except (OSError, ValueError):
+                raise HTTPException(status_code=404) from None
+            text, read_at = filler(written)
+            return _sent(request, text.encode("utf-8"), MEDIA_TYPES[path.suffix], max(info.st_mtime, read_at or 0))
         response = FileResponse(
             path,
             stat_result=info,
@@ -170,6 +191,22 @@ def browser_assets_router(*, asset_paths: Callable[[], Mapping[str, Path]],
             response = Response(content=b"" if request.method == "HEAD" else body, media_type=MEDIA_TYPES[path.suffix],
                                 headers=headers)
             response.headers["content-length"] = str(len(body))
+        if _REVALIDATION.is_not_modified(response.headers, request.headers):
+            response = NotModifiedResponse(response.headers)
+            response.headers["x-content-type-options"] = "nosniff"
+        return response
+
+    def _sent(request: Request, body: bytes, media_type: str, modified: float) -> Response:
+        """A filled page's bytes, as a file is sent: its own validator and date, compressed where the browser asks and it is large
+        enough."""
+        tag = '"' + hashlib.sha256(body).hexdigest()[:32] + '"'
+        accepted = {part.split(";")[0].strip().lower() for part in request.headers.get("accept-encoding", "").split(",")}
+        headers = {**_HEADERS, "vary": "Accept-Encoding", "etag": tag, "last-modified": formatdate(modified, usegmt=True)}
+        if "gzip" in accepted and len(body) >= _SMALLEST_COMPRESSED:
+            body = gzip.compress(body, compresslevel=6, mtime=0)
+            headers.update({"content-encoding": "gzip", "etag": tag.rstrip('"') + '-gzip"'})
+        response = Response(content=b"" if request.method == "HEAD" else body, media_type=media_type, headers=headers)
+        response.headers["content-length"] = str(len(body))
         if _REVALIDATION.is_not_modified(response.headers, request.headers):
             response = NotModifiedResponse(response.headers)
             response.headers["x-content-type-options"] = "nosniff"

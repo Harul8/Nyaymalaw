@@ -12,6 +12,7 @@ import os
 import re
 import threading
 import time
+import traceback
 from collections import OrderedDict
 from contextlib import contextmanager
 from copy import deepcopy
@@ -27,6 +28,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StrictBool, field_validator
 from nm.app.admin_api import admin_router
+from nm.app import held_pages
 from nm.app.documents import papers_named
 from nm.app.static_assets import browser_assets_router
 from nm.app.turn_progress import STAGES as TURN_STAGES
@@ -679,8 +681,29 @@ def health_detail(advocate_id: Advocate, request: Request, response: Response) -
     return detail
 
 
+def failure_reference() -> str:
+    """A short reference for one failure, which the advocate can quote and the operator find in the log."""
+    return 'NM-' + os.urandom(4).hex().upper()
+
+
+async def unexpected_failure(request: Request, exc: Exception):
+    """A failure nobody caught, answered by code's one sentence (plan AN.56, piece 56d; D261): what happened, what to do, and a
+    reference. The log has the reference with the route, the kind of failure and where in the code it arose - never its message or
+    any value, which can hold an advocate's words; the server still records the failure as its own (the error is raised on)."""
+    reference = failure_reference()
+    route = getattr(request.scope.get('route'), 'path', None) or 'an unknown address'
+    frames = traceback.extract_tb(exc.__traceback__)[-6:]
+    logging.getLogger('nm.failure').error('Failure %s on %s %s: %s, at %s', reference, request.method, route,
+                                          type(exc).__name__, ' < '.join(f'{Path(frame.filename).name}:{frame.lineno} {frame.name}'
+                                                                         for frame in reversed(frames)))
+    return JSONResponse(status_code=500, headers={'Cache-Control': 'no-store'}, content={
+        'detail': (f'NM met a fault of its own and could not finish this. Try again in a moment; if it happens again, quote '
+                   f'reference {reference} when you report it.'), 'reference': reference})
+
+
 app.add_exception_handler(RequestValidationError, invalid_request)
 app.add_exception_handler(AuthenticationUnavailable, unavailable_authentication)
+app.add_exception_handler(Exception, unexpected_failure)
 
 class Credentials(BaseModel):
     # Plan AN.53 (53d1, D235): the name is at most what an email address can be. THE PASSWORD HAS NO LENGTH OF ITS OWN HERE, on
@@ -3606,9 +3629,19 @@ def _may_see_the_admin_area(request: Request) -> bool | str:
     return application().admin_level_of(advocate_id) is not None
 
 
+def _held_page(written: str) -> tuple[str, float | None]:
+    """A public page with what NM holds filled in from the library's own records (plan AN.56, piece 56a; D258); as written - saying the
+    figures are not available - where the application reads no library or its records cannot be read; and when the records
+    that filled it were last written."""
+    reader = getattr(application(), "held_law", None)
+    held = reader() if reader is not None else None
+    return held_pages.filled(written, held), (held or {}).get("changed")
+
+
 app.include_router(browser_assets_router(
     asset_paths=lambda: application().browser_asset_paths(), root=ROOT,
-    gated={name: _may_see_the_admin_area for name in ("admin.html", "admin.css", "admin.js")}))
+    gated={name: _may_see_the_admin_area for name in ("admin.html", "admin.css", "admin.js")},
+    filled={name: _held_page for name in ("home.html", "what-it-holds.html")}))
 
 # The Admin area (plan AN.46, piece 46g): its routes are given the edge's own sign-in, CSRF and failed-attempt pieces, so there is
 # no door in them the rest of the edge does not use. A signed-in advocate who is not named in the settings gets a 404.
