@@ -97,7 +97,16 @@ def test_the_runner_refuses_a_round_it_cannot_keep():
         rounds.run(lambda e: "a", lambda p, e: (None, "tired"), lambda a, e: a, lambda o, e: True)
     with pytest.raises(ValueError):
         rounds.run(lambda e: "a", lambda p, e: ([], None), lambda a, e: a, lambda o, e: True)
-    assert set(rounds.STOPS) == {"nothing_missing", "repeated", "nothing_new", "backstop", "unavailable"}
+    assert set(rounds.STOPS) == {"nothing_missing", "repeated", "nothing_new", "complete", "backstop", "unavailable"}
+
+
+def test_the_rounds_stop_when_what_they_are_for_is_done():
+    """D323: drafting's rounds end when the draft has nothing left to correct."""
+    done, stopped = rounds.run(lambda e: f"draft {len(e)}", lambda p, e: ([p], None), lambda a, e: {"faults": 2 - len(e)},
+                               lambda o, e: True, finished=lambda o, e: o["faults"] == 0)
+    assert [entry["outcome"]["faults"] for entry in done] == [2, 1, 0] and stopped == {"why": rounds.COMPLETE, "reason": None}
+    with pytest.raises(TypeError):
+        rounds.run(lambda e: "a", lambda p, e: ([p], None), lambda a, e: a, lambda o, e: True, finished="yes")
 
 
 # --- research's later rounds (D320) ---------------------------------------------------------------------------------------------
