@@ -20,6 +20,9 @@ from nm.shared.store_port import StaleWrite
 from nm.work_the_file.matter_contracts import Matter
 
 CONTRACT = "core_conversation_v1"
+# The conversation header still identifies the digest chain. Each row identifies
+# the receipt format it was saved under.
+WAITING_ROW_CONTRACT = "core_conversation_v2"
 HEADER = "core_conversation"
 #: What a turn has shown of its answer while it works, sealed with the conversation as each
 #: part passes (owner decision P27, 19 Oct 2026: each section is saved when it is shown).
@@ -120,6 +123,17 @@ def _unread_pages(turn_id, documents):
             for document in documents for page in document["unread"]]
 
 
+def _row_contract_valid(row):
+    if row["contract"] == CONTRACT:
+        return "waiting_messages" not in row
+    messages = row.get("waiting_messages")
+    return (row["contract"] == WAITING_ROW_CONTRACT
+            and isinstance(messages, list) and bool(messages)
+            and all(isinstance(entry, dict) and set(entry) == {"text", "taken", "said", "at"}
+                    and all(type(value) is str for value in entry.values())
+                    and _nonempty(entry["text"]) for entry in messages))
+
+
 def checked_rows(matter, advocate_id, *, copied=True):
     """The conversation's turns, each receipt and the digest chain checked. copied=False
     (P35, 21 Oct 2026) returns the matter's own turns, for a caller that only reads them or
@@ -150,7 +164,7 @@ def checked_rows(matter, advocate_id, *, copied=True):
                 raise ValueError("conversation steers")
             if "added" in row and (not row["added"] or not _added_valid(row["added"])):
                 raise ValueError("conversation additions")
-            if (row["contract"] != CONTRACT or type(row["sequence"]) is not int
+            if (not _row_contract_valid(row) or type(row["sequence"]) is not int
                     or row["sequence"] != sequence
                     or row["previous"] != previous or row["digest"] != digest(body)
                     or row["matter_id"] != matter.id or row["advocate_id"] != advocate_id
@@ -656,6 +670,13 @@ def commit_turn(store, context, *, elements, activities, records=None, work=None
         raise ConversationRefused("Sign in again before continuing.", status=401)
     if context.replay is not None:
         return deepcopy(context.replay)
+    try:
+        held = shown_of(context.matter, copied=False)
+        if held is not None and held["request"] != context.request:
+            raise ValueError("Waiting messages belong to another request")
+    except ValueError as exc:
+        raise ConversationRefused("The pending conversation could not be read reliably.") from exc
+    waiting_messages = (held or {}).get("go", {}).get("heard", [])
     version = context.matter.version + 1
     response = {"turn_id": context.turn_id, "matter_id": None, "chat_id": context.chat_id,
                 "route": "core_engine", "mode": "conversation", "mode_statement": "",
@@ -682,6 +703,9 @@ def commit_turn(store, context, *, elements, activities, records=None, work=None
         row["steers"] = deepcopy(list(context.steers))
     if context.added:
         row["added"] = deepcopy(list(context.added))
+    if waiting_messages:
+        row["contract"] = WAITING_ROW_CONTRACT
+        row["waiting_messages"] = deepcopy(waiting_messages)
     if context.asked is not None:
         row["asked"] = questions.check_asked(deepcopy(context.asked))
         # The page shows what was asked, and how each answer came to stand, above the answer it shaped.

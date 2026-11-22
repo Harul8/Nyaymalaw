@@ -4,11 +4,13 @@ one the stop offers, for the matter's disputes. A go-ahead runs its step; inform
 the advocate's words and the matter is understood again with them; a new question waits as the next message; an unclear one is asked
 about; a reader that cannot be reached loses no message. NM says how it took each. Offline: scripted models; the words are invented."""
 import json
+from copy import deepcopy
+from dataclasses import replace
 
 import pytest
 
 from nm.core_engine import message_reader, steps
-from nm.core_engine.conversation import queued_of, shown_of, stored_chat, chat_matter_id
+from nm.core_engine.conversation import HEADER, chat_matter_id, checked_rows, digest, queued_of, shown_of, stored_chat
 from nm.shared.model_port import ModelResult, ProviderUnavailable, Usage
 from nm.shared.budget_contracts import Completion
 from tests.test_core_answer_sections import Scripted, scripted_answers
@@ -203,6 +205,45 @@ def test_reopening_a_long_wait_keeps_every_heard_message_in_order(served):
     heard_again = reopened['pending']['stopped']['waiting']['heard']
     assert [entry['text'] for entry in heard_again] == messages
     assert len(reader.asked) == len(messages)
+
+
+@pytest.mark.parametrize('finish', ['done', 'end_to_end'])
+def test_finishing_keeps_the_waiting_words_and_replays_the_saved_response(served, finish):
+    waiting_matter(served)
+    reader = Reader(judged(kind='unclear', ask='Which step would you like?'),
+                    judged(kind='go', choice=finish))
+    reading(served, reader)
+    first = 'Please leave the deposit for later.\nI will review it separately.'
+    assert say(served, first).json()['detail']['heard']['taken'] == 'unclear'
+    terminal = 'Save what we have.' if finish == 'done' else 'Finish the remaining work end to end.'
+    result = say(served, terminal)
+    assert result.status_code == 200 and result.json()['committed'] == 'committed'
+
+    def saved():
+        return served.store.load(chat_matter_id(OWNER, CHAT))
+
+    assert shown_of(saved()) is None
+    row, = checked_rows(saved(), OWNER)
+    assert [entry['text'] for entry in row['waiting_messages']] == [first, terminal]
+    assert [entry['taken'] for entry in row['waiting_messages']] == ['unclear', 'go']
+    assert row['response']['elements'] == result.json()['elements']
+
+    calls_before = list(served.model.calls)
+    replay = served.login().post('/api/turn', json=SENT)
+    assert replay.status_code == 200 and replay.json()['replayed'] is True
+    assert replay.json()['elements'] == result.json()['elements']
+    assert checked_rows(saved(), OWNER) == (row,)
+    assert served.model.calls == calls_before and len(reader.asked) == 2
+
+    # A matching digest cannot make a receipt with out-of-contract transcript fields readable.
+    matter = saved()
+    metadata = deepcopy(matter.intake_answers)
+    row['waiting_messages'][0]['text'] = ''
+    row['digest'] = digest({key: value for key, value in row.items() if key != 'digest'})
+    metadata[HEADER]['tail_digest'] = row['digest']
+    served.store.commit(replace(matter, brain_chat=(row,), intake_answers=metadata, version=matter.version + 1),
+                        expected_version=matter.version)
+    assert served.login().get(f'/api/chats/{CHAT}').status_code == 409
 
 
 def test_a_message_is_taken_only_while_the_matter_waits(served):
