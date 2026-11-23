@@ -17,7 +17,8 @@ const between = (start, end) => {
   return app.slice(a, b);
 };
 const source = between('// THE MODEL AND THE EFFORT FOR A MESSAGE', '// F-A-18,')
-  + '\n' + between('function replyFooter(', '// A RESEARCH NOTE');
+  + '\n' + between('function replyFooter(', '// A RESEARCH NOTE')
+  + '\n' + between('function restoredTurn(turn) {', '// LB-83. WHEN THE ANSWER WAS SAVED');
 
 function el(tag) {
   return {
@@ -52,8 +53,8 @@ const context = {
   answeredAt: () => null, navigator: {}, setTimeout,
 };
 vm.createContext(context);
-vm.runInContext(source + '\nthis.exported = { resetTurnChoice, loadTurnChoices, replyFooter };', context);
-const { resetTurnChoice, loadTurnChoices, replyFooter } = context.exported;
+vm.runInContext(source + '\nthis.exported = { resetTurnChoice, loadTurnChoices, replyFooter, restoredTurn };', context);
+const { resetTurnChoice, loadTurnChoices, replyFooter, restoredTurn } = context.exported;
 
 // The lists come from the server, each model with its cost beside Luna's, and the defaults it gives.
 await loadTurnChoices();
@@ -96,6 +97,19 @@ assert.equal(said({ metrics: { chosen: { model: 'auto', effort: 'max' }, calls: 
   { operation: 'core_response_review', model: 'gpt-6-luna' }] } }), 'Auto · Most thorough · reviewed by 6.1 Terra and 6 Luna');
 const older = replyFooter({ answer: { metrics: {} } }, () => '');
 assert.ok(!older.children.some((kid) => kid.className === 'reply-chosen'), 'an answer saved before says nothing');
+// Plan AN.79 (D337): an answer reopened from history says the same line as when it was given, from the saved turn's own record -
+// and carries nothing else of that record (no costs or counts).
+{
+  const saved = { committed: true, release_state: 'released', chat_id: 'c', turn_id: 't', elements: [], message: 'Asked.',
+    metrics: { chosen: { model: 'gpt-6-luna', effort: 'medium' }, cost_usd: 0.309, estimate: { usd: 0.232 },
+      calls: [{ operation: 'core_response_review', model: 'gpt-6-luna', cost_usd: 0.01, tokens_in: 900 }] } };
+  const reopened = restoredTurn(saved).answer;
+  assert.equal(said(reopened), '6 Luna · Standard · reviewed by 6 Luna');
+  assert.equal(JSON.stringify(reopened.metrics), JSON.stringify({ chosen: { model: 'gpt-6-luna', effort: 'medium' },
+    calls: [{ operation: 'core_response_review', model: 'gpt-6-luna' }] }));
+  assert.equal(restoredTurn({ ...saved, metrics: { cost_usd: 1 } }).answer.metrics, null, 'a turn saved before says nothing');
+  assert.equal(restoredTurn({ ...saved, metrics: undefined }).answer.metrics, null);
+}
 
 // Plan AN.49 (D186): the foot of every answer that can be kept offers the note plainly, saying what it holds.
 context.noteAvailable = () => true;

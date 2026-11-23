@@ -401,6 +401,10 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
   border-radius: 50%; box-sizing: border-box; }
 .chip.deadline.urgent::before { content: "!"; width: auto; height: auto; border: 0; font-weight: 700; line-height: 1; }
 .chip.deadline.expired::before { content: "\2715"; width: auto; height: auto; border: 0; font-size: 0.7rem; line-height: 1; }
+/* Plan AN.79 (D336): a step taken in time is done - quiet, with a tick; one taken with its date not given is neutral. */
+.chip.deadline.done, .chip.deadline.taken { background: var(--surface-2); color: var(--ink-2); border-color: var(--rule-2);
+  font-weight: 500; }
+.chip.deadline.done::before { content: "\2713"; width: auto; height: auto; border: 0; font-size: 0.72rem; line-height: 1; }
 .chip.quiet { background: var(--surface-2); color: var(--ink-3); border-color: var(--rule-2); }
 .count { color: var(--ink-3); }
 .group { margin: 0.15rem 0 0; font-family: var(--f-sans); font-size: 0.7rem; font-weight: 600; letter-spacing: 0.12em;

@@ -1079,13 +1079,25 @@ function restoredTurn(turn) {
   return { brief: turn.message || turn.asked || '', briefMissing, documents, answer: {
     chat_id: turn.chat_id, turn_id: turn.turn_id,
     elements: turn.elements || [], blocked: turn.blocked,
-    blocked_reason: turn.blocked_reason, metrics: null, restored: true,
+    // Plan AN.79 (D337): what the foot's model line reads - the model and effort chosen and the models of the review calls -
+    // carried from the saved turn's own record, and nothing else of it (no costs or counts).
+    blocked_reason: turn.blocked_reason, metrics: chosenOf(turn.metrics), restored: true,
     service_status: typeof turn.service_status === 'string' ? turn.service_status : null,
     // Plan AN.37: what NM asked while it worked, and how each answer came to stand.
     questions_asked: turn.questions_asked && typeof turn.questions_asked === 'object' ? turn.questions_asked : null,
     at: turn.at || '',
     composed: Array.isArray(turn.composed) ? turn.composed : [],
   } };
+}
+
+// A saved turn's model line, as replyFooter reads it: the model and effort chosen, and each call's operation and model.
+function chosenOf(metrics) {
+  const chosen = metrics && typeof metrics === 'object' ? metrics.chosen : null;
+  if (!chosen || typeof chosen !== 'object' || !chosen.model) return null;
+  const calls = Array.isArray(metrics.calls) ? metrics.calls : [];
+  return { chosen: { model: chosen.model, effort: chosen.effort },
+    calls: calls.filter((call) => call && typeof call === 'object')
+      .map((call) => ({ operation: call.operation, model: call.model })) };
 }
 
 // LB-83. WHEN THE ANSWER WAS SAVED, said quietly under it (owner, 28 September
@@ -3742,8 +3754,11 @@ function renderCheckLegend(marks = CHECK_MARKS) {
 // 'Late' where so (the design's 'File by' is said only of a filing, and not every time limit is
 // one) - and a quiet word for those it could not work out. How near the day is shows in words
 // and in the chip's colour (the signed-off design, plan AN.14): a week or less, a month or less,
-// further, or passed. The days are the count code saved; nothing is counted here.
+// further, or passed. The days are the count code saved; nothing is counted here. Plan AN.79 (D336): the mark follows the
+// result - a step taken in time is done (a tick), one taken with its date not given is neutral, and only Passed, Late and
+// Early (taken before its earliest day) carry the cross; the words are unchanged.
 const NEAR_DAYS = { urgent: 7, soon: 30 };
+const DONE_RESULTS = { 'In time': 'done', Passed: 'expired', Late: 'expired', Early: 'expired' };
 
 function deadlineChips(limits) {
   const make = (tag, className, text) => {
@@ -3761,7 +3776,7 @@ function deadlineChips(limits) {
     const open = !result || result === 'Open';
     const saved = rows.get('Days left');
     const days = open && /^\d+$/.test(String(saved ?? '')) ? Number(saved) : null;
-    const near = !open ? 'expired' : days === null ? 'open'
+    const near = !open ? DONE_RESULTS[result] || 'taken' : days === null ? 'open'
       : days <= NEAR_DAYS.urgent ? 'urgent' : days <= NEAR_DAYS.soon ? 'soon' : 'open';
     const said = !open ? ` · ${result}` : days === null ? '' : ` · ${days} ${days === 1 ? 'day' : 'days'} left`;
     const chip = make('span', `chip deadline ${near}`,

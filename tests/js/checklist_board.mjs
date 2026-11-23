@@ -209,6 +209,21 @@ assert.match(read, /Any other route — It may be quicker\./);
   assert.deepEqual([near(7).className, near(8).className], ['chip deadline urgent', 'chip deadline soon']);
   assert.equal(near(1).textContent, 'By 28 Oct 2026 · 1 day left');
 }
+// The mark follows the result (plan AN.79, D336): a step taken in time is done, not a missed day; one taken with its date not
+// given is neutral; Passed, Late and Early keep the cross. The words are the saved result's.
+{
+  const chip = (result, days) => context.deadlineChips([{ what: 'Last day for the notice', last_day: '2026-12-13', rows: [
+    ['Last day', '13 December 2026 (Sunday)'], ['As of', '23 November 2026 (Monday)'], ['Result', result],
+    ...(days ? [days] : [])] }])[0];
+  assert.deepEqual([chip('In time', ['Days to spare', '29']).className, chip('In time', ['Days to spare', '29']).textContent],
+    ['chip deadline done', 'By 13 Dec 2026 · In time']);
+  assert.equal(chip('Taken; its date not given, so whether in time is not known').className, 'chip deadline taken');
+  for (const [result, days] of [['Late', ['Days late', '3']], ['Passed', ['Days since the last day', '2']],
+    ['Early', ['Days before the earliest day', '4']]]) {
+    assert.equal(chip(result, days).className, 'chip deadline expired', result);
+  }
+  assert.equal(chip('Open', ['Days left', '20']).className, 'chip deadline soon');
+}
 // AN ASK OPENS WHAT IT ASKS FOR (rendering v16; the readability design): the item as the board
 // of the same conversation now holds it, else as the answer admitted it.
 {
