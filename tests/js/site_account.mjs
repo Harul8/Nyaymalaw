@@ -40,6 +40,7 @@ class El {
   insertAdjacentHTML() { throw new Error('insertAdjacentHTML must not be used'); }
   append(...nodes) { for (const node of nodes) this.appendChild(node); }
   appendChild(node) { node.parent = this; this.children.push(node); return node; }
+  prepend(...nodes) { for (const node of nodes) node.parent = this; this.children.unshift(...nodes); }
   replaceChildren(...nodes) {
     for (const child of this.children) child.parent = null;
     this.children = [];
@@ -63,6 +64,16 @@ const all = (root) => root.children.flatMap((child) => [child, ...all(child)]);
 const find = (root, test) => all(root).find(test);
 const has = (node, name) => node.className.split(' ').includes(name);
 const within = (root, name) => find(root, (node) => has(node, name));
+// Once the server says who is signed in, the account area holds an Open workspace link and then the person control (plan AN.74,
+// AN.77; 23 Nov 2026): exactly one of each, however often the page asks. The control is returned.
+function signedIn(account) {
+  assert.equal(account.children.length, 2, 'the Open workspace link and the person control');
+  const [workspace, control] = account.children;
+  assert.equal(workspace.tag, 'a');
+  assert.equal(workspace.textContent, 'Open workspace');
+  assert.equal(workspace.getAttribute('href'), '/app');
+  return control;
+}
 
 function link(text, href, className) {
   const node = new El('a');
@@ -221,6 +232,7 @@ const signedInAnswer = (url) => (url === '/api/session' ? Promise.resolve(reply(
 
   look.resolve(reply(SIGNED_IN));
   await settle();
+  assert.equal(signedIn(d.account), control, 'the control drawn while asking is the one filled in');
   assert.equal(p.timers[0].cleared, true, 'an answered look leaves no timer behind');
   assert.equal(toggle.disabled, false);
   assert.equal(toggle.getAttribute('aria-label'), 'Your account: Adv. Meera Rao');
@@ -285,7 +297,7 @@ const signedInAnswer = (url) => (url === '/api/session' ? Promise.resolve(reply(
   const out = deferred();
   const p = page({ cookie: 'nm_csrf=tok123', answer: (url) => (url === '/api/session' ? Promise.resolve(reply(SIGNED_IN)) : out.promise) });
   await settle();
-  const control = p.dom.account.children[0];
+  const control = signedIn(p.dom.account);
   const toggle = within(control, 'acct-toggle');
   const signOut = within(control, 'acct-signout');
   const status = within(control, 'acct-status');
@@ -315,7 +327,7 @@ for (const [label, answer] of [
   let signOutAnswer = answer;
   const p = page({ cookie: 'nm_csrf=tok123', answer: (url) => (url === '/api/session' ? Promise.resolve(reply(SIGNED_IN)) : signOutAnswer()) });
   await settle();
-  const control = p.dom.account.children[0];
+  const control = signedIn(p.dom.account);
   const signOut = within(control, 'acct-signout');
   const status = within(control, 'acct-status');
   click(p, within(control, 'acct-toggle'));
@@ -324,7 +336,7 @@ for (const [label, answer] of [
   assert.equal(p.reloads.count, 0, `${label}: not shown signed out`);
   assert.equal(signOut.disabled, false, `${label}: the control can be used again`);
   assert.match(status.textContent, /could not be confirmed/, label);
-  assert.equal(p.dom.account.children[0], control, `${label}: still shown as signed in`);
+  assert.equal(signedIn(p.dom.account), control, `${label}: still shown as signed in`);
   signOutAnswer = () => Promise.resolve(reply({}));
   click(p, signOut);
   await settle();
@@ -381,8 +393,7 @@ for (const order of ['older answers last', 'older answers first']) {
   const settleNewer = () => newer.resolve(reply({ advocate: { name: 'New Person', email: 'new@x.in' } }));
   if (order === 'older answers last') { settleNewer(); await settle(); settleOlder(); } else { settleOlder(); await settle(); settleNewer(); }
   await settle();
-  assert.equal(p.dom.account.children.length, 1, order);
-  assert.equal(within(p.dom.account.children[0], 'acct-name').textContent, 'New Person', order);
+  assert.equal(within(signedIn(p.dom.account), 'acct-name').textContent, 'New Person', order);
   assert.equal(p.dom.hero.textContent, 'Open your workspace', order);
 }
 
@@ -399,7 +410,7 @@ for (const order of ['older answers last', 'older answers first']) {
   pageshow(p, true);
   await settle();
   assert.equal(p.calls.length, 3);
-  assert.equal(p.dom.account.children.length, 1, 'one control, however often the page is restored');
+  assert.ok(signedIn(p.dom.account), 'one link and one control, however often the page is restored');
   assert.equal(p.dom.hero.textContent, 'Open your workspace');
 
   now = () => Promise.resolve(reply({}, 401));   // the session ended while the page was kept
@@ -424,7 +435,7 @@ for (const order of ['older answers last', 'older answers first']) {
   const markup = '<img src=x onerror=alert(1)>';
   const p = page({ cookie: 'nm_csrf=tok', answer: () => Promise.resolve(reply({ advocate: { name: markup, email: '"><script>alert(1)</script>' } })) });
   await settle();
-  const control = p.dom.account.children[0];
+  const control = signedIn(p.dom.account);
   const name = within(control, 'acct-name');
   assert.equal(name.textContent, markup);
   assert.equal(name.children.length, 0, 'no element was made from a name');
@@ -437,26 +448,26 @@ for (const order of ['older answers last', 'older answers first']) {
 {
   const p = page({ cookie: 'nm_csrf=tok', answer: () => Promise.resolve(reply({ advocate: { id: 'adv_9', name: '', email: 'p14lrahul@iima.ac.in' } })) });
   await settle();
-  const control = p.dom.account.children[0];
+  const control = signedIn(p.dom.account);
   assert.equal(within(control, 'acct-name').textContent, 'p14lrahul@iima.ac.in');
   assert.equal(within(control, 'acct-avatar').textContent, 'P');
   assert.equal(within(control, 'acct-mail').hidden, true, 'the email is not said twice');
   const only = page({ cookie: 'nm_csrf=tok', answer: () => Promise.resolve(reply({ advocate: { id: 'adv_demo' } })) });
   await settle();
-  const idControl = only.dom.account.children[0];
+  const idControl = signedIn(only.dom.account);
   assert.equal(within(idControl, 'acct-name').textContent, 'adv_demo');
   assert.equal(within(idControl, 'acct-avatar').textContent, 'A');
   assert.equal(within(idControl, 'acct-mail').hidden, true);
   const mixed = page({ cookie: 'nm_csrf=tok', answer: () => Promise.resolve(reply({ advocate: { name: { a: 1 }, email: 'x@y.in' } })) });
   await settle();
-  assert.equal(within(mixed.dom.account.children[0], 'acct-name').textContent, 'x@y.in', 'a value that is not text is treated as not sent');
+  assert.equal(within(signedIn(mixed.dom.account), 'acct-name').textContent, 'x@y.in', 'a value that is not text is treated as not sent');
 }
 
 // If the shared initials rule did not load, the control still works and the circle stays empty.
 {
   const p = page({ cookie: 'nm_csrf=tok', answer: signedInAnswer, person: false });
   await settle();
-  const control = p.dom.account.children[0];
+  const control = signedIn(p.dom.account);
   assert.equal(within(control, 'acct-name').textContent, 'Adv. Meera Rao');
   assert.equal(within(control, 'acct-avatar').textContent, '');
   assert.equal(within(control, 'acct-toggle').disabled, false);

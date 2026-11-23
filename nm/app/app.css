@@ -1650,3 +1650,29 @@ button.danger:hover, button.danger:focus-visible { background: var(--signal-w); 
 .deleted-row .deleted-name { grid-column: 1 / -1; margin: 0; font-weight: 600; overflow-wrap: anywhere; }
 .deleted-row .hint { margin: 0; }
 @media (max-width: 30rem) { .deleted-row { grid-template-columns: 1fr 1fr; } .deleted-row .hint { grid-column: 1 / -1; } }
+
+/* The opening view names the task; the conversation keeps its own saved title. */
+.start-matter { display: none; }
+#pane-advise[data-view="opening"].empty-chat .start-matter { display: block; margin-bottom: 1rem; }
+.start-matter h1 { margin: 0; font: 600 2rem/1.2 var(--f-serif); }
+.start-matter p { margin: .4rem 0; color: var(--ink-2); }
+.start-matter button { min-height: 44px; text-decoration: underline; text-underline-offset: .2em; }
+.composer-line :is(.tool-button, .send-button) { width: auto; min-width: 44px; min-height: 44px; padding-inline: .45rem; gap: .25rem; }
+.composer-line .send-arrow { display: none; }
+.thread-title:not(.unnamed) { position: sticky; top: 0; z-index: 1; background: var(--paper); padding-block: .45rem; }
+.thread a { text-underline-offset: .18em; }
+@media (max-width: 560px) {
+  .composer-line { flex-wrap: wrap; }
+  .composer-line textarea { order: -1; flex-basis: 100%; }
+  .composer-line .plus-menu { margin-right: auto; }
+}
+
+.start-matter summary { cursor: pointer; min-height: 44px; padding-block: .5rem; color: var(--accent); }
+#recent-work-list .row { padding: .45rem .6rem; border-block-start: 1px solid var(--rule); cursor: pointer; }
+#recent-work-list .row:hover { background: var(--accent-w); }
+.thread .cite { text-decoration-style: solid; }
+
+@media (min-width: 821px) and (max-width: 1160px) {
+  #pane-advise.has-board.reading { grid-template-columns: minmax(0, 1fr) minmax(280px, 34%); }
+  #pane-advise.has-board.reading > .matter-board { display: none; }
+}

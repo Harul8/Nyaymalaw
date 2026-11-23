@@ -64,7 +64,7 @@ window.NmBrainSources = (() => {
     const dialog = node('brain-source-reader');
     if (dialog.open) dialog.close();
     node('pane-advise').classList.remove('reading');
-    if (restoreFocus && opener?.isConnected) opener.focus();
+    if (restoreFocus && opener?.isConnected) opener.focus({preventScroll: true});
   }
 
   // kind: what is open, said above its title ('Held law', 'Needed · Dispute 1').

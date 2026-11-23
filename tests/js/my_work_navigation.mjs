@@ -27,9 +27,11 @@ class Element {
   }
   get textContent() { return this._text + this.children.map(child => child.textContent).join(''); }
   set textContent(value) { this._text = String(value); this.children = []; }
-  replaceChildren(...children) { this._text = ''; this.children = children; }
-  append(...children) { this.children.push(...children); }
-  prepend(...children) { this.children.unshift(...children); }
+  // A child knows the element it is in, as the DOM's parentElement says (a failed open is said in the row's own list).
+  adopt(children) { for (const child of children) if (child && typeof child === 'object') child.parentElement = this; }
+  replaceChildren(...children) { this._text = ''; this.adopt(children); this.children = children; }
+  append(...children) { this.adopt(children); this.children.push(...children); }
+  prepend(...children) { this.adopt(children); this.children.unshift(...children); }
   setAttribute(name, value) { this.attributes[name] = String(value); }
   removeAttribute(name) { delete this.attributes[name]; }
   addEventListener() {}

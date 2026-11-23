@@ -341,7 +341,7 @@
         <span class="top-label">Home</span>
       </a>
       <button type="button" id="top-new" class="ghost top-action">+ New matter</button>
-      <button type="button" id="top-history" class="ghost top-action" aria-controls="rail">Conversation history</button>
+      <button type="button" id="top-history" class="ghost top-action" aria-controls="rail">Recent work</button>
       <!-- THE ADMIN AREA (plan AN.46, piece 46p; owner, 7 Nov 2026: the same sign-in for everyone, and an admin sees the admin tabs
            without asking): shown, automatically, when the server answers /api/admin/me, which it does only for an account the server's
            settings name as an admin. -->
@@ -422,7 +422,7 @@
        newest first; opening one shows the same conversation window. -->
   <aside class="rail" id="rail" aria-labelledby="rail-title">
     <div class="rail-head">
-      <h2 id="rail-title">Conversation history</h2>
+      <h2 id="rail-title">Recent work</h2>
       <!-- Plan AN.53 (D241): what the advocate deleted, to put back within thirty days or erase now. -->
       <button type="button" id="deleted-chats-open" class="ghost rail-deleted">Recently deleted</button>
     </div>
@@ -484,6 +484,15 @@
     <form id="composer" class="composer" autocomplete="off">
       <!-- PLAN AN.48 (D173; owner, 10 Nov 2026: "make the chatbox like Claude one"): one slim box - the plus on its left, the
            brief, then Send and the mic on its right - and under it, in small words, the model and the effort for the message. -->
+      <div class="start-matter">
+        <h1>Start a matter</h1>
+        <p>Describe the matter, ask a legal question, or attach a document.</p>
+        <details id="resume-work">
+          <summary>Resume recent work</summary>
+          <div id="recent-work-list" aria-live="polite"></div>
+          <button type="button" class="ghost" id="all-work" aria-controls="rail">View all recent work</button>
+        </details>
+      </div>
       <div class="composer-box">
         <!-- PLAN AN.42 (D77): what is written while NM works on an answer waits here, a line each, and goes once the answer is
              done; Edit puts a message back in the box below, Discard removes it. -->
@@ -503,7 +512,7 @@
                 <path d="M10 4v12M4 10h12" fill="none" stroke="currentColor" stroke-width="1.8"
                       stroke-linecap="round"/>
               </svg>
-              <span class="sr-only">Attach documents, photos or recordings, or record a voice note</span>
+              <span>Attach</span>
             </button>
             <div id="plus-panel" class="plus-panel" role="menu" hidden>
               <button type="button" role="menuitem" id="plus-attach">Attach documents, photos or recordings</button>
@@ -516,6 +525,7 @@
                for its files, it is a turning ring with a stop in its middle; words typed or a file attached meanwhile bring
                the arrow back. -->
           <button type="submit" class="send-button" id="send" data-state="send" aria-label="Send" title="Send">
+            <span id="send-label" aria-hidden="true">Send</span>
             <svg class="send-arrow" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">
               <path d="M15.5 4.5v5a2.5 2.5 0 0 1-2.5 2.5H4.8M8.4 8.4 4.8 12l3.6 3.6" fill="none" stroke="currentColor"
                     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -537,7 +547,7 @@
               <path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" fill="none" stroke="currentColor"
                     stroke-width="1.6" stroke-linecap="round"/>
             </svg>
-            <span class="sr-only">Dictate the brief</span>
+            <span>Dictate</span>
           </button>
         </div>
       </div>

@@ -29,6 +29,8 @@ class Element {
     this._text = '';
   }
   get textContent() { return this._text + this.children.map((child) => child.textContent).join(''); }
+  // The element a row is in, as the DOM's parentElement says (a failed open is said in the row's own list).
+  get parentElement() { return this.parent; }
   set textContent(value) { this.children.forEach((c) => { c.parent = null; }); this.children = []; this._text = String(value); }
   adopt(nodes) { nodes.forEach((node) => { if (node.parent) node.remove(); node.parent = this; }); }
   replaceChildren(...nodes) { this.children.forEach((c) => { c.parent = null; }); this.children = []; this._text = ''; this.append(...nodes); }

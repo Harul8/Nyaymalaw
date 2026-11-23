@@ -942,7 +942,7 @@ function historyChatRow(chat, generation, session) {
       if (selectedGeneration !== state.railGeneration
           || session !== state.sessionGeneration
           || generation !== state.matterListGeneration) return;
-      $('rail-body').prepend(stateBlock('unbuildable', `The chat could not be read: ${error.message}`));
+      row.parentElement?.prepend(stateBlock('unbuildable', `The chat could not be read: ${error.message}`));
     });
   };
   row.onclick = open;
@@ -5027,6 +5027,7 @@ function updateWorkspace() {
   syncBoardStatus();
   $('pane-advise').classList.toggle('empty-chat',
     $('pane-advise').dataset.view === 'opening' && !state.turns.length);
+  if (!$('pane-advise').classList.contains('empty-chat')) $('resume-work').open = false;
   paintSend();
   markAddress();
 }
@@ -6355,6 +6356,7 @@ function paintSend() {
   button.dataset.state = look === 'queue' ? 'send' : look;
   button.setAttribute('aria-label', SEND_LOOKS[look]);
   button.title = SEND_LOOKS[look];
+  $('send-label').textContent = { send: 'Send', queue: 'Queue', working: 'Stop', waiting: 'Cancel send' }[look];
   button.disabled = look === 'send' && usageUsedUp();
   renderQueued();
 }
@@ -6826,6 +6828,30 @@ async function loadTurnChoices() {
 // every conversation (owner, 16 Oct 2026).
 $('top-new').addEventListener('click', () => startMatter());
 $('top-history').addEventListener('click', () => openTab('advise'));
+$('all-work').addEventListener('click', () => openTab('advise'));
+$('resume-work').addEventListener('toggle', async (event) => {
+  const disclosure = event.currentTarget;
+  const list = $('recent-work-list');
+  if (!disclosure.open) {
+    list.replaceChildren();
+    return;
+  }
+  const session = state.sessionGeneration;
+  const generation = ++state.matterListGeneration;
+  const current = () => disclosure.open && session === state.sessionGeneration
+    && generation === state.matterListGeneration;
+  list.textContent = 'Loading recent work…';
+  try {
+    const data = await api('/api/work?limit=3&offset=0');
+    if (!current()) return;
+    const rows = data.chats.map((chat) => historyChatRow(chat, generation, session));
+    if (data.state !== 'ok') rows.unshift(stateBlock('unbuildable', 'Some recent work could not be loaded.'));
+    if (!rows.length) rows.push(stateBlock('empty', 'No recent work yet.'));
+    list.replaceChildren(...rows);
+  } catch {
+    if (current()) list.textContent = 'Recent work is unavailable. Open the full list to try again.';
+  }
+});
 
 /* THE GATE RUNS FIRST.
  *

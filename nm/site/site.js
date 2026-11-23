@@ -173,6 +173,9 @@
     ui.toggle.setAttribute('aria-label', `Your account: ${name}`);
     ui.toggle.disabled = false;
     account.removeAttribute('aria-busy');
+    const workspace = make('a', 'signin workspace-link', 'Open workspace');
+    workspace.href = WORKSPACE;
+    account.prepend(workspace);
     workspaceLinks();
   }
 
