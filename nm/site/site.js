@@ -93,7 +93,8 @@
     const title = make('p', 'acct-title', 'Signed in');
     const who = make('p', 'acct-who');
     const mail = make('p', 'acct-mail');
-    const open = make('a', 'btn primary', 'Open the app');
+    // D333 (plan AN.74): one name for the way into the workspace, the words of O28.
+    const open = make('a', 'btn primary', 'Open your workspace');
     open.href = WORKSPACE;
     const out = make('button', 'btn secondary acct-signout', 'Sign out');
     out.type = 'button';
@@ -173,7 +174,7 @@
     ui.toggle.setAttribute('aria-label', `Your account: ${name}`);
     ui.toggle.disabled = false;
     account.removeAttribute('aria-busy');
-    const workspace = make('a', 'signin workspace-link', 'Open workspace');
+    const workspace = make('a', 'signin workspace-link', 'Open your workspace');
     workspace.href = WORKSPACE;
     account.prepend(workspace);
     workspaceLinks();

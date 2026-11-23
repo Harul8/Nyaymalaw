@@ -36,6 +36,8 @@ const state = {
   // loses the right to paint or close anything.
   railGeneration: 0,
   matterListGeneration: 0,
+  // The opening view's short list of recent work (plan AN.77, D333) owns its own, so neither list cancels the other's loading.
+  recentWorkGeneration: 0,
   sessionGeneration: 0,
   sessionsGeneration: 0,
 };
@@ -320,6 +322,7 @@ function clearPrivileged() {
   activeIntent = null;
   state.railGeneration += 1;
   state.matterListGeneration += 1;
+  state.recentWorkGeneration += 1;
   state.advocate = null;
   state.workspace = null;
   state.turns = [];
@@ -911,7 +914,9 @@ function historyTitle(chat) {
   return words.length ? words.slice(0, 10).join(' ') + (words.length > 10 ? '…' : '') : 'Conversation';
 }
 
-function historyChatRow(chat, generation, session) {
+// counter: the state's generation the list this row is in belongs to - the history list's, or the short list's of recent work
+// (plan AN.77, D333).
+function historyChatRow(chat, generation, session, counter = 'matterListGeneration') {
   const row = document.createElement('div');
   row.className = 'row';
   row.dataset.chatId = chat.chat_id;
@@ -941,7 +946,7 @@ function historyChatRow(chat, generation, session) {
     return selection.catch((error) => {
       if (selectedGeneration !== state.railGeneration
           || session !== state.sessionGeneration
-          || generation !== state.matterListGeneration) return;
+          || generation !== state[counter]) return;
       row.parentElement?.prepend(stateBlock('unbuildable', `The chat could not be read: ${error.message}`));
     });
   };
@@ -6829,29 +6834,33 @@ async function loadTurnChoices() {
 $('top-new').addEventListener('click', () => startMatter());
 $('top-history').addEventListener('click', () => openTab('advise'));
 $('all-work').addEventListener('click', () => openTab('advise'));
-$('resume-work').addEventListener('toggle', async (event) => {
-  const disclosure = event.currentTarget;
+$('resume-work').addEventListener('toggle', (event) => showRecentWork(event.currentTarget));
+
+// START OR RESUME (plan AN.77; D333): the opening view's short list of the three most recent conversations, loaded when it is
+// opened and emptied when it is closed. It keeps its own generation (state.recentWorkGeneration), so opening it never cancels the
+// history list's loading, nor that list this one's; a reply that comes after the list was closed or opened again paints nothing.
+async function showRecentWork(disclosure) {
   const list = $('recent-work-list');
   if (!disclosure.open) {
     list.replaceChildren();
     return;
   }
   const session = state.sessionGeneration;
-  const generation = ++state.matterListGeneration;
+  const generation = ++state.recentWorkGeneration;
   const current = () => disclosure.open && session === state.sessionGeneration
-    && generation === state.matterListGeneration;
+    && generation === state.recentWorkGeneration;
   list.textContent = 'Loading recent work…';
   try {
     const data = await api('/api/work?limit=3&offset=0');
     if (!current()) return;
-    const rows = data.chats.map((chat) => historyChatRow(chat, generation, session));
+    const rows = data.chats.map((chat) => historyChatRow(chat, generation, session, 'recentWorkGeneration'));
     if (data.state !== 'ok') rows.unshift(stateBlock('unbuildable', 'Some recent work could not be loaded.'));
     if (!rows.length) rows.push(stateBlock('empty', 'No recent work yet.'));
     list.replaceChildren(...rows);
   } catch {
     if (current()) list.textContent = 'Recent work is unavailable. Open the full list to try again.';
   }
-});
+}
 
 /* THE GATE RUNS FIRST.
  *

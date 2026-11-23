@@ -64,13 +64,13 @@ const all = (root) => root.children.flatMap((child) => [child, ...all(child)]);
 const find = (root, test) => all(root).find(test);
 const has = (node, name) => node.className.split(' ').includes(name);
 const within = (root, name) => find(root, (node) => has(node, name));
-// Once the server says who is signed in, the account area holds an Open workspace link and then the person control (plan AN.74,
-// AN.77; 23 Nov 2026): exactly one of each, however often the page asks. The control is returned.
+// Once the server says who is signed in, the account area holds an Open your workspace link and then the person control (plan
+// AN.74, AN.77; D333: one name for the way in): exactly one of each, however often the page asks. The control is returned.
 function signedIn(account) {
-  assert.equal(account.children.length, 2, 'the Open workspace link and the person control');
+  assert.equal(account.children.length, 2, 'the Open your workspace link and the person control');
   const [workspace, control] = account.children;
   assert.equal(workspace.tag, 'a');
-  assert.equal(workspace.textContent, 'Open workspace');
+  assert.equal(workspace.textContent, 'Open your workspace');
   assert.equal(workspace.getAttribute('href'), '/app');
   return control;
 }
@@ -245,7 +245,7 @@ const signedInAnswer = (url) => (url === '/api/session' ? Promise.resolve(reply(
   assert.equal(within(control, 'acct-title').textContent, 'Signed in');
   assert.equal(d.account.getAttribute('aria-busy'), null);
   const open = find(control, (node) => node.tag === 'a');
-  assert.equal(open.textContent, 'Open the app');
+  assert.equal(open.textContent, 'Open your workspace', 'D333: the menu says the one name too');
   assert.equal(open.getAttribute('href'), '/app');
   assert.equal(within(control, 'acct-signout').textContent, 'Sign out');
   assert.equal(within(control, 'acct-status').getAttribute('role'), 'status');

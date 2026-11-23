@@ -38,6 +38,8 @@ PAGE_TESTS = [
     "a_step_watch_hears_its_own_step.mjs",
     # Plan AN.48 (D305): a reload reopens the conversation in progress, named in the page's address.
     "a_reload_reopens_the_conversation.mjs",
+    # Plan AN.77 (D333): the short list of recent work keeps its own generation; the Attach button says in full what it does.
+    "start_or_resume.mjs",
 ]
 #: Run, with the cases it is given, by tests/test_the_screen_never_folds_a_disclosure.py.
 RUN_ELSEWHERE = {"render_turn_partition.mjs"}
