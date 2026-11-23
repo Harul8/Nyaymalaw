@@ -6,7 +6,7 @@ runs no step and calls no model. A message at a guided stop is read with the who
 follow-up is not taken through intake again. Offline: the scripted served application; the words are invented; not browser QA."""
 from nm.core_engine import message_reader, steps
 from nm.core_engine.conversation import chat_matter_id, shown_of, stored_chat
-from tests.guided import ACTS_FOR
+from tests.guided import ACTS_FOR, intake
 from tests.test_a_follow_up_starts_from_the_last_understanding import reader_says
 from tests.test_a_message_while_a_matter_waits import Reader, judged, reading
 from tests.test_core_answer_sections import Scripted, scripted_answers
@@ -44,8 +44,9 @@ def guide(served, card, **over):
     return served.client.post("/api/turn/guide", json=body)
 
 
-def go(served, choice):
-    return served.client.post("/api/turn/go", json={"chat_id": CHAT, "turn_id": "turn-1", "choice": choice})
+def go(served, choice, disputes=None):
+    return served.client.post("/api/turn/go", json={"chat_id": CHAT, "turn_id": "turn-1", "choice": choice,
+                                                    **({"disputes": disputes} if disputes else {})})
 
 
 def say(served, words):
@@ -206,6 +207,36 @@ def test_a_message_that_asks_to_be_worked_straight_through_is_not_guided(served)
     served.model.way, served.model.way_reading = "end_to_end", "Work the whole matter through."
     reply = served.client.post("/api/turn", json=STATED)
     assert reply.status_code == 200, reply.text
+
+
+def test_after_intake_one_chosen_dispute_is_researched_then_analysed_and_the_next_is_offered(served):
+    """Plan AN.65-AN.66 (D313, D314) after guided intake: the advocate's chosen dispute is researched alone, then its analysis -
+    with the account of what the client must prove, what to get and what the other side relies on (the case step) - is written
+    for it alone; the stop after it offers the other dispute and the finish, and calls no model."""
+    sent(served)
+    assert intake(served.client, CHAT)["after"] == "understood"
+    calls = counted(served)
+    assert go(served, "research", ["D1"]).json()["detail"]["code"] == "waiting"
+    assert set(held(served)["steps"]["parts"]) == {"D1"} and stop(served)["after"] == "researched"
+    assert not [operation for operation in calls if operation.startswith("core_case")], "no analysis before its go-ahead"
+    researched = len(calls)
+    assert go(served, "write", ["D1"]).json()["detail"]["code"] == "waiting"
+    assert "core_response_writer" in calls[researched:], "the analysis written"
+    card = stop(served)
+    assert card["after"] == "written"
+    assert card["disputes"] == [{"id": "D1", "name": "Dispute 1", "researched": True, "written": True},
+                                {"id": "D2", "name": "Dispute 2", "researched": False, "written": False}]
+    offered = [(option["choice"], option["disputes"]) for option in card["gos"]]
+    assert ("research", ["D2"]) in offered and ("done", None) in offered, "the next dispute offered, or the finish"
+    shown = len(calls)
+    stop(served)
+    assert len(calls) == shown, "the stop and its offer call no model"
+    answered = held(served)["steps"]["answered"]["sections"]
+    assert [section.get("dispute_id") for section in answered] == ["D1"], "the other dispute untouched"
+    # The case step (AN.35, D290, D291) is kept with the analysis: its account of what the client must prove, what to get and what
+    # the other side relies on, for the chosen dispute alone.
+    case, = [section["case"] for section in answered]
+    assert case["dispute_id"] == "D1" and case["contract"].startswith("core_case")
 
 
 def test_a_confirmation_stands_for_each_dispute_left_exactly_as_it_was_confirmed():
