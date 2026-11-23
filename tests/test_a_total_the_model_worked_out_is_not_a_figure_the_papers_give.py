@@ -189,3 +189,18 @@ def test_a_saved_plan_is_picked_up_as_it_was_saved():
     saved["understanding"]["facts"][0]["fact"] = "The invoices total 55 kg."
     admitted = research.accept(saved, turn("Find the applicable law."))
     assert admitted["issues"] == [] and admitted["proposal"]["understanding"]["facts"][0]["fact"] == "The invoices total 55 kg."
+
+
+def test_a_number_a_paper_writes_without_a_unit_is_its_figure_and_a_worked_out_total_still_is_not():
+    """Plan AN.79 (D338, invented): the D334 run's understanding gave 'Rs. 25,000' a month for a message offering '25,000 every
+    month', and the check refused it as worked out - a number with no unit beside it was not counted as the papers' figure. The
+    same number written bare in a message or a paper now is; a total nobody wrote is refused as before, and a number standing
+    with another unit is that figure, not a bare one."""
+    chat = page("chat.pdf", 3, "I will pay slowly as business improves, maybe 25,000 every month. Received 50,000 on 28/10/2026.")
+    ctx = papers(chat, said="Find the applicable law. The loan was Rs. 4,50,000.")
+    assert refused("The borrower offered Rs. 25,000 a month and paid Rs. 50,000 of the Rs. 4,50,000 lent.", ctx) == []
+    (found,) = refused("Of the Rs. 4,50,000 lent, Rs. 4,00,000 remains after the payment.", ctx)
+    assert "'Rs. 4,00,000'" in found["problem"] and found["fix"] == FIGURE_FIX
+    (found,) = refused("A payment of Rs. 25 was made.", papers(said="Find the applicable law. The first invoice shows 25 kg."))
+    assert "'Rs. 25'" in found["problem"], "25 stands with kg beside it: that is 25 kg, not a bare 25"
+    assert figures.bare_numbers_in("maybe 25,000 every month; 30 kg; Rs.1,260 and 7") == {25000, 7}

@@ -981,11 +981,14 @@ def _figure_problems(understanding, context):
     AN.27, P23; AN.29, D9; invariant I6). Counting is code's work (figures.py adds the papers' transactions): a total, a difference or
     an estimate that a model worked out is refused to it, in words, and left out when it revises. A figure is a number with a unit
     beside it (figures.quantities_in); it is the papers' own if the same number stands against the same unit, or the same amount of
-    the same kind, in a message or a paper. One problem for each figure, naming every place it is stated. What an earlier note of
+    the same kind, or the same number with no unit beside it (AN.79, D338), in a message or a paper. One problem for each figure, naming every place it is stated. What an earlier note of
     ours or a record of the matter holds is not a message or a paper."""
     sources = [row["text"] for row in advocate_messages(context)] + [row["text"] for row in context.get("documents", ())]
-    pairs, amounts = set(), set()
+    pairs, amounts, bare = set(), set(), set()
     for text in sources:
+        # Plan AN.79 (D338): the same number a message or paper writes with no unit beside it ('25,000 every month') is the
+        # papers' own figure too; the D334 run refused 'Rs. 25,000' for it.
+        bare |= figures.bare_numbers_in(" ".join(text.split()))
         for _, number, unit in figures.quantities_in(" ".join(text.split())):
             value = figures.number_of(number)
             if value is not None:
@@ -996,7 +999,8 @@ def _figure_problems(understanding, context):
         for place, text in _words_of(item, _PLACES.get(name, f"the {name.replace('_', ' ')}"), name):
             for words, number, unit in figures.quantities_in(" ".join(text.split())):
                 value = figures.number_of(number)
-                if value is None or (unit, value) in pairs or (figures.UNITS[unit].dimension, value * figures.UNITS[unit].size) in amounts:
+                if (value is None or value in bare or (unit, value) in pairs
+                        or (figures.UNITS[unit].dimension, value * figures.UNITS[unit].size) in amounts):
                     continue
                 kept = stated.setdefault((unit, value), {"words": words, "places": []})
                 if place not in kept["places"]:

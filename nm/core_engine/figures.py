@@ -335,6 +335,23 @@ def quantities_in(text):
     return out
 
 
+_BARE = re.compile(rf"(?<![\w.,]){_NUMBER}(?!\w)")
+
+
+def bare_numbers_in(text):
+    """Each number some words write in digits with no unit of the table beside it ('maybe 25,000 every month'), as Fractions (plan
+    AN.79, D338): a figure the understanding gives with a unit is the papers' own where a message or a paper writes the same number
+    so. A number standing with a unit is that figure, not a bare one."""
+    figured = [(match.start(), match.end()) for pattern in (_UNIT_NUMBER, _NUMBER_UNIT) for match in pattern.finditer(text)]
+    found = set()
+    for match in _BARE.finditer(text):
+        if not any(start <= match.start() and match.end() <= end for start, end in figured):
+            value = number_of(match.group(0))
+            if value is not None:
+                found.add(value)
+    return found
+
+
 # --- identity ------------------------------------------------------------------------------------------------------------------
 
 def _tidy(text, keep=""):
