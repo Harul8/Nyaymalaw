@@ -56,13 +56,15 @@ FINISHING = frozenset({"core_response_cross_check", "core_response_overview"})
 #: Plan AN.62-AN.64: the go-aheads that settle a guided stop and move the matter to its next stop without a step run - That is
 #: right (the read-back), Propose the disputes (the offer) and Confirm the disputes (D312).
 MOVES = {"right": READ, "identify": OFFER, "confirm": PROPOSED}
-GOS = ("next", "research", "write", "end_to_end", "done", "search_again", *MOVES)
+#: Plan AN.67 (23d2, D331): "draft" - the draft of a held template, for a dispute whose analysis is written and whose research
+#: rests on it, offered by code and written only on the advocate's go-ahead.
+GOS = ("next", "research", "write", "end_to_end", "done", "search_again", "draft", *MOVES)
 _FIELDS = {"mode", "allowed", "n", "waiting"}
 #: What a go-ahead record may add (48b: the disputes named; 48c: the messages heard while the matter waited; 48e: each step's
 #: tentative time beside the time it took; D175: how a follow-up's turn started; D287: a message worked straight through as it
 #: asked; D282: the dispute whose failed searches are made again; AN.62-AN.64: guided intake - what is settled, whom the advocate
 #: acts for and the disputes confirmed).
-_ADDED = ({"disputes"}, {"heard"}, {"times"}, {"recheck"}, {"proposed"}, {"taken"}, {"way"}, {"again"}, {"guided"})
+_ADDED = ({"disputes"}, {"heard"}, {"times"}, {"recheck"}, {"proposed"}, {"taken"}, {"way"}, {"again"}, {"guided"}, {"draft"})
 #: Guided intake's record: the stops settled by a go-ahead (the read-back, the offer), the parties the advocate acts for with the
 #: words of their own message that say so (D328), and each confirmed dispute with the fingerprint of the dispute as confirmed (D312).
 _GUIDED = {"settled", "client", "confirmed"}
@@ -129,8 +131,8 @@ def valid(go):
                 and _taken_valid(go.get("taken"))
                 and _way_valid(go.get("way"))
                 and _guided_valid(go.get("guided"))
-                and (go.get("again") is None or isinstance(go["again"], list) and len(go["again"]) == 1
-                     and isinstance(go["again"][0], str) and bool(go["again"][0].strip()))
+                and all(go.get(key) is None or isinstance(go[key], list) and len(go[key]) == 1
+                        and isinstance(go[key][0], str) and bool(go[key][0].strip()) for key in ("again", "draft"))
                 and isinstance(heard, list)
                 and all(isinstance(entry, dict) and set(entry) == _HEARD and all(isinstance(entry[key], str) for key in _HEARD)
                         and entry["text"].strip() for entry in heard)
@@ -406,6 +408,36 @@ def state_of(steps):
             "researched": {WHOLE} if understood and set(groups) <= kept else set(), "written": {WHOLE} if shown else set()}
 
 
+def part_of(steps, name):
+    """The saved research of one dispute of a matter, by its name in state_of's order (WHOLE: the one dispute an answer written
+    as a whole researched); None where it has none."""
+    parts = (steps or {}).get("parts") or {}
+    if name == WHOLE:
+        return next(iter(parts.values())) if len(parts) == 1 else None
+    return parts.get(name)
+
+
+def draftable(steps):
+    """Plan AN.67 (23d2, D331): each dispute, in the matter's order, whose analysis is written, whose saved research rests on a held
+    template (drafting.rests_on: its Act and section chosen by the research) and which has no draft yet - with that template,
+    the first NM holds. Code's, from the saved record alone; no model is asked."""
+    from nm.core_engine import drafting  # imported here: drafting reads the research, which imports what reads these records
+    state = state_of(steps)
+    drafted = (steps or {}).get("drafts") or {}
+    found = []
+    for name in state["order"]:
+        part = part_of(steps, name)
+        if name not in state["written"] or name in drafted or part is None:
+            continue
+        try:
+            templates = drafting.rests_on(part)
+        except (KeyError, TypeError, AttributeError):
+            continue
+        if templates:
+            found.append((name, templates[0]))
+    return found
+
+
 def _left(state):
     """The disputes still to research, and those researched still to write, in the matter's order."""
     unresearched = [name for name in state["order"] if name not in state["researched"]]
@@ -469,6 +501,16 @@ def given(go, choice, *, held, disputes=None, at=None):
             name = disputes[0]
         return {"mode": MODE, "allowed": ["research", "write"] if name in state["written"] else ["research"], "n": go["n"] + 1,
                 "waiting": None, "disputes": None if state["whole"] else [name], "again": [name], **_carried(go)}
+    if choice == "draft":
+        # Plan AN.67 (23d2, D331): the draft the stop offers for one dispute whose analysis is written - the run drafts it and
+        # stops again where it was; nothing else is done.
+        if state["whole"] and disputes is not None:
+            raise ValueError("The draft is for the whole answer")
+        names = [WHOLE] if state["whole"] else disputes or []
+        if len(names) != 1 or names[0] not in dict(draftable(held.get("steps"))):
+            raise ValueError("NM offers no draft for that dispute")
+        return {"mode": MODE, "allowed": ["write"], "n": go["n"] + 1, "waiting": None,
+                "disputes": None if state["whole"] else names, "draft": names, **_carried(go)}
     if choice == "next":
         if unwritten:
             choice, eligible = "write", unwritten
@@ -542,6 +584,8 @@ class Gate:
         self.proposed = [] if go is None else list(go.get("proposed") or ())
         #: Plan AN.52 (D282): the dispute (WHOLE: the answer written as a whole) whose failed searches this run makes again.
         self.again = [] if go is None else list(go.get("again") or ())
+        #: Plan AN.67 (23d2, D331): the dispute (WHOLE: the answer written as a whole) whose draft this run writes, and nothing else.
+        self.draft = [] if go is None else list(go.get("draft") or ())
     @property
     def guided(self):
         """AN.62-AN.64: a matter in guided intake, which stops once understood at its first guided stop not yet settled - as this
@@ -675,6 +719,10 @@ def card(held, asked=None):
             gos.append({"choice": "research", "disputes": None, "said": "Research all disputes"})
         if len(unwritten) > 1:
             gos.append({"choice": "write", "disputes": None, "said": "Write all researched"})
+    # Plan AN.67 (23d2, D331): each written analysis whose research rests on a held template, not yet drafted, offers its draft.
+    gos += [{"choice": "draft", "disputes": None if state["whole"] else [name],
+             "said": f"Draft: {template['title']}" + ("" if state["whole"] else f" ({names[name]})")}
+            for name, template in draftable(steps)]
     if unresearched or unwritten:
         gos.append({"choice": "end_to_end", "disputes": None, "said": "End to end"})
     gos.append({"choice": "done", "disputes": None, "said": (

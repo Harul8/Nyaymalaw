@@ -47,6 +47,11 @@ _ADDED_FIELDS = _STEPPED_FIELDS | {"added"}
 #: limits, each dispute's research by its id, each dispute's case by the index of its section, and what the answer has shown - its
 #: sections done, the check across them and the overview (the answering's own state). None, or empty, until the step finishes.
 STEPS = ("understood", "limits", "parts", "cases", "answered")
+#: Plan AN.67 (23d2, D331): after them, where a draft was asked for at a stop, each dispute's drafts by its name (steps.state_of's;
+#: the whole answer's by steps.WHOLE), each version in the order written. Steps without it are read as before.
+DRAFTED_STEPS = (*STEPS, "drafts")
+#: The most versions of one dispute's draft a turn keeps (23d4: each change the advocate asks for is the next version).
+MOST_DRAFTS = 20
 #: Why a turn stopped part-way (D69), by code's own name for it; turn.STOPS owns the words said for each.
 _STOP_CODE = re.compile(r"[a-z][a-z_]{0,40}\Z")
 #: What a turn has asked the advocate while it works (plan AN.37, D37-D40), sealed with the conversation as it is asked and as
@@ -320,7 +325,8 @@ def shown_of(matter, *, copied=True):
 def _sent_valid(held):
     """The form of a turn being worked on (AN.41): each step present, empty until it finishes, and why it stopped by its code."""
     steps, stopped = held["steps"], held["stopped"]
-    return (isinstance(steps, dict) and tuple(steps) == STEPS
+    return (isinstance(steps, dict) and tuple(steps) in (STEPS, DRAFTED_STEPS)
+            and _drafts_valid(steps.get("drafts", {}))
             and (steps["understood"] is None or isinstance(steps["understood"], dict)
                  and set(steps["understood"]) == {"interpretation", "plan"} and isinstance(steps["understood"]["plan"], dict))
             and (steps["limits"] is None or isinstance(steps["limits"], dict))
@@ -348,6 +354,14 @@ def _added_valid(added):
                         and _nonempty(entry["corrects"]["value"]) for entry in added))
     except (KeyError, TypeError):
         return False
+
+
+def _drafts_valid(drafts):
+    """The form of a turn's drafts (plan AN.67, 23d2): by the name of a dispute, its versions, each a saved draft's record, which
+    drafting.validate checks again in full wherever a draft is used."""
+    return (isinstance(drafts, dict) and all(isinstance(name, str) and name.strip() for name in drafts)
+            and all(isinstance(versions, list) and 0 < len(versions) <= MOST_DRAFTS
+                    and all(isinstance(version, dict) for version in versions) for versions in drafts.values()))
 
 
 def _steers_valid(steers):

@@ -15,6 +15,7 @@ from nm.core_engine import message_reader, steps as stepwise
 from nm.core_engine.retrieval import HybridSearcher
 from nm.shared import step_record_store
 from nm.shared.step_record_store import _SQL_V2, VERSION, FileStepRecords
+from tests.guided import intake
 from tests.test_a_message_while_a_matter_waits import CHAT, SENT, held
 from tests.test_additions_are_the_advocates_messages import go
 from tests.test_core_answer_sections import Scripted, scripted_answers
@@ -56,6 +57,7 @@ def test_a_failed_search_is_offered_again_never_made_again_by_itself_and_made_ag
     scripted_answers(served, scripted)
     asked, fail = failing(monkeypatch, served)
     assert served.client.post("/api/turn", json=SENT).json()["detail"]["code"] == "waiting"
+    intake(served.client, CHAT)  # AN.62-AN.64: a new matter is taken through guided intake first
     work = held(served)["steps"]["understood"]["plan"]["work"]
     lost = next(item["id"] for item in work if item["dispute"]["id"] == "D1")
     fail[0] = {lost}
@@ -94,6 +96,7 @@ def test_search_again_is_refused_where_no_search_failed_and_names_one_dispute(se
     scripted_answers(served, Scripted())
     asked, fail = failing(monkeypatch, served)
     assert served.client.post("/api/turn", json=SENT).json()["detail"]["code"] == "waiting"
+    intake(served.client, CHAT)  # AN.62-AN.64: a new matter is taken through guided intake first
     assert go(served, "search_again", ["D1"]).json()["detail"]["code"] == "not_offered", "nothing researched yet"
     assert go(served, "research").json()["detail"]["code"] == "waiting"
     assert go(served, "search_again", ["D1"]).json()["detail"]["code"] == "not_offered", "no search failed"
@@ -105,6 +108,7 @@ def test_an_answer_written_as_a_whole_is_searched_again_as_a_whole(served, monke
     served.model.disputes = 1
     asked, fail = failing(monkeypatch, served)
     assert served.client.post("/api/turn", json=SENT).json()["detail"]["code"] == "waiting"
+    intake(served.client, CHAT)  # AN.62-AN.64: a new matter is taken through guided intake first
     fail[0] = {item["id"] for item in held(served)["steps"]["understood"]["plan"]["work"]}
     assert go(served, "research").json()["detail"]["code"] == "waiting"
     assert offered(served)[-1] == {"choice": "search_again", "disputes": None, "said": "Search again"}
@@ -116,8 +120,12 @@ def test_an_answer_written_as_a_whole_is_searched_again_as_a_whole(served, monke
 
 
 def test_every_list_of_go_aheads_knows_search_again():
-    assert set(stepwise.GOS) == set(step_record_store.CHOICES) == set(get_args(TurnGo.model_fields["choice"].annotation))
-    assert set(message_reader.CHOICES) == set(stepwise.GOS)
+    # The guided stops' own moves (AN.62-AN.64) go by their own route and are never a step's record; the reader also reads a
+    # batch of disputes as its step (D309).
+    taken = set(stepwise.GOS) - set(stepwise.MOVES)
+    assert "search_again" in taken and "draft" in taken
+    assert taken == set(step_record_store.CHOICES) == set(get_args(TurnGo.model_fields["choice"].annotation))
+    assert set(message_reader.CHOICES) == set(stepwise.GOS) | set(message_reader.BATCH_CHOICES)
 
 
 def test_a_version_two_step_store_is_carried_over_with_its_records_as_they_were(tmp_path):
@@ -129,7 +137,7 @@ def test_a_version_two_step_store_is_carried_over_with_its_records_as_they_were(
                    ("a@example.test", "t1", "c1", "go", "write", '["D1"]', "f" * 64, 0, "2027-03-01T09:00:00+00:00"))
     records = FileStepRecords(path)
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == VERSION == 3
+        assert db.execute("PRAGMA user_version").fetchone()[0] == VERSION == 4
     (kept,) = records.left()
     assert kept["choice"] == "write" and kept["taken_at"] == "2027-03-01T09:00:00+00:00" and kept["disputes"] == ["D1"]
     records.taken("a@example.test", "t2", route="go", chat_id="c1", choice="search_again", disputes=["D1"], session="f" * 64)

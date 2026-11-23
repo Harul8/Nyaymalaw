@@ -18,7 +18,7 @@ from dataclasses import replace
 from datetime import datetime, timezone
 
 from nm.core_engine import answer_sections, answer_sources, calculation, case_gathered, checklist, estimates, follow_up, questions
-from nm.core_engine import reasoning, replay_scope, research, response_rendering, response_writer
+from nm.core_engine import drafting, reasoning, replay_scope, research, response_rendering, response_writer
 from nm.core_engine import steps as stepwise, tentative, titles, understanding
 from nm.core_engine.calls import CorrectionUnavailable, OwnRequestRejected, ReleaseWithheld, StopRequested, TurnCalls
 from nm.core_engine.conversation import (
@@ -287,7 +287,7 @@ class _Later:
 
 
 #: What an answer starting afresh keeps of earlier work: nothing.
-_NOTHING_KEPT = {"understood": None, "limits": None, "parts": {}, "cases": {}, "answered": None}
+_NOTHING_KEPT = {"understood": None, "limits": None, "parts": {}, "cases": {}, "answered": None, "drafts": {}}
 _UNREADABLE = (ValueError, KeyError, TypeError, IndexError, SchemaViolation)
 
 
@@ -328,6 +328,8 @@ def _kept(steps, context, report, *, plan=None, steered=False):
             kept["limits"] = steps["limits"]
         except _UNREADABLE as exc:
             log.warning("The saved time limits were not kept and are worked out again: %s", type(exc).__name__)
+    # Plan AN.67 (23d2): each dispute's drafts, checked again from what they kept against its research and the time limits as kept.
+    kept["drafts"] = _drafts_kept(steps.get("drafts"), context, kept["parts"], kept["limits"])
     layout = response_writer.parts({"contract": research.CONTRACT, "plan": plan})
     disputes = {dispute["id"]: dispute for dispute in ((plan.get("proposal") or {}).get("understanding") or {}).get("disputes", ())}
     for key, case in steps["cases"].items():
@@ -369,6 +371,55 @@ def _kept(steps, context, report, *, plan=None, steered=False):
     return kept
 
 
+def _drafts_kept(drafts, context, parts, limits):
+    """Plan AN.67 (23d2, D331): a turn's drafts, each dispute's versions checked again from what they kept (drafting.validate)
+    against that dispute's research and the time limits; a dispute whose research is not kept, or a version of whose draft does
+    not pass, keeps none of its drafts - the stop offers its draft again."""
+    kept = {}
+    for name, versions in (drafts or {}).items():
+        part = stepwise.part_of({"parts": parts}, name)
+        if part is None:
+            continue
+        try:
+            sources = answer_sources.build(context, part)
+            kept[name] = [drafting.validate(version, context, sources, time_limits=limits) for version in versions]
+        except _UNREADABLE as exc:
+            log.warning("A dispute's saved draft was not kept: %s", type(exc).__name__)
+    return kept
+
+
+def _validate_drafts(drafts, context, record, limits):
+    """Plan AN.67 (23d2): the drafts an answer is saved with, each version checked again against its dispute's research in the
+    answer's own (research.part_of) and its time limits. ValueError where one does not pass or names no dispute it researched."""
+    groups = list(research.dispute_work(record["plan"]))
+    if not isinstance(drafts, dict) or not drafts:
+        raise ValueError("A saved answer's drafts are not of their form")
+    for name, versions in drafts.items():
+        dispute = groups[0] if name == stepwise.WHOLE and len(groups) == 1 else name
+        if dispute not in groups or not isinstance(versions, list) or not versions:
+            raise ValueError("A saved draft names no dispute the answer researched")
+        sources = answer_sources.build(context, research.part_of(record, dispute))
+        for version in versions:
+            drafting.validate(version, context, sources, time_limits=limits)
+
+
+def _draft(calls, context, kept, name, keep, report):
+    """Plan AN.67 (23d2, D331): the draft the advocate asked for at a stop, of the held template the dispute's research rests on
+    (drafting.rests_on) - written from the conversation, that research as kept and the time limits kept (drafting.write) and saved
+    as the dispute's draft - and the turn stops again where it was; nothing else is done. Research no longer kept, or a dispute
+    already drafted, drafts nothing."""
+    part = stepwise.part_of({"parts": kept["parts"]}, name)
+    templates = drafting.rests_on(part) if part is not None and name not in kept["drafts"] else []
+    if templates:
+        report("drafting")
+        record = drafting.write(calls, templates[0], context, answer_sources.build(context, part), time_limits=kept["limits"])
+        if keep is not None:
+            keep.draft(name, record)
+    else:
+        log.warning("A draft was asked for that the matter, as kept, does not offer; nothing was drafted")
+    raise stepwise.Waiting("written")
+
+
 def steps_from(held):
     """The steps of a turn saved in the earlier form - what it had shown and the activity it came from (P27) - so that Continue
     keeps them too (plan AN.41, D70): its understanding and plan, each dispute's research it had finished, its time limits and what
@@ -405,7 +456,10 @@ def activity_of(held, context):
     return {"contract": CONTRACT, "interpretation": steps["understood"]["interpretation"], "research": record,
             "sources": sources, "execution": execution_record(record),
             "calculation": steps["limits"] if steps["limits"] is not None else calculation.unavailable(LIMITS_UNFINISHED),
-            "rendering_contract": response_rendering.CASED_CONTRACT, **deepcopy(answered)}
+            "rendering_contract": response_rendering.CASED_CONTRACT, **deepcopy(answered),
+            # Plan AN.67 (23d2): with the drafts that pass their check again.
+            **({"drafts": drafts} if (drafts := _drafts_kept(steps.get("drafts"), context, steps["parts"], steps["limits"]))
+               else {})}
 
 
 class _Keeper:
@@ -525,6 +579,21 @@ class _Keeper:
 
     def part(self, dispute_id, part):
         self.later(lambda held: held.update(steps={**held["steps"], "parts": {**held["steps"]["parts"], dispute_id: part}}))
+
+    def draft(self, name, record):
+        """Plan AN.67 (23d2, D331): a dispute's draft, as its next version."""
+        def add(held):
+            drafts = dict(held["steps"].get("drafts") or {})
+            drafts[name] = [*drafts.get(name, ()), record]
+            held["steps"] = {**held["steps"], "drafts": drafts}
+        self.later(add)
+
+    def drafts_kept(self, drafts):
+        """Plan AN.67 (23d2): only the drafts that passed their check again."""
+        def keep(held):
+            steps = {key: value for key, value in held["steps"].items() if key != "drafts"}
+            held["steps"] = {**steps, **({"drafts": dict(drafts)} if drafts else {})}
+        self.later(keep)
 
     def parts_kept(self, parts):
         """After a steer (D79): only the research still answering the new plan is kept."""
@@ -685,7 +754,13 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
     if gate.again and resume and not steered and resume.get("understood") and not adding:
         resume, again = _searched_again(resume, gate.again, keep)
         started.update(again)
-    kept = _kept(resume, context, report) if resume and not steered else _NOTHING_KEPT
+    kept = _kept(resume, context, report) if resume and not steered else deepcopy(_NOTHING_KEPT)
+    if keep is not None and resume and (resume.get("drafts") or {}) != kept["drafts"]:
+        # Plan AN.67 (23d2): a draft that no longer passes its check again, or any draft after a steer, is not kept.
+        keep.drafts_kept(kept["drafts"])
+    if gate.draft:
+        # Plan AN.67 (23d2, D331): a go-ahead to draft drafts that dispute and stops again where it was.
+        _draft(calls, context, kept, gate.draft[0], keep, report)
     # Plan AN.48 (48h; D161-D162): the analyses written before the advocate's later messages are reviewed again from their own words
     # against everything said, and written again only where the review finds them wanting - in the next run that writes or
     # finishes; until then they stay as they were checked.
@@ -827,7 +902,9 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
     elements = response_rendering.render_sections(context, record, sources, sections=sections, cross_check=crossed,
                                                   overview=overview, time_limits=limits,
                                                   contract=response_rendering.CASED_CONTRACT)
-    activity = {**base(record, sources, execution), "sections": sections, "cross_check": crossed, "overview": overview}
+    activity = {**base(record, sources, execution), "sections": sections, "cross_check": crossed, "overview": overview,
+                # Plan AN.67 (23d2): the drafts kept are saved with the answer.
+                **({"drafts": kept["drafts"]} if kept.get("drafts") else {})}
     kept = calls.estimate()
     if kept["passed"]:
         # D45: recorded for diagnostics; the answer is saved as it would be.
@@ -971,6 +1048,8 @@ def _validate_sections(activity, context, elements):
         raise ValueError("Saved sources or operation evidence changed")
     answer_sections.validate(activity, context, record, sources, limits, kept=activity["contract"] in _KEEPS,
                              looked=activity["contract"] in _LOOKS)
+    if "drafts" in activity:
+        _validate_drafts(activity["drafts"], context, record, limits)
     rebuilt = response_rendering.render_sections(context, record, sources, sections=activity["sections"],
                                                  cross_check=activity["cross_check"], overview=activity["overview"],
                                                  time_limits=limits, contract=activity["rendering_contract"])
@@ -988,7 +1067,9 @@ def known_activity(activity):
     if version == UNANSWERED_CONTRACT:
         return set(activity) == {"contract"}
     if version in SECTIONED:
-        return set(activity) == _SECTIONED_FIELDS and rendering == _RENDERINGS[version]
+        # Plan AN.67 (23d2): the current version's answer may be saved with its drafts.
+        return (set(activity) == _SECTIONED_FIELDS or version == CONTRACT and set(activity) == _SECTIONED_FIELDS | {"drafts"}
+                ) and rendering == _RENDERINGS[version]
     expected_fields =(_ACTIVITY_FIELDS if version == LEGACY_CONTRACT else
                        _ACTIVITY_FIELDS | {"authority_evidence"} if version == AUTHORITY_CONTRACT else
                        _ACTIVITY_FIELDS | {"authority_evidence", "calculation"} if version == CALCULATION_CONTRACT

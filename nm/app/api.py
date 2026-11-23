@@ -52,7 +52,6 @@ from nm.core_engine import answer_sections
 from nm.core_engine.turn import LEGACY_CONTRACT as LEGACY_CORE_TURN, STOP_NEEDS, STOPS, activity_of, saved_rows
 from nm.core_engine import research, response_writer
 from nm.core_engine import steps as stepwise
-from nm.core_engine.retrieval import offered
 from nm.core_engine import checklist
 from nm.core_engine.retrieval import SearchUnavailable
 from nm.shared.citation_contracts import judgment_place, provision_label, statute_title
@@ -1978,11 +1977,12 @@ def continue_turn(req: TurnOf, advocate_id: Advocate, request: Request, backgrou
 class TurnGo(BaseModel):
     """The advocate's go-ahead at a stop of a matter worked step by step (plan AN.48, 48a3, 48b): the step, and for research or
     the analyses the disputes it is for (none: every dispute that step can now take); Search again (plan AN.52, D282) names the one
-    dispute whose failed searches are made again (none: the answer written as a whole)."""
+    dispute whose failed searches are made again (none: the answer written as a whole); Draft (plan AN.67, 23d2) names the one
+    dispute whose draft the stop offers (none: the answer written as a whole)."""
     model_config = ConfigDict(extra='forbid')
     chat_id: str = Field(min_length=1, max_length=200)
     turn_id: str = Field(min_length=1, max_length=200)
-    choice: Literal['next', 'research', 'write', 'end_to_end', 'done', 'search_again']
+    choice: Literal['next', 'research', 'write', 'end_to_end', 'done', 'search_again', 'draft']
     disputes: list[Annotated[str, Field(min_length=1, max_length=200)]] | None = Field(default=None, min_length=1, max_length=50)
 
 
@@ -2870,23 +2870,19 @@ def _work_of(held):
 def _law_found(part):
     """The sections of the Acts and the judgments one dispute's research chose (D68), by name, from its saved research: what the
     page lists as that dispute's research finishes. Never their text."""
-    chosen = {identity for kind in ('provision', 'judgment') for ids in research.chosen(part, kind).values() for identity in ids}
     found, seen = [], set()
-    for search in [*part['searches'].values(), *(search for _, search in research.further_searches(part))]:
-        for candidate in offered(search):
-            if candidate['id'] not in chosen:
-                continue
-            row = candidate.get('source') or {}
-            if candidate['kind'] == 'provision':
-                item = {'kind': 'provision', 'act': row.get('act_name') or row.get('act_id') or '',
-                        'section': str(row.get('section_number') or '')}
-            else:
-                item = {'kind': 'judgment', 'title': row.get('case_name') or row.get('case_id') or ''}
-            key = tuple(sorted(item.items()))
-            if key not in seen:
-                seen.add(key)
-                # The passage it opens in the reading pane, as the board's law opens (the candidate is the passage's own id).
-                found.append({**item, 'tag': candidate['id']})
+    for candidate in research.chosen_candidates(part):
+        row = candidate.get('source') or {}
+        if candidate['kind'] == 'provision':
+            item = {'kind': 'provision', 'act': row.get('act_name') or row.get('act_id') or '',
+                    'section': str(row.get('section_number') or '')}
+        else:
+            item = {'kind': 'judgment', 'title': row.get('case_name') or row.get('case_id') or ''}
+        key = tuple(sorted(item.items()))
+        if key not in seen:
+            seen.add(key)
+            # The passage it opens in the reading pane, as the board's law opens (the candidate is the passage's own id).
+            found.append({**item, 'tag': candidate['id']})
     return found
 
 

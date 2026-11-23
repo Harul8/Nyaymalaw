@@ -33,8 +33,9 @@ import re
 from copy import deepcopy
 from datetime import datetime
 
-from nm.core_engine import answer_sources, reasoning, research_note, response_writer
+from nm.core_engine import answer_sources, reasoning, research, research_note, response_writer
 from nm.core_engine import rounds as runner
+from nm.shared.citation_contracts import instrument_key, provision_label, statute_title
 from nm.shared.clock_contracts import IST
 from nm.shared.model_port import (
     ModelError,
@@ -707,7 +708,7 @@ def word(record, saved_at):
 NI_138_V1 = {
     "id": "ni_138_demand_notice", "version": 1,
     "title": "Demand notice under section 138 of the Negotiable Instruments Act, 1881",
-    "law": {"act": "Negotiable Instruments Act, 1881", "sections": ["138", "141", "142"]},
+    "law": {"act": "Negotiable Instruments Act, 1881", "sections": ["138"]},
     "parts": [
         {"id": "heading", "title": "Notice", "for": "The opening of the notice: its date, how it is sent and the place it is sent from.",
          "particulars": [
@@ -789,3 +790,24 @@ NI_138_V1 = {
 #: The templates NM drafts from, by id and version (AN.67: template selection is the owner's). A version, once a draft of it is
 #: saved, stays held as it is so that the draft reads as saved (P46); a change is a new version.
 TEMPLATES: dict[tuple[str, int], dict] = {(NI_138_V1["id"], NI_138_V1["version"]): check_template(NI_138_V1)}
+
+
+def rests_on(record):
+    """The held templates a dispute's research rests on (plan AN.67, 23d2; D331), the latest version of each, in the order NM
+    holds them: those whose Act, and a section of it the template names, the research's picks chose (research.chosen_candidates).
+    The Act is matched by its instrument key - the one grouping of held copies (citation_contracts) - and the section by its one
+    rendering; never by topic words or a near title. [] where none does."""
+    read = set()
+    for candidate in research.chosen_candidates(record):
+        if candidate["kind"] != "provision":
+            continue
+        row = candidate.get("source") or {}
+        title = statute_title(row.get("act_name") or row.get("title") or "", row.get("act_id") or "")
+        read.add((instrument_key(title), provision_label("", str(row.get("section_number") or ""))))
+    latest = {}
+    for (identity, version), template in TEMPLATES.items():
+        if identity not in latest or version > latest[identity]["version"]:
+            latest[identity] = template
+    return [template for template in latest.values()
+            if any((instrument_key(template["law"]["act"]), provision_label("", section)) in read
+                   for section in template["law"]["sections"])]

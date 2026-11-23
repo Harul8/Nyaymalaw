@@ -25,7 +25,7 @@ from nm.core_engine import figures, reasoning
 from nm.core_engine import rounds as runner
 from nm.core_engine.calls import ALLOWANCE as TURN_ALLOWANCE, CorrectionUnavailable
 from nm.core_engine.replay_scope import known, once
-from nm.core_engine.retrieval import SearchUnavailable, _digest, _valid_location, in_force, validate_search
+from nm.core_engine.retrieval import SearchUnavailable, _digest, _valid_location, in_force, offered, validate_search
 from nm.core_engine.understanding import REFERENCE, TEXT, TYPOGRAPHY, advocate_messages, select, source_catalogue
 from nm.shared import clock_contracts
 from nm.core_engine.citations import IndexUnavailable, held_judgments
@@ -4159,6 +4159,20 @@ def chosen(record, kind="provision"):
             kept = out.setdefault(work_id, [])
             kept.extend(identity for identity in ids if identity not in kept)
     return out
+
+
+def chosen_candidates(record):
+    """Each candidate a record's picks chose - provisions and judgments - once, in the order its searches, then its further
+    searches, offered it: what the page lists as a dispute's law found (D68) and what a held template is found resting on (plan
+    AN.67, 23d2). Candidates no pick chose are left out."""
+    picked = {identity for kind in ("provision", "judgment") for ids in chosen(record, kind).values() for identity in ids}
+    found, seen = [], set()
+    for search in [*record["searches"].values(), *(search for _, search in further_searches(record))]:
+        for candidate in offered(search):
+            if candidate["id"] in picked and candidate["id"] not in seen:
+                seen.add(candidate["id"])
+                found.append(candidate)
+    return found
 
 
 def retrieve(plan, searcher, context, model=None, *, progress=None, case_index=None):
