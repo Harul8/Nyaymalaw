@@ -18,6 +18,13 @@ see: the draft is for the advocate's review (SEQ.7), never sent by NM.
 The saved draft keeps its template, each round - a writing with what code found of it, or a review with what code admitted of it -
 and the parts as they stand; on reading it is checked again from those alone (P46). Piece 23c: the saved draft as a Word file,
 from what it saved and nothing else. The request that starts a draft (23d) builds on it.
+
+Piece 23d1 (D330): the first template NM holds, the demand notice under section 138 of the Negotiable Instruments Act, 1881, as
+version 1. A template may now hold set wording - a part code writes from wording the owner agreed, filling in only particulars the
+writer stated in the other parts, never the writer's to write - a part used only when the papers show what it needs, a value code
+works out from a stated particular (the cheque's amount in words), and fixed notes for the advocate that go with every draft of it.
+A part of set wording is composed again after every writing, so the review, the saved draft and its reading see it as it stands; what
+the review finds in it is kept for the advocate and never written again.
 """
 from __future__ import annotations
 
@@ -79,7 +86,7 @@ WRITER = """You are an Indian advocate's junior, drafting a document for the adv
 
 Purpose: a draft the advocate can send after their own review: each part doing what it is for, in the plain, formal language of such a document, every fact in it the papers' or the advocate's own and every provision the held law's.
 
-Outcome: each part, in the order given, as its paragraphs. For each paragraph give the IDs of the passages it rests on. For each particular it states, give the particular's words exactly as the papers or the advocate's messages write them, and the ID of the passage they stand in, and write those words into the paragraph as they stand. Where a particular is given nowhere, do not supply it: write [[its id]] where it would go and list its id under missing. Give a date only as the papers, the advocate or the time limits give it; work none out. Where you are shown faults found in an earlier draft of a part, write that part again so that none of them remains.
+Outcome: each part, in the order given, as its paragraphs. For each paragraph give the IDs of the passages it rests on. For each particular it states, give the particular's words exactly as the papers or the advocate's messages write them, and the ID of the passage they stand in, and write those words into the paragraph as they stand. Where a particular is given nowhere, do not supply it: write [[its id]] where it would go and list its id under missing. Give a date only as the papers, the advocate or the time limits give it; work none out. Where you are shown faults found in an earlier draft of a part, write that part again so that none of them remains. A part shown with its set wording is there so you see how the document runs: its particulars are filled in from the parts you write, so it is not yours to write. A part said to be used only when something holds is given only where the papers or the advocate show that it does.
 
 Work in a loop: draft each part, check each particular and each date against the passage you cite, correct what does not stand there, then give the whole."""
 
@@ -91,33 +98,117 @@ Outcome: each problem you find, as the part it is in (its part_id); what kind it
 
 Work in a loop: read the conversation and its papers first, then the draft part by part against them and the held law; check each problem against the passages before you give it, and drop any they do not bear out. List only what you find: no problems means the draft can go to the advocate as it is."""
 
-#: The templates NM drafts from, by id and version: none until the owner agrees one (AN.67: template selection is the owner's).
-TEMPLATES: dict[tuple[str, int], dict] = {}
+def _said_text(value):
+    return isinstance(value, str) and bool(value.strip())
 
 
 def check_template(template):
     """A template as drafting reads it: {"id", "version", "title", "law": {"act", "sections"}, "parts": [{"id", "title", "for",
-    "particulars": [{"id", "said"}]}]} - every id once, the parts in order."""
-    if (not isinstance(template, dict) or set(template) != {"id", "version", "title", "law", "parts"}
+    "particulars": [{"id", "said"}]}]} - every id once, the parts in order - with, where it has them (23d1), "computed": {id:
+    {"from", "as", "said"}} (a value code works out, by a way of _COMPUTE, from a particular a written part states) and "notes" (fixed
+    words for the advocate). A part may be set wording ("wording": its paragraphs, each [[id]] in them a particular of a written part
+    or a computed value, the part itself stating none) or used only when something holds ("when": what must hold); at least one
+    part is written."""
+    if (not isinstance(template, dict) or not {"id", "version", "title", "law", "parts"} <= set(template)
+            or not set(template) <= {"id", "version", "title", "law", "parts", "computed", "notes"}
             or not isinstance(template["id"], str) or not template["id"] or type(template["version"]) is not int
-            or not isinstance(template["title"], str) or not template["title"].strip()
+            or not _said_text(template["title"])
             or not isinstance(template["law"], dict) or set(template["law"]) != {"act", "sections"}
             or not isinstance(template["parts"], list) or not template["parts"]):
         raise ValueError("A template names itself, its version, its law and its parts")
-    parts, particulars = set(), set()
+    parts, particulars, written, marks = set(), set(), set(), set()
     for part in template["parts"]:
-        if (not isinstance(part, dict) or set(part) != {"id", "title", "for", "particulars"} or part["id"] in parts
-                or not _MARK.fullmatch(f"[[{part['id']}]]") or not all(isinstance(part[k], str) and part[k].strip()
-                                                                      for k in ("title", "for"))
-                or not isinstance(part["particulars"], list)):
+        if (not isinstance(part, dict) or not {"id", "title", "for", "particulars"} <= set(part)
+                or set(part) - {"id", "title", "for", "particulars"} not in ({"wording"}, {"when"}, set()) or part["id"] in parts
+                or not _MARK.fullmatch(f"[[{part['id']}]]") or not all(_said_text(part[k]) for k in ("title", "for"))
+                or not isinstance(part["particulars"], list) or ("when" in part and not _said_text(part["when"]))):
             raise ValueError("Each part of a template is named once and says what it is for")
         parts.add(part["id"])
+        if "wording" in part:
+            if (part["particulars"] or not isinstance(part["wording"], list) or not part["wording"]
+                    or not all(_said_text(text) for text in part["wording"])):
+                raise ValueError("A part of set wording gives its paragraphs and states no particular of its own")
+            marks |= {mark for text in part["wording"] for mark in _MARK.findall(text)}
+            continue
         for item in part["particulars"]:
             if (not isinstance(item, dict) or set(item) != {"id", "said"} or item["id"] in particulars
-                    or not _MARK.fullmatch(f"[[{item['id']}]]") or not isinstance(item["said"], str) or not item["said"].strip()):
+                    or not _MARK.fullmatch(f"[[{item['id']}]]") or not _said_text(item["said"])):
                 raise ValueError("Each particular of a template is named once and says what it is")
             particulars.add(item["id"])
+            written.add(item["id"])
+    computed = template.get("computed", {})
+    if not any("wording" not in part for part in template["parts"]) or not isinstance(computed, dict):
+        raise ValueError("A template has a part the writer writes")
+    for name, how in computed.items():
+        if (not _MARK.fullmatch(f"[[{name}]]") or name in particulars or not isinstance(how, dict)
+                or set(how) != {"from", "as", "said"} or how["from"] not in written or how["as"] not in _COMPUTE
+                or not _said_text(how["said"])):
+            raise ValueError("A computed value of a template says what it is and how code works it out")
+    if not marks <= written | set(computed):
+        raise ValueError("Set wording fills in only particulars the written parts state or code works out")
+    notes = template.get("notes", [])
+    if not isinstance(notes, list) or not all(_said_text(note) for note in notes):
+        raise ValueError("A template's notes are words for the advocate")
     return template
+
+
+def _written(template):
+    """The ids of the parts the writer writes, in order: every part but those of set wording."""
+    return [part["id"] for part in template["parts"] if "wording" not in part]
+
+
+def _said(template):
+    """What each particular and each computed value of a template is, by id."""
+    return {**{item["id"]: item["said"] for part in template["parts"] for item in part["particulars"]},
+            **{name: how["said"] for name, how in template.get("computed", {}).items()}}
+
+
+_ONES = ("", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen",
+         "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen")
+_TENS = ("", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety")
+#: A sum in figures as Indian papers write it: digits alone, or grouped by commas in the Indian way (2,50,000) or in threes
+#: (250,000), with paise after a point.
+_FIGURES = re.compile(r"(?<![\d,])(\d+|\d{1,2}(?:,\d\d)*,\d{3}|\d{1,3}(?:,\d{3})+)(?:\.(\d{1,2}))?(?![\d,]|\.\d)")
+#: The only words a sum in figures may carry for code to write it in words: the currency's names and "only". A sum that carries
+#: any other word (lakh, thousand, its own words) is not one code turns into words.
+_CURRENCY = {"rs", "inr", "rupee", "rupees", "re", "only"}
+
+
+def _below_hundred(number):
+    return _ONES[number] if number < 20 else " ".join(filter(None, (_TENS[number // 10], _ONES[number % 10])))
+
+
+def _indian(number):
+    """A whole number above nought in words in the Indian way: crore, lakh, thousand, hundred."""
+    crore, number = divmod(number, 10 ** 7)
+    lakh, number = divmod(number, 10 ** 5)
+    thousand, number = divmod(number, 1000)
+    hundred, number = divmod(number, 100)
+    said = [f"{_indian(crore)} Crore" if crore else "", f"{_below_hundred(lakh)} Lakh" if lakh else "",
+            f"{_below_hundred(thousand)} Thousand" if thousand else "", f"{_ONES[hundred]} Hundred" if hundred else "",
+            _below_hundred(number) if number else ""]
+    return " ".join(filter(None, said))
+
+
+def rupees_in_words(words):
+    """A sum of rupees given in figures, as it is written in words on an Indian cheque or notice ("Rs. 2,50,000/-": "Rupees Two
+    Lakh Fifty Thousand only"); None where the words give no one sum in figures, carry any word but the currency's, or give
+    nought - code then leaves the sum in words marked as needed rather than guess it."""
+    found = list(_FIGURES.finditer(str(words)))
+    if len(found) != 1 or re.search(r"\d", _FIGURES.sub(" ", str(words))):
+        return None
+    if not {word.lower() for word in re.findall(r"[A-Za-z]+", _FIGURES.sub(" ", str(words)))} <= _CURRENCY:
+        return None
+    rupees, paise = int(found[0].group(1).replace(",", "")), int((found[0].group(2) or "0").ljust(2, "0"))
+    if not rupees and not paise:
+        return None
+    said = " and ".join(filter(None, (f"Rupees {_indian(rupees)}" if rupees else "", f"{_below_hundred(paise)} Paise" if paise
+                                      else "")))
+    return f"{said} only"
+
+
+#: The ways code works out a template's computed value from the words of the particular it comes from.
+_COMPUTE = {"rupees_in_words": rupees_in_words}
 
 
 def _shared(context, sources, time_limits):
@@ -128,11 +219,20 @@ def _shared(context, sources, time_limits):
             "time_limits": time_limits or []}
 
 
+def _entry(part):
+    """A part as the writer and the reviewer read it: what it is for and the particulars it states, when it is used if only
+    sometimes, and its set wording if it has some."""
+    return {"part_id": part["id"], "title": part["title"], "for": part["for"],
+            "particulars": [{"id": item["id"], "is": item["said"]} for item in part["particulars"]],
+            **({"used_only_when": part["when"]} if "when" in part else {}),
+            **({"set_wording": list(part["wording"])} if "wording" in part else {})}
+
+
 def _document(template, asked):
+    """The document as a call reads it: the parts asked for, and every part of set wording, so that the writer sees how the
+    document runs and the reviewer what code wrote."""
     return {"title": template["title"], "law": template["law"],
-            "parts": [{"part_id": part["id"], "title": part["title"], "for": part["for"],
-                       "particulars": [{"id": item["id"], "is": item["said"]} for item in part["particulars"]]}
-                      for part in template["parts"] if part["id"] in asked]}
+            "parts": [_entry(part) for part in template["parts"] if part["id"] in asked or "wording" in part]}
 
 
 def _sent(shared, payload):
@@ -152,7 +252,7 @@ def _material(template, context, sources, time_limits, asked, earlier):
 
 def _needed(template):
     """A particular not given, as a reader is shown it where it goes: [particular needed: what it is]."""
-    said = {item["id"]: item["said"] for part in template["parts"] for item in part["particulars"]}
+    said = _said(template)
     return lambda text: _MARK.sub(lambda match: f"[particular needed: {said.get(match.group(1), match.group(1))}]", text)
 
 
@@ -167,21 +267,40 @@ def _review_material(template, context, sources, time_limits, draft):
                             for part in template["parts"]]})
 
 
+def _unstood(particular, known, text, sources, offered, at):
+    """What code finds wrong in a particular a paragraph states (at: the paragraph's place), or None where it stands: a
+    particular of its part, its words standing in an offered passage it cites and in the paragraph."""
+    name, words, cited = particular["particular_id"], particular["words"], particular["source_id"]
+    if name not in known:
+        return f"Paragraph {at} gives {name}, which is not a particular of this part."
+    source = sources.get(offered.get(cited)) if cited in offered else None
+    if source is None:
+        return f"Paragraph {at} cites {cited} for {name}, which was not offered."
+    if not response_writer.stands(source["text"], words):
+        return f"The words given for {name} do not stand in {cited}: {words!r}."
+    if not response_writer.stands(text, words):
+        return f"Paragraph {at} does not state {name} in the words given for it: {words!r}."
+    return None
+
+
 def _faults(proposal, template, asked, context, sources, time_limits):
     """What code finds wrong in each part a writer's proposal gives, by part id: nothing for a part that stands. A part asked for
-    and not given, or given twice, is at fault; a part not asked for is never taken."""
+    and not given, or given twice, is at fault - except that a part used only when something holds may be left out, or given
+    with no paragraph, where it does not (23d1); a part not asked for is never taken."""
     offered = answer_sources.aliases(sources)
     parts = {part["id"]: part for part in template["parts"]}
     given = [item["part_id"] for item in proposal["parts"]]
     found = {part_id: [] for part_id in asked}
     for part_id in asked:
-        if given.count(part_id) != 1:
+        if given.count(part_id) > 1 or (not given.count(part_id) and "when" not in parts[part_id]):
             found[part_id].append("This part was not given once.")
     for item in proposal["parts"]:
         part_id = item["part_id"]
         if part_id not in found or given.count(part_id) != 1:
             continue
         faults, part = found[part_id], parts[part_id]
+        if not item["paragraphs"] and "when" in part:
+            continue
         known = {particular["id"] for particular in part["particulars"]}
         stated, missing = set(), set()
         if not item["paragraphs"]:
@@ -194,19 +313,11 @@ def _faults(proposal, template, asked, context, sources, time_limits):
             if unknown:
                 faults.append(f"Paragraph {at} rests on passages that were not offered: {', '.join(unknown)}.")
             for particular in paragraph["particulars"]:
-                name, words, cited = particular["particular_id"], particular["words"], particular["source_id"]
-                if name not in known:
-                    faults.append(f"Paragraph {at} gives {name}, which is not a particular of this part.")
-                    continue
-                source = sources.get(offered.get(cited)) if cited in offered else None
-                if source is None:
-                    faults.append(f"Paragraph {at} cites {cited} for {name}, which was not offered.")
-                elif not response_writer.stands(source["text"], words):
-                    faults.append(f"The words given for {name} do not stand in {cited}: {words!r}.")
-                elif not response_writer.stands(text, words):
-                    faults.append(f"Paragraph {at} does not state {name} in the words given for it: {words!r}.")
+                fault = _unstood(particular, known, text, sources, offered, at)
+                if fault is None:
+                    stated.add(particular["particular_id"])
                 else:
-                    stated.add(name)
+                    faults.append(fault)
             marked = set(_MARK.findall(text))
             listed = set(paragraph["missing"])
             if marked != listed:
@@ -253,27 +364,67 @@ def _told(finding, *, cited=True):
     return f"An independent review found that this part {FINDS[finding['kind']]}{words}: {finding['why'].strip()}{see}"
 
 
-def _drafted(draft, proposal, faults):
+def _drafted(template, draft, proposal, faults):
     """The draft after a writing: each part the writing asked for as it now stands - its paragraphs as given (the last given, where
-    a part was not given once) with what code found in them."""
+    a part was not given once; none, where a part used only sometimes was left out) with what code found in them."""
     draft = deepcopy(draft) if draft is not None else {}
+    sometimes = {part["id"] for part in template["parts"] if "when" in part}
     given = {item["part_id"]: item["paragraphs"] for item in proposal["parts"]}
     for part_id, found in faults.items():
         before = draft.get(part_id, {"paragraphs": []})["paragraphs"]
-        once = [item["part_id"] for item in proposal["parts"]].count(part_id) == 1
-        draft[part_id] = {"paragraphs": deepcopy(given[part_id]) if once else before, "faults": list(found)}
+        times = [item["part_id"] for item in proposal["parts"]].count(part_id)
+        paragraphs = deepcopy(given[part_id]) if times == 1 else [] if not times and part_id in sometimes else before
+        draft[part_id] = {"paragraphs": paragraphs, "faults": list(found)}
     return draft
 
 
-def _state(template, kept):
+def _composed(template, draft, sources):
+    """The draft with its parts of set wording written by code (23d1): each [[id]] in their wording filled with the words a written
+    part states for that particular - the first place the draft states it and code finds it stands - or with the value code works
+    out from such words; left marked where neither is there. Each paragraph keeps, as a written one does, the passages it rests on,
+    the particulars it states and what it leaves marked; a part of set wording is never at code's fault."""
+    offered = answer_sources.aliases(sources)
+    values = {}
+    for part in template["parts"]:
+        if "wording" in part or part["id"] not in draft:
+            continue
+        known = {item["id"] for item in part["particulars"]}
+        for at, paragraph in enumerate(draft[part["id"]]["paragraphs"], 1):
+            for particular in paragraph["particulars"]:
+                if (particular["particular_id"] not in values
+                        and _unstood(particular, known, paragraph["text"], sources, offered, at) is None):
+                    values[particular["particular_id"]] = (particular["words"], particular["source_id"])
+    computed = template.get("computed", {})
+    for name, how in computed.items():
+        made = _COMPUTE[how["as"]](values[how["from"]][0]) if how["from"] in values else None
+        if made is not None:
+            values[name] = (made, values[how["from"]][1])
+    draft = dict(draft)
+    for part in template["parts"]:
+        if "wording" not in part:
+            continue
+        paragraphs = []
+        for text in part["wording"]:
+            used = list(dict.fromkeys(_MARK.findall(text)))
+            paragraphs.append({
+                "text": _MARK.sub(lambda match: values[match.group(1)][0] if match.group(1) in values else match.group(0), text),
+                "source_ids": list(dict.fromkeys(values[name][1] for name in used if name in values)),
+                "particulars": [{"particular_id": name, "words": values[name][0], "source_id": values[name][1]}
+                                for name in used if name in values and name not in computed],
+                "missing": [name for name in used if name not in values]})
+        draft[part["id"]] = {"paragraphs": paragraphs, "faults": []}
+    return draft
+
+
+def _state(template, kept, sources):
     """Where the kept rounds leave the draft: its parts, the findings of the last review that still bear on their words, what that
     review said beside them, the rewrites used, whether the draft as it stands was reviewed, and what the last round was and
-    whether, a writing, it changed the draft."""
+    whether, a writing, it changed the draft. After each writing, the parts of set wording are composed again from it."""
     state = {"draft": None, "findings": {}, "beside": [], "rewrites": 0, "reviewed": False, "last": None, "changed": False}
     for entry in kept:
         if entry["kind"] == WRITING:
             before = state["draft"]
-            after = _drafted(before, entry["proposal"], entry["faults"])
+            after = _composed(template, _drafted(template, before, entry["proposal"], entry["faults"]), sources)
             if before is not None:
                 state["rewrites"] += 1
             changed = after != before
@@ -296,11 +447,13 @@ def _next(template, state):
     and the writing changed something; otherwise the draft is reviewed - unless it was reviewed as it stands, a rewrite having
     changed nothing (NOTHING_NEW). After a review, the parts it or code found at fault are written again while rewrites are left; a
     review that finds nothing leaves the draft COMPLETE where code finds nothing either, and otherwise (code's faults, which the
-    writer has already been told) ends the rounds as the writings did: NOTHING_NEW, or BACKSTOP at the allowance."""
+    writer has already been told) ends the rounds as the writings did: NOTHING_NEW, or BACKSTOP at the allowance. Only the written
+    parts are ever written; what the review finds in set wording alone ends the rounds as NOTHING_NEW, no rewrite being able to
+    correct it - it is kept for the advocate."""
     draft = state["draft"]
+    order = _written(template)
     if draft is None:
-        return WRITING, [part["id"] for part in template["parts"]]
-    order = [part["id"] for part in template["parts"]]
+        return WRITING, order
     faulted = [part_id for part_id in order if draft[part_id]["faults"]]
     left = state["rewrites"] < REWRITES
     if state["last"] == WRITING:
@@ -311,10 +464,10 @@ def _next(template, state):
         return REVIEW, None
     found = [part_id for part_id in order if draft[part_id]["faults"] or state["findings"].get(part_id)]
     if not found:
-        return None, runner.COMPLETE
+        return None, runner.NOTHING_NEW if state["findings"] else runner.COMPLETE
     if not left:
         return None, runner.BACKSTOP
-    if not state["findings"]:
+    if not any(state["findings"].get(part_id) for part_id in order):
         return None, runner.NOTHING_NEW
     return WRITING, found
 
@@ -377,10 +530,10 @@ def write(model, template, context, sources, *, time_limits=None):
     kept = []
 
     def upcoming():
-        return _next(template, _state(template, kept))
+        return _next(template, _state(template, kept, sources))
 
     def ask(done):
-        state = _state(template, kept)
+        state = _state(template, kept, sources)
         kind, asked = _next(template, state)
         if kind == WRITING:
             earlier = _earlier(state, asked) if state["draft"] is not None else None
@@ -389,7 +542,7 @@ def write(model, template, context, sources, *, time_limits=None):
         return {"kind": REVIEW, "returned": _review_call(model, template, context, sources, time_limits, state["draft"])}
 
     def admit(proposal, done):
-        return _round(template, context, sources, time_limits, _state(template, kept), proposal), None
+        return _round(template, context, sources, time_limits, _state(template, kept, sources), proposal), None
 
     def carry_out(entry, done):
         kept.append(entry)
@@ -403,11 +556,11 @@ def write(model, template, context, sources, *, time_limits=None):
                             finished=lambda outcome, done: outcome == (None, runner.COMPLETE))
     if not kept:
         raise ModelError("The draft could not be written")
-    return _record(template, kept, stopped)
+    return _record(template, kept, stopped, sources)
 
 
-def _record(template, kept, stopped):
-    state = _state(template, kept)
+def _record(template, kept, stopped, sources):
+    state = _state(template, kept, sources)
     parts = [{"part_id": part["id"], **deepcopy(state["draft"][part["id"]]),
               "findings": deepcopy(state["findings"].get(part["id"], []))} for part in template["parts"]]
     return {"contract": CONTRACT, "template": deepcopy(template), "rounds": kept, "stopped": stopped, "parts": parts,
@@ -435,7 +588,7 @@ def validate(record, context, sources, *, time_limits=None, templates=None):
             or not isinstance(rounds, list) or not rounds):
         raise ValueError("A saved draft does not say how its rounds ended")
     for at, entry in enumerate(rounds):
-        state = _state(template, rounds[:at])
+        state = _state(template, rounds[:at], sources)
         kind, asked = _next(template, state)
         if kind is None:
             raise ValueError("A draft's rounds go on after they ended")
@@ -455,14 +608,14 @@ def validate(record, context, sources, *, time_limits=None, templates=None):
                                                                    if key in entry}) != entry:
             raise ValueError("A round of a draft differs from what code finds of it")
     # How the rounds ended: as the last round left them; otherwise at a writer or reviewer that could not be asked.
-    kind, why = _next(template, _state(template, rounds))
+    kind, why = _next(template, _state(template, rounds, sources))
     if kind is None:
         expected = stopped["why"] == why and (bool(stopped["reason"]) if why == runner.BACKSTOP else stopped["reason"] is None)
     else:
         expected = stopped["why"] == runner.UNAVAILABLE and bool(stopped["reason"])
     if not expected:
         raise ValueError("A saved draft does not end as its rounds do")
-    if record != _record(template, rounds, stopped):
+    if record != _record(template, rounds, stopped, sources):
         raise ValueError("A saved draft's parts are not as its rounds leave them")
     return record
 
@@ -471,10 +624,16 @@ def validate(record, context, sources, *, time_limits=None, templates=None):
 NOT_REVIEWED = "This draft as it stands was not reviewed independently: the review could not be made."
 
 
+def _used(part):
+    """Whether a saved part of a draft is shown: not a part used only sometimes that the draft left out, with nothing found in it."""
+    return bool(part["paragraphs"] or part["faults"] or part["findings"])
+
+
 def shown(record):
     """The draft as the advocate reads it: each part's title and paragraphs, a particular not given written where it goes as
-    [particular needed: what it is], what code still finds in a part and what the review found in it; what the review said of no
-    part; and whether the draft as it stands was reviewed."""
+    [particular needed: what it is], what code still finds in a part and what the review found in it - a part used only
+    sometimes that the draft leaves out, with nothing found in it, not shown; what the review said of no part; whether the draft as
+    it stands was reviewed; and the template's notes for the advocate."""
     template = record["template"]
     needed = _needed(template)
     titles = {part["id"]: part["title"] for part in template["parts"]}
@@ -482,9 +641,9 @@ def shown(record):
             "parts": [{"part_id": part["part_id"], "title": titles[part["part_id"]],
                        "paragraphs": [needed(paragraph["text"]) for paragraph in part["paragraphs"]],
                        "faults": list(part["faults"]), "found": [_told(finding) for finding in part["findings"]]}
-                      for part in record["parts"]],
+                      for part in record["parts"] if _used(part)],
             "beside": [f"The review also said: {finding['why'].strip() or FINDS[finding['kind']]}" for finding in record["beside"]],
-            "reviewed": None if record["reviewed"] else NOT_REVIEWED}
+            "reviewed": None if record["reviewed"] else NOT_REVIEWED, "notes": list(template.get("notes", []))}
 
 
 #: A particular not given, highlighted where it goes in the Word file, for the advocate to fill.
@@ -499,17 +658,18 @@ STILL_AT_FAULT = "NM's own checks still find that this part does not stand as th
 def word(record, saved_at):
     """The saved draft as a Word file (23c), from what the draft saved and nothing else (record: a draft validate has read;
     saved_at: when it was saved): its title, each part's heading and paragraphs as they stand, a particular not given highlighted
-    where it goes, and after the document, apart from it, what is still for the advocate to settle - the particulars needed, what
-    code and the review still find, what the review said of no part, and whether the draft as it stands was reviewed. The same
-    saved draft always gives the same bytes. Returns (the file's name, without its extension; its bytes)."""
+    where it goes, and after the document, apart from it, what is still for the advocate to settle - the template's notes, the
+    particulars needed (each once, under the first part that needs it), what code and the review still find, what the review said
+    of no part, and whether the draft as it stands was reviewed. A part shown() leaves out is left out here too. The same saved
+    draft always gives the same bytes. Returns (the file's name, without its extension; its bytes)."""
     template = record["template"]
-    said = {item["id"]: item["said"] for part in template["parts"] for item in part["particulars"]}
+    said = _said(template)
     titles = {part["id"]: part["title"] for part in template["parts"]}
     moment = datetime.fromisoformat(saved_at).astimezone(IST)
     body = [research_note.paragraph("Title", template["title"]),
             research_note.paragraph("Meta", f"Draft for your review · saved {moment.day} {moment:%B %Y}")]
-    notes = []
-    for part in record["parts"]:
+    notes, noted = list(template.get("notes", [])), set()
+    for part in filter(_used, record["parts"]):
         title = titles[part["part_id"]]
         body.append(research_note.paragraph("Heading2", title))
         needed = []
@@ -522,7 +682,8 @@ def word(record, saved_at):
                 at = match.end()
             pieces.append(research_note.runs(paragraph["text"][at:]))
             body.append(research_note.paragraph("Normal", "", "".join(pieces)))
-        notes += [f"{title}: the papers do not give {item}." for item in dict.fromkeys(needed)]
+        notes += [f"{title}: the papers do not give {item}." for item in dict.fromkeys(needed) if item not in noted]
+        noted |= set(needed)
         notes += [f"{title}: {STILL_AT_FAULT}"] if part["faults"] else []
         notes += [f"{title}: {_told(finding, cited=False)}" for finding in part["findings"]]
     notes += [f"The review also said: {finding['why'].strip() or FINDS[finding['kind']]}" for finding in record["beside"]]
@@ -534,3 +695,97 @@ def word(record, saved_at):
     body.append(research_note.paragraph("Meta", DRAFTED))
     name = f"Draft {moment:%Y-%m-%d} - " + (" ".join(re.sub(r"[^\w\s-]", "", template["title"]).split())[:60].strip() or "document")
     return name, research_note.word_file(research_note.document_xml(body), name, saved_at)
+
+
+
+#: D330 (23 Nov 2026, the owner's word on Claude's recommendation): the demand notice under section 138 of the Negotiable
+#: Instruments Act, 1881, version 1, in English. The demand, what follows if the amount is not paid and the close are set wording;
+#: a drawer that is a company or firm has its part, used only where the papers show one; other sums only where the advocate asks
+#: for them, apart from the cheque's amount; the advocate's name and office address marked as needed until their account holds
+#: them. The notes say what the held text of section 138 and section 142 requires of the dates. A draft of it is for the
+#: advocate's own review before anything is sent; the set wording is the owner's to correct, as a new version.
+NI_138_V1 = {
+    "id": "ni_138_demand_notice", "version": 1,
+    "title": "Demand notice under section 138 of the Negotiable Instruments Act, 1881",
+    "law": {"act": "Negotiable Instruments Act, 1881", "sections": ["138", "141", "142"]},
+    "parts": [
+        {"id": "heading", "title": "Notice", "for": "The opening of the notice: its date, how it is sent and the place it is sent from.",
+         "particulars": [
+             {"id": "notice_date", "said": "the date of the notice"},
+             {"id": "modes", "said": "how the notice is sent (registered post, speed post, courier, e-mail or another way)"},
+             {"id": "place", "said": "the place the notice is sent from"}]},
+        {"id": "parties", "title": "From and to",
+         "for": "Who sends the notice and for whom, and the drawer of the cheque, to whom it is addressed.",
+         "particulars": [
+             {"id": "advocate_name", "said": "the advocate's name"},
+             {"id": "advocate_address", "said": "the advocate's office address"},
+             {"id": "client_name", "said": "the name of the advocate's client, the payee or holder in due course of the cheque"},
+             {"id": "client_address", "said": "the client's address"},
+             {"id": "drawer_name", "said": "the name of the drawer of the cheque"},
+             {"id": "drawer_address", "said": "the drawer's address"}]},
+        {"id": "company", "title": "Those in charge of the drawer",
+         "for": ("The persons the papers show were in charge of, and responsible to, the drawer for the conduct of its business "
+                 "(section 141), to whom the notice is also addressed."),
+         "when": "the papers show that the drawer is a company, a firm or another association of individuals",
+         "particulars": [{"id": "persons_in_charge", "said": "the names, positions and addresses of those persons"}]},
+        {"id": "debt", "title": "The debt",
+         "for": ("The legally enforceable debt or other liability for whose discharge, in whole or in part, the cheque was drawn, "
+                 "and how it arose, as the papers show it."),
+         "particulars": [
+             {"id": "debt_nature", "said": "what the debt or other liability is and how it arose"},
+             {"id": "debt_amount", "said": "the amount of the debt or liability"}]},
+        {"id": "cheque", "title": "The cheque",
+         "for": "The cheque the drawer drew on their account and gave to the client for that debt or liability.",
+         "particulars": [
+             {"id": "cheque_number", "said": "the cheque's number"},
+             {"id": "cheque_date", "said": "the date the cheque bears"},
+             {"id": "cheque_amount", "said": "the cheque's amount in figures, as the cheque or the papers give it"},
+             {"id": "drawee_bank", "said": "the bank and branch on which the cheque is drawn"}]},
+        {"id": "dishonour", "title": "Its return unpaid",
+         "for": ("How the cheque was presented and returned unpaid: when and through which bank it was presented, the reason the "
+                 "bank gave in its own words, and when the client received the bank's information of its return."),
+         "particulars": [
+             {"id": "presented_on", "said": "when the cheque was presented"},
+             {"id": "presented_through", "said": "the bank and branch through which the client presented the cheque"},
+             {"id": "returned_on", "said": "the date of the bank's memo returning the cheque"},
+             {"id": "return_reason", "said": "the reason for the return, in the words of the bank's memo"},
+             {"id": "information_received",
+              "said": "when the client received the bank's information that the cheque was returned unpaid"}]},
+        {"id": "other_sums", "title": "Other sums claimed",
+         "for": ("Each sum the advocate asks the notice to claim besides the cheque's amount, stated apart from it and on the basis "
+                 "the advocate gives."),
+         "when": "the advocate asks for interest, notice charges or another sum to be claimed besides the cheque's amount",
+         "particulars": [{"id": "other_sums_claimed", "said": "each such sum and its basis"}]},
+        {"id": "demand", "title": "Demand",
+         "for": ("The demand for payment of the cheque's amount within fifteen days of the receipt of the notice (section 138, "
+                 "provisos (b) and (c))."),
+         "particulars": [],
+         "wording": ["My client therefore calls upon you to pay the said amount of [[cheque_amount]] ([[amount_in_words]]), the "
+                     "amount of the said cheque, to my client within fifteen days of the receipt of this notice."]},
+        {"id": "consequence", "title": "If it is not paid", "for": "What follows if the amount is not paid within that time.",
+         "particulars": [],
+         "wording": ["Take notice that if you fail to pay the said amount to my client within fifteen days of the receipt of this "
+                     "notice, my client shall be constrained to make a complaint against you for the offence punishable under "
+                     "section 138 of the Negotiable Instruments Act, 1881, as section 142 of that Act provides, and to take such "
+                     "other proceedings as the law allows, entirely at your risk as to costs and consequences."]},
+        {"id": "close", "title": "Close", "for": "The close of the notice.", "particulars": [],
+         "wording": ["A copy of this notice is retained in my office for further action.", "[[advocate_name]], Advocate",
+                     "Place: [[place]]", "Date: [[notice_date]]"]},
+    ],
+    "computed": {"amount_in_words": {"from": "cheque_amount", "as": "rupees_in_words", "said": "the cheque's amount in words"}},
+    "notes": [
+        ("Section 138, proviso (a): the cheque must have been presented to the bank within six months from the date on which it "
+         "is drawn or within the period of its validity, whichever is earlier. Check the date of presentation against both."),
+        ("Section 138, proviso (b): this notice must be given in writing within thirty days of the receipt of information from "
+         "the bank regarding the return of the cheque as unpaid. Check that it goes out within that time."),
+        ("Section 138, proviso (c), and section 142(1)(b): the fifteen days for payment run from the drawer's receipt of this "
+         "notice, and a complaint is to be made within one month of the date on which the cause of action arises under proviso "
+         "(c). Keep proof of when the notice was sent and when it was received."),
+        ("The demand, what follows if the amount is not paid and the close are set wording, with only the particulars filled in "
+         "from the papers; correct it where the matter needs it."),
+    ],
+}
+
+#: The templates NM drafts from, by id and version (AN.67: template selection is the owner's). A version, once a draft of it is
+#: saved, stays held as it is so that the draft reads as saved (P46); a change is a new version.
+TEMPLATES: dict[tuple[str, int], dict] = {(NI_138_V1["id"], NI_138_V1["version"]): check_template(NI_138_V1)}
