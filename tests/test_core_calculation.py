@@ -54,7 +54,9 @@ def step(id_, what, words, period, start, **extra):
             "article": extra.get("article", ""), "part": "", "words": words, "period_words": period,
             # Calculation v5 (Q16): the step's own check of what its quoted words date; v6 (P34):
             # a period the facts set, empty unless given.
-            "start": {"dated_event": "", "same_event": True, "period_words": "", "period_quote": "", **start}, "copies": [], "done": extra.get("done", blank),
+            "start": {"dated_event": "", "same_event": True, "period_words": "", "period_quote": "", **start}, "copies": [],
+            # Calculation v8 (D335): the step's own check of whether what was done is the step the Act requires.
+            "done": {"meets_the_act": True, "falls_short": "", **extra.get("done", blank)},
             "earliest_after": extra.get("earliest_after", ""), "reasoning": "From the Act's words.",
             "assumptions": ["The dates are as reported."], "missing": [], "may_extend": extra.get("may_extend", [])}
 
@@ -262,7 +264,7 @@ def test_a_refused_limit_gets_one_correction_that_faces_the_same_checks(store):
     assert boxes["Last day for the drawer to pay"]["last_day"] == "2026-09-13"  # checked first; stands
     row = saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]
     record = row["activities"]["calculation"]
-    assert record["contract"] == calculation.CONTRACT == "core_calculation_v7"
+    assert record["contract"] == calculation.CONTRACT == "core_calculation_v8"
     assert record["correction"]["state"] == "corrected" and [r["id"] for r in record["correction"]["refused"]] == ["bad"]
     assert record["proposal"] == chain() and record["not_assessed"] == []
     assert saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]["response"][
@@ -275,9 +277,10 @@ def test_a_step_taken_quoted_from_the_event_time_runs_from_is_refused_then_corre
     step taken, and the correction is told why."""
     proposal = chain()
     pay = proposal["calculations"][0]
-    pay["done"] = {"what": "notice delivered", "date": "2026-08-29", "quote": "Notice was delivered on 29 August 2026"}
+    pay["done"] = {"what": "notice delivered", "date": "2026-08-29", "quote": "Notice was delivered on 29 August 2026",
+                   "meets_the_act": True, "falls_short": ""}
     corrected = deepcopy(pay)
-    corrected["done"] = {"what": "", "date": "", "quote": ""}
+    corrected["done"] = {"what": "", "date": "", "quote": "", "meets_the_act": True, "falls_short": ""}
     model = Calculating(proposal, correction={"calculations": [corrected, fixed_bad()], "cannot": []})
     reply = turn(store, model)
     prompt, = model.seen["correction"]
@@ -467,8 +470,8 @@ def test_a_start_its_own_check_says_dates_another_event_is_not_given_and_spends_
     record = calculation.work_out(model, context(MESSAGE), Held())
     assert record["calculations"] == [] and "correction" not in model.seen
     assert record["not_assessed"] == [{"what": "Last day for the demand notice", "why": (
-        "the words quoted date the bank returning the cheque, not the event time runs from (the payee receiving the "
-        "bank's information), whose date is not given")}]
+        "the date given is of the bank returning the cheque, not of the event time runs from (the payee receiving "
+        "the bank's information), and that event's date is not given")}]
     # Its own check confirming the very event, the same words are worked out.
     notice["start"].update(dated_event="the payee receiving the bank's return memo", same_event=True)
     confirmed = calculation.work_out(Calculating({"needed": True, "why": "", "not_assessed": [],
@@ -583,7 +586,8 @@ def test_a_step_said_to_be_taken_without_its_date_is_taken_its_date_not_given(st
     not known."""
     proposal = chain()
     complaint = proposal["calculations"][1]
-    complaint["done"] = {"what": "complaint filed", "date": "", "quote": "We filed the complaint"}
+    complaint["done"] = {"what": "complaint filed", "date": "", "quote": "We filed the complaint", "meets_the_act": True,
+                         "falls_short": ""}
     reply = turn(store, Calculating(proposal))
     box = next(e["working"] for e in reply["elements"] if e["kind"] == "WORKING"
                and e["text"] == "Last day to file the complaint")
@@ -635,7 +639,8 @@ def test_a_step_the_facts_say_is_not_yet_taken_stands_open_with_its_days_left():
     assert entry["done"] is None
     assert entry["standing"] == {"state": "open", "days": 166}  # 25 Oct 2026 to the last day, 9 April 2027
     taken = deepcopy(unfiled)
-    taken["calculations"][0]["done"] = {"what": "Suit filed", "date": "", "quote": "No suit has been filed yet"}
+    taken["calculations"][0]["done"] = {"what": "Suit filed", "date": "", "quote": "No suit has been filed yet",
+                                        "meets_the_act": True, "falls_short": ""}
     (entry,) = calculation.work_out(Calculating(taken), ctx, CreditHeld(), now=now)["calculations"]
     # Code cannot tell words saying a step was taken from words saying it was not: that is the
     # prompt's to keep right. What code keeps is the rule it was given for a step said to be taken.
@@ -664,3 +669,99 @@ def test_the_prompt_defines_same_event_once_for_every_case():
     # What it refines stays: the words must date that very event, and posting is not delivery.
     assert "posting a notice is not its delivery" in text
     assert text.count('under "same_event"') == 2  # the flag is explained at its two uses, each consistent with the other
+
+
+def notice_step(**done):
+    """The payee's thirty days for the demand notice, from the bank's information reaching the payee; done as given."""
+    return step("n1", "Last day for the demand notice",
+                "within thirty days of the receipt of information by him from the bank regarding the return of the cheque "
+                "as unpaid", "thirty days",
+                {"after": "", "event": "the payee receiving the bank's information", "date": "2026-08-18",
+                 "quote": "The bank's return memo reached my client on 18 August 2026",
+                 "dated_event": "the payee receiving the bank's return memo"},
+                done={"what": "notice given", "date": "2026-08-29", "quote": "Notice was delivered on 29 August 2026",
+                      **done})
+
+
+def test_a_step_done_that_may_fall_short_of_the_act_is_not_counted_as_taken():
+    """D335 (plan AN.79, 23 Nov 2026): the D334 end-to-end run took a message demanding payment as the demand notice given,
+    so the limit read 'In time' while the answer said that message is not a compliant notice. The step's own check says
+    whether what was done is the step the Act requires; where it may fall short, the limit stands open with its days
+    left, and what was done stays beside it with why it may not count - in the Working box and for the writer."""
+    from datetime import datetime, timezone
+    from tests.test_core_understanding import context
+    ctx, now = context(MESSAGE), datetime(2026, 9, 1, 9, 0, tzinfo=timezone.utc)
+    doubtful = notice_step(meets_the_act=False, falls_short="it does not state the amount of the cheque")
+    record = calculation.work_out(Calculating({"needed": True, "why": "The notice.", "not_assessed": [],
+                                               "calculations": [doubtful]}), ctx, Held(), now=now)
+    (entry,) = record["calculations"]
+    assert entry["working"]["last_day"] == "2026-09-17"
+    assert entry["standing"] == {"state": "open", "days": 16}
+    assert entry["done"]["counted"] is False
+    assert entry["done"]["falls_short"] == "it does not state the amount of the cheque"
+    (shown,) = calculation.presentation(record)["worked_out"]
+    assert shown["standing"]["state"] == "open" and shown["step_taken"]["counted"] is False
+    (box,) = response_rendering._working(record)
+    rows = dict(box["working"]["rows"])
+    assert rows["Done, not counted as the step"] == "notice given"
+    assert rows["Done on"] == "29 August 2026 (Saturday)"
+    assert rows["Why it may not count"] == "it does not state the amount of the cheque"
+    assert rows["Result"] == "Open" and rows["Days left"] == "16" and "Taken on" not in rows
+    assert calculation.validate(record, ctx) == record
+    # The same step its own check finds to be the step the Act requires is taken in time, as before.
+    counted = calculation.work_out(Calculating({"needed": True, "why": "", "not_assessed": [],
+                                                "calculations": [notice_step()]}), ctx, Held(), now=now)
+    assert counted["calculations"][0]["standing"] == {"state": "in_time", "days": 19}
+    assert "counted" not in counted["calculations"][0]["done"]  # a step counted carries no mark, as before v8
+    # A record saved before v8 keeps every step done as taken, and replays exactly as saved; v8's mark is v8's alone.
+    earlier = deepcopy(counted) | {"contract": calculation.V7_CONTRACT}
+    assert calculation.validate(earlier, ctx) == earlier
+    with pytest.raises(ValueError, match="v8"):
+        calculation.validate(deepcopy(record) | {"contract": calculation.V7_CONTRACT}, ctx)
+    text = " ".join(calculation.SYSTEM.split())
+    assert 'under "meets_the_act", say whether it is the step they require, in the form and with the contents' in text
+    assert "A step that may fall short is shown as still to be taken, with what was done beside it" in text
+
+
+VALIDITY = ("138. Dishonour of cheque for insufficiency, etc., of funds in the account.\nProvided that nothing contained in "
+            "this section shall apply unless-\n(a) the cheque has been presented to the bank within a period of six months "
+            "from the date on which it is drawn or within the period of its validity, whichever is earlier;\n(b) the payee")
+
+
+class ValidityHeld(Held):
+    def read(self, title):
+        held = super().read(title)
+        if title == NI:
+            text = VALIDITY + held["text"]
+            held = {**held, "text": text, "sha256": hashlib.sha256(text.encode()).hexdigest()}
+        return held
+
+
+def test_whichever_is_earlier_in_the_acts_clause_is_said_beside_the_working():
+    """D340 (plan AN.79): the run's presentation limit showed six months from the cheque's date without the Act's 'or
+    within the period of its validity, whichever is earlier'. Code finds the mark in the quoted words' clause of the held
+    text and says, beside the working and to the writer, that only the period quoted is counted; a provision without it
+    carries nothing."""
+    from tests.test_core_understanding import context
+    ctx = context("The cheque is dated 5 November 2026 and was presented on 10 November 2026.")
+    presented = step("p1", "Last day to present the cheque", "within a period of six months from the date on which it is "
+                     "drawn", "six months", {"after": "", "event": "the cheque being drawn", "date": "2026-11-05",
+                                             "quote": "The cheque is dated 5 November 2026",
+                                             "dated_event": "the date the cheque is drawn"})
+    record = calculation.work_out(Calculating({"needed": True, "why": "", "not_assessed": [],
+                                               "calculations": [presented]}), ctx, ValidityHeld())
+    (entry,) = record["calculations"]
+    assert entry["provision"]["other_period"] == {
+        "which": "earlier", "words": "or within the period of its validity, whichever is earlier",
+        "said": calculation.OTHER_PERIOD["earlier"]}
+    (box,) = response_rendering._working(record)
+    assert ["The Act goes on", "“…or within the period of its validity, whichever is earlier”"] in box["working"]["rows"]
+    assert ["Another period the Act names (not counted)", [calculation.OTHER_PERIOD["earlier"]]] in box["working"]["lists"]
+    assert calculation.presentation(record)["worked_out"][0]["other_period_not_counted"]["which"] == "earlier"
+    assert calculation.validate(record, ctx) == record
+    # The demand notice's thirty days carry no such mark.
+    plain = calculation.work_out(Calculating({"needed": True, "why": "", "not_assessed": [],
+                                              "calculations": [notice_step()]}), context(MESSAGE), ValidityHeld())
+    assert "other_period" not in plain["calculations"][0]["provision"]
+    (box,) = response_rendering._working(plain)
+    assert not [title for title, _ in box["working"]["lists"] if title.startswith("Another period")]

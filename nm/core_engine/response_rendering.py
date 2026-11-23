@@ -630,6 +630,10 @@ def _shown(working, earlier, as_of=None):
     row("Period", f"“{working['period']}”")
     if working["words"] and working["words"] != working["period"]:
         row("The Act’s words", f"“{working['words']}”")
+    other = working.get("other_period")
+    if other and other.get("words"):
+        # D340 (plan AN.79): the rest of the Act's clause, where it makes this the earlier or later of two periods.
+        row("The Act goes on", f"“…{other['words']}”")
     row("Runs from", _date(start["date"]))
     if start.get("after"):
         row("Starts the day after", earlier.get(start["after"], start["after"]))
@@ -652,9 +656,17 @@ def _shown(working, earlier, as_of=None):
     row("Last day", _date(working["last_day"]))
     if working["earliest_day"]:
         row("Earliest day", _date(working["earliest_day"]))
-    if working["step_taken"]:
-        row("Taken on", _date(working["step_taken"]["date"]) if working["step_taken"]["date"] else "Not given")
-        row("Whose words", f"“{working['step_taken']['quote']}”")
+    taken = working["step_taken"]
+    if taken and taken.get("counted", True):
+        row("Taken on", _date(taken["date"]) if taken["date"] else "Not given")
+        row("Whose words", f"“{taken['quote']}”")
+    elif taken:
+        # D335 (calculation v8): what was done may fall short of the step the Act requires, so the limit is counted as
+        # still to be taken; what was done stays beside it.
+        row("Done, not counted as the step", taken.get("what") or "Not named")
+        row("Done on", _date(taken["date"]) if taken["date"] else "Not given")
+        row("Whose words", f"“{taken['quote']}”")
+        row("Why it may not count", taken.get("falls_short"))
     standing = working["standing"]
     if as_of:
         row("As of", _date(as_of))
@@ -663,7 +675,9 @@ def _shown(working, earlier, as_of=None):
         row(_DAYS[standing["state"]], standing["days"])
     row("Court closed on the last day", _COURT_CLOSED)
     lists = [[title, list(items)] for title, items in (
-        ("Owner’s ruling applied", working["owner_rulings"]), ("Assumed", working["assumptions"]),
+        ("Owner’s ruling applied", working["owner_rulings"]),
+        ("Another period the Act names (not counted)", [other["said"]] if other else []),
+        ("Assumed", working["assumptions"]),
         ("Still needed", working["missing"]), ("May extend time (not counted)", working["may_extend"])) if items]
     return rows, lists
 
@@ -677,6 +691,7 @@ def _working(record, *, as_of=False):
         provision, worked = entry["provision"], entry["working"]
         working = {"what": entry["what"], "provision": entry["provision_name"], "act": provision["act"],
                    "period": provision["period_words"], "words": provision.get("words") or provision.get("from"),
+                   **({"other_period": deepcopy(provision["other_period"])} if provision.get("other_period") else {}),
                    "runs_from": deepcopy(entry["start"]), "copies": deepcopy(entry["copies"]),
                    "step_taken": deepcopy(entry["done"]), "earliest_day": entry["earliest"],
                    "counting_starts_after": worked["start"], "period_end": worked["period_end"],
