@@ -10,9 +10,12 @@ from nm.core_engine import message_reader, shown_words, steps as stepwise
 from nm.core_engine.conversation import chat_matter_id, shown_of, stored_chat
 from nm.shared.model_port import Completion, ModelResult, ProviderUnavailable, Usage
 from tests.test_core_answer_sections import Scripted, scripted_answers
+from tests.guided import ACTS_FOR, intake
 from tests.test_core_served import OWNER, served  # noqa: F401 - pytest fixture
 
-SENT = {"message": "Inspect this reported account.", "turn_id": "turn-1", "steps": "interactive"}
+# Plan AN.62-AN.64: a new matter worked step by step goes through guided intake first; its message says whom the advocate
+# acts for, so that NM need not ask (D311).
+SENT = {"message": f"{ACTS_FOR} Inspect this reported account.", "turn_id": "turn-1", "steps": "interactive"}
 CHAT = stored_chat(OWNER, None, "turn-1")
 READING = "You want the account examined in one go."
 
@@ -37,6 +40,7 @@ def test_a_message_read_as_step_by_step_stops_after_the_understanding_and_is_rea
     assert [asked["new_message"] for asked in served.model.ways] == [SENT["message"]]
     assert "way" not in served.client.get(f"/api/chats/{CHAT}").json()["pending"]
     assert not scripted.payloads("core_response_writer")
+    intake(served.client, CHAT)
     # A go-ahead runs its step without reading the message again.
     went = served.client.post("/api/turn/go", json={
         "chat_id": CHAT, "turn_id": "turn-1", "choice": "research",
@@ -54,7 +58,7 @@ def test_a_message_that_asks_otherwise_is_worked_straight_through_and_code_says_
     assert reply.status_code == 200, reply.text
     assert reply.json()["committed"] == "committed" and scripted.payloads("core_response_writer")
     # The message was saved first, as its first step; then, read, as worked straight through - code's words, the reading after.
-    assert kept[0] == stepwise.first()
+    assert kept[0] == stepwise.guided(stepwise.first())
     said = f"{message_reader.WAY_SAID[how]} {shown_words.MARK} {READING}"
     assert kept[1] == {**stepwise.first(), "allowed": list(stepwise.STEPS), "way": {"how": how, "said": said}}
     assert all(go == kept[1] for go in kept[1:])

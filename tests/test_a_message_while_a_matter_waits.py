@@ -14,9 +14,12 @@ from nm.core_engine.conversation import HEADER, chat_matter_id, checked_rows, di
 from nm.shared.model_port import ModelResult, ProviderUnavailable, Usage
 from nm.shared.budget_contracts import Completion
 from tests.test_core_answer_sections import Scripted, scripted_answers
+from tests.guided import ACTS_FOR, intake
 from tests.test_core_served import OWNER, served  # noqa: F401 - pytest fixture
 
-SENT = {"message": "Inspect this reported account.", "turn_id": "turn-1", "steps": "interactive"}
+# Plan AN.62-AN.64: a new matter worked step by step goes through guided intake first; its message says whom the advocate
+# acts for, so that NM need not ask (D311).
+SENT = {"message": f"{ACTS_FOR} Inspect this reported account.", "turn_id": "turn-1", "steps": "interactive"}
 CHAT = stored_chat(OWNER, None, "turn-1")
 
 
@@ -54,6 +57,7 @@ def waiting_matter(served):
     scripted_answers(served, Scripted())
     reply = served.client.post("/api/turn", json=SENT)
     assert reply.status_code == 409 and reply.json()["detail"]["code"] == "waiting"
+    intake(served.client, CHAT)
 
 
 def say(served, words):

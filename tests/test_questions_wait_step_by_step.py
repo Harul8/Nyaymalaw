@@ -12,10 +12,13 @@ import pytest
 from nm.core_engine import questions, research, steps
 from nm.core_engine.conversation import asking_of, chat_matter_id, save_asking, shown_of, stored_chat
 from tests.test_core_answer_sections import Scripted, scripted_answers
+from tests.guided import ACTS_FOR, intake
 from tests.test_core_served import OWNER, served  # noqa: F401 - pytest fixture
 from tests.test_nm_asks_in_the_middle_of_a_turn import Desk, proposal, proposer
 
-SENT = {"message": "Inspect this reported account.", "turn_id": "turn-1", "steps": "interactive"}
+# Plan AN.62-AN.64: a new matter worked step by step goes through guided intake first; its message says whom the advocate
+# acts for, so that NM need not ask (D311).
+SENT = {"message": f"{ACTS_FOR} Inspect this reported account.", "turn_id": "turn-1", "steps": "interactive"}
 CHAT = stored_chat(OWNER, None, "turn-1")
 
 
@@ -37,6 +40,7 @@ def researched_with_a_question(served, scripted):
     scripted_answers(served, scripted)
     served.app.propose_questions = proposer(proposal(depends=["D2"]))
     assert served.client.post("/api/turn", json=SENT).json()["detail"]["code"] == "waiting"
+    intake(served.client, CHAT)
     assert go(served, "research").json()["detail"]["code"] == "waiting"
     card = stop(served)["waiting"]
     assert card["after"] == "researched" and [q["question"] for q in card["questions"]] == ["Whom do you act for?"]

@@ -8,6 +8,7 @@ import pytest
 
 from nm.app.step_jobs import AT_ONCE, PER_ADVOCATE, StepCancelled, StepJobs, count_from
 from nm.core_engine.conversation import chat_matter_id, stored_chat
+from tests.guided import intake
 from tests.test_a_message_while_a_matter_waits import SENT
 from tests.test_core_answer_sections import Scripted, scripted_answers
 from tests.test_core_served import OWNER, served  # noqa: F401 - pytest fixture
@@ -120,6 +121,7 @@ def test_a_go_ahead_that_waited_for_a_place_is_not_refused_by_its_own_waiting(se
     waiting = served.client.post("/api/turn", json={**SENT, "turn_id": "turn-b"})
     assert waiting.json()["detail"]["code"] == "waiting"
     chat_b = waiting.json()["detail"]["chat_id"] or stored_chat(OWNER, None, "turn-b")
+    intake(served.client, chat_b, "turn-b")
     held = Held(served)
     served.app.step_jobs.wait_seconds, served.app.step_jobs.at_once = 0.2, 1
     assert served.client.post("/api/turn", json=SENT).status_code == 202
@@ -143,6 +145,7 @@ def test_a_step_that_waited_then_was_refused_as_it_began_says_working_no_longer(
     scripted_answers(served, Scripted())
     waiting = served.client.post("/api/turn", json={**SENT, "turn_id": "turn-b"})
     chat_b = waiting.json()["detail"]["chat_id"] or stored_chat(OWNER, None, "turn-b")
+    intake(served.client, chat_b, "turn-b")
     held = Held(served)
     served.app.step_jobs.wait_seconds, served.app.step_jobs.at_once = 0.2, 1
     assert served.client.post("/api/turn", json=SENT).status_code == 202

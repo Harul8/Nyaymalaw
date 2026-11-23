@@ -14,6 +14,7 @@ from nm.app.step_jobs import StepJobs
 from nm.arrive.advocate_contracts import token_fingerprint
 from nm.core_engine import steps as stepwise
 from nm.shared.step_record_store import FileStepRecords
+from tests.guided import intake
 from tests.test_a_message_while_a_matter_waits import CHAT, SENT, held
 
 from tests.test_core_answer_sections import Scripted, scripted_answers
@@ -108,13 +109,15 @@ def test_a_step_a_restart_interrupted_is_continued_by_the_server_itself(served):
     served.app.step_jobs.of(OWNER, "turn-1").exception(timeout=30)
     later = outcome(served)
     assert later.status_code == 409 and later.json()["detail"]["code"] == "waiting", "the step finished as Continue finishes it"
-    assert stepwise.waiting_of(held(served)) == "understood"
+    # Plan AN.62 (D310): a new matter's first step ends at the read-back of guided intake.
+    assert stepwise.waiting_of(held(served)) == stepwise.READ
     assert served.app.step_records.left() == []
 
 
 def test_a_go_ahead_not_yet_begun_is_given_again_as_given(served):
     scripted_answers(served, Scripted())
     assert served.client.post("/api/turn", json=SENT).json()["detail"]["code"] == "waiting"
+    intake(served.client, CHAT)
     served.app.step_records.taken(OWNER, "turn-1", route="go", chat_id=CHAT, choice="research", disputes=["D1"],
                                   session=fingerprint_of(served))
     assert api.continue_interrupted_steps() == 1
@@ -130,6 +133,7 @@ def test_nothing_is_taken_up_without_its_words_or_once_the_sign_in_no_longer_hol
     Nothing is taken up, as before, and a message that never began is still let go."""
     scripted_answers(served, Scripted())
     assert served.client.post("/api/turn", json=SENT).json()["detail"]["code"] == "waiting"
+    intake(served.client, CHAT)
     calls = len(served.model.calls)
     served.app.step_records.taken(OWNER, "turn-2", route="send", session=fingerprint_of(served))  # a message never begun
     served.app.step_records.taken(OWNER, "turn-1", route="go", chat_id=CHAT, choice="research", session="0" * 64)

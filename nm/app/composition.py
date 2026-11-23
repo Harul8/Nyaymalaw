@@ -401,7 +401,9 @@ class Application:
         # Plan AN.58 (D287): a message sent step by step is read, as its work begins, for whether it asks to be worked otherwise.
         fresh = go is None and steps == 'interactive'
         if fresh:
-            go = stepwise.first()
+            # Plan AN.62-AN.64 (D309-D312): a new matter worked step by step is taken through guided intake; a follow-up, or a
+            # message read as asking for its work otherwise, is not (turn.process).
+            go = stepwise.guided(stepwise.first())
 
         if document_refs:
             # The documents sent with the message, read from this advocate's own space;
@@ -562,6 +564,41 @@ class Application:
                              effort=asked.get('effort'), message=held['message'], turn_id=turn_id,
                              chat_id=asked['chat_id'], go=go)
 
+    def _moved(self, matter, held, go):
+        """Plan AN.62-AN.64: a guided stop settled - the matter is saved waiting at its next stop, with no step run and no model
+        called; raised as a stop is, so that the page reads the new stop as it reads any (kept)."""
+        from nm.core_engine import turn
+        from nm.core_engine.conversation import ConversationRefused, save_waiting
+        held['go'] = go
+        save_waiting(self.store, matter, held)
+        refusal = ConversationRefused(turn.STOPS['waiting'], status=409, code='waiting', retryable=True)
+        refusal.kept, refusal.chat_id = True, held['request']['chat_id']
+        raise refusal
+
+    def guide_turn(self, *, advocate_id, chat_id, turn_id, choice, at, session_current, disputes=None):
+        """A go-ahead that settles a guided stop (plan AN.62-AN.64; D310-D312): That is right, Propose the disputes or Confirm the
+        disputes - bound to the stop the advocate answered (at) and, for a confirmation, to the disputes it showed. The matter moves
+        to its next stop without a step run or a model call. ConversationRefused where the matter does not wait there, or the
+        go-ahead is not the one its stop offers."""
+        from nm.core_engine import steps as stepwise
+        from nm.core_engine.conversation import ConversationRefused
+        matter, held = self._held(advocate_id, chat_id)
+        if held is None or held['turn_id'] != turn_id or stepwise.waiting_of(held) is None:
+            raise ConversationRefused('This matter is not waiting for your go-ahead.', status=409, code='not_waiting')
+        if self.turn_running(advocate_id, turn_id):
+            raise ConversationRefused('NM is already working on this answer.', code='turn_in_progress')
+        if not session_current():
+            raise ConversationRefused('Sign in again before continuing.', status=401)
+        try:
+            go = (stepwise.given(held['go'], choice, held=held, disputes=list(disputes) if disputes is not None else None, at=at)
+                  if choice in stepwise.MOVES else None)
+        except ValueError:
+            go = None
+        if not stepwise.moved(go):
+            raise ConversationRefused('NM cannot take that go-ahead for this matter now: what it shows has changed. Read it again '
+                                      'and answer it as it is now.', status=409, code='not_offered')
+        self._moved(matter, held, go)
+
     def message_turn(self, *, advocate_id, chat_id, turn_id, message, session_current, document_refs=()):
         """A message sent while a matter waits for the advocate (plan AN.48, 48c; D146, D158): the message reader judges what it is.
         A go-ahead runs its step, as its button would; information, a correction or a rethink joins the matter as the advocate's
@@ -627,8 +664,17 @@ class Application:
                 return turn.done(self.store, matter, advocate_id, turn_id,
                                  running=lambda held_turn: self.turn_running(advocate_id, held_turn),
                                  session_current=session_current)
+            if stepwise.moved(go):  # AN.62-AN.64: a guided stop settled in words - no step runs
+                self._moved(matter, held, go)
             return ran(go)
         entry = {'text': message, 'documents': list(documents), 'at': datetime.now(timezone.utc).isoformat()}
+        if kind in ('information', 'correction') and stepwise.waiting_of(held) in stepwise.GUIDED:
+            # Plan AN.62-AN.64 (D310-D312): before the disputes are confirmed, what the advocate adds or corrects - papers among it -
+            # is read with the whole matter: it is understood again with their words, and stops where it was or at the next guided
+            # stop not yet settled.
+            said = f"{judgement['said']} NM reads the matter again with it.".strip()
+            go = stepwise.rethink(stepwise.heard(held['go'], message, kind, said))
+            return ran(go, steered_with=[entry])
         if kind == 'rethink':
             go = stepwise.rethink(stepwise.heard(held['go'], message, kind, judgement['said']))
             return ran(go, steered_with=[entry])

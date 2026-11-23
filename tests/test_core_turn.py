@@ -2,6 +2,7 @@
 from copy import deepcopy
 from dataclasses import replace
 import json
+import re
 
 import pytest
 
@@ -69,8 +70,10 @@ class ScriptedModel:
             if prompt.operation == "core_research_understand":
                 latest = prompt.user.split("(the one we act on now):\n", 1)[1].split(
                     "\n\nCurrent records of this matter:", 1)[0]
+                # Plan AN.63 (D328): where the advocate's words say whom they act for, the understanding gives them.
+                said = re.search(r"I act for [^.\n]+", prompt.user)
                 self.research = ResearchModel(understanding(disputes=self.disputes, needs_research=self.legal,
-                                                            words=latest))
+                                                            words=latest, acts_for=said.group(0) if said else ""))
             return self.research.structured(prompt, schema, tier, **kwargs)
         data = json.loads(prompt.user)
         self.calls.append((prompt.operation, data))

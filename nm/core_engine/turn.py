@@ -533,6 +533,11 @@ class _Keeper:
     def case(self, index, case):
         self.later(lambda held: held.update(steps={**held["steps"], "cases": {**held["steps"]["cases"], str(index): case}}))
 
+    def guided(self, record):
+        """Plan AN.62-AN.64 (D311, D328): guided intake's record on the go-ahead - whom the advocate acts for, by the words of their
+        own message, as found once the matter is understood."""
+        self.later(lambda held: held.update(go={**held["go"], "guided": dict(record)}) if held.get("go") else None)
+
     def taken(self, route, said):
         """Plan AN.48 (D175): how a follow-up's turn started - from NM's earlier understanding of the matter, or with the whole
         matter read again - in code's words, kept on the go-ahead record for its stops to say."""
@@ -733,8 +738,15 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
         disputes = len(response_writer.parts({"contract": research.CONTRACT, "plan": plan}))
         calls.expect("planned", estimates.turn_planned_usd(priced, calls.estimate()["spent_usd"], max(1, disputes - 1),
                                                            calls.effort))
-    # Plan AN.48 (D134, 48a1): understood - a matter worked step by step stops here for the advocate's go-ahead to research.
-    gate.after("understand")
+    # Plan AN.62-AN.64 (D311, D328): a matter in guided intake records whom the advocate acts for - the parties the understanding
+    # marks with the words of the advocate's own message, which code finds there - before it stops.
+    if gate.guided:
+        gate.guide(research.acting_for(((plan.get("proposal") or {}).get("understanding")) or {}, context))
+        if keep is not None:
+            keep.guided(gate.go["guided"])
+    # Plan AN.48 (D134, 48a1): understood - a matter worked step by step stops here for the advocate's go-ahead to research; one in
+    # guided intake, at its first guided stop not yet settled (AN.62-AN.64).
+    gate.after("understand", {"understood": {"plan": plan}})
     # Step 4 (owner, 21 Oct 2026; P26 as first decided): each dispute is researched as its own
     # part, and its section is written as soon as that part is ready; the time limits are
     # worked out beside the search, only where research is needed.
@@ -1065,7 +1077,8 @@ def _worked_as_asked(calls, context, go, gate, keeper, report, way):
         return go
     how = reading["how"]
     if how == "research_all":
-        go = {**go, "allowed": ["understand", "research"]}
+        # The explicit request is the advocate's scope (D309): it is not taken through guided intake (AN.62-AN.64).
+        go = {**stepwise.unguided(go), "allowed": ["understand", "research"]}
     elif how in stepwise.WAYS:
         go = stepwise.straight(go, how, reading["said"])
     else:
@@ -1166,6 +1179,9 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     if attempts is None:
         raise ConversationRefused("Conversation processing is not configured.", status=503,
                                   code="attempt_storage_unavailable")
+    if go is not None and go.get("guided") is not None and context.rows:
+        # Plan AN.62 (D309): guided intake is a new matter's; a follow-up starts from the conversation as it stands (D175).
+        go = stepwise.unguided(go)
     gate = stepwise.Gate(go)
     identity = digest([advocate_id, context.chat_id, turn_id, *stepwise.attempt_part(go)])
     # The committed conversation the request was made on: what a turn shows while it works

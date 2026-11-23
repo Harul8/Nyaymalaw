@@ -54,12 +54,13 @@ def v5_work(quote="Find the applicable law."):
 # --- v7 proposals ---------------------------------------------------------------------
 
 def understanding(questions=1, disputes=1, *, needs_research=True, words="Find the applicable law",
-                  why_it_matters=True):
-    """A v9 understanding; why_it_matters=False gives the v7 and v8 shape."""
+                  why_it_matters=True, acts_for=""):
+    """A v9 understanding; why_it_matters=False gives the v7 and v8 shape. acts_for (plan AN.63, D328): the advocate's words
+    saying they act for the client, where their messages say so."""
     return {"summary": "A reported position on which the advocate seeks the law.",
             "asked": ["Where the law stands on the reported position"], "ruled_out": [],
             "needs_research": needs_research, "no_research_reason": "" if needs_research else "A courtesy.",
-            "parties": [{"who": "client", "role": "claimant"}],
+            "parties": [{"who": "client", "role": "claimant", **({"acts_for": acts_for} if acts_for else {})}],
             "facts": [{"id": "F1", "fact": "The advocate seeks the applicable law.", "advocate_words": words,
                        "certainty": "reported"}],
             "disputes": [{"id": f"D{d}", "name": f"Dispute {d}", "between": ["client", "other party"],

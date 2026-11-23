@@ -1998,6 +1998,30 @@ def go_turn(req: TurnGo, advocate_id: Advocate, request: Request, background: Ba
                      req, request, advocate_id, background, held=True)
 
 
+class TurnGuide(BaseModel):
+    """A go-ahead that settles a stop of guided intake (plan AN.62-AN.64; D310-D312): That is right, Propose the disputes or Confirm
+    the disputes - bound to the stop answered (its 'at', as its card gave it) and, for a confirmation, to the disputes it showed."""
+    model_config = ConfigDict(extra='forbid')
+    chat_id: str = Field(min_length=1, max_length=200)
+    turn_id: str = Field(min_length=1, max_length=200)
+    choice: Literal['right', 'identify', 'confirm']
+    at: str = Field(min_length=1, max_length=64)
+    disputes: list[Annotated[str, Field(min_length=1, max_length=200)]] | None = Field(default=None, min_length=1, max_length=50)
+
+
+@app.post('/api/turn/guide', dependencies=[CsrfProtected])
+def guide_turn(req: TurnGuide, advocate_id: Advocate, request: Request) -> _Released:
+    """A guided stop settled (plan AN.62-AN.64): the matter moves to its next stop at once - no step runs and no model is called -
+    and is answered as a stop is (409 'waiting', kept), so that the page reads the new stop from the conversation."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    served = application()
+    signed_in = lambda: _session_current(request, advocate_id)  # noqa: E731
+    return _converted(lambda: served.guide_turn(advocate_id=advocate_id, chat_id=req.chat_id, turn_id=req.turn_id,
+                                                choice=req.choice, at=req.at, disputes=req.disputes, session_current=signed_in),
+                      req, signed_in=signed_in, active=lambda: _active_while_working(request))
+
+
 class TurnAnswers(BaseModel):
     """Answers to NM's questions given while a matter waits (plan AN.48, 48d): by question ID, {"chosen": [labels], "other": "own
     words"}."""
@@ -2253,7 +2277,7 @@ def _saved_state(advocate_id, chat_id, turn_id):
     held = _held(matter)
     if held is None or held['turn_id'] != turn_id:
         return {}
-    return {'state': 'stopped', 'chat_id': chat_id, 'stopped': _stopped_of(held, _asked(matter, held))}
+    return {'state': 'stopped', 'chat_id': chat_id, 'stopped': _stopped_of(held, _asked(matter, held), matter)}
 
 
 class QuestionAnswers(BaseModel):
@@ -2583,7 +2607,7 @@ def chat(chat_id: str, advocate_id: Advocate, request: Request, response: Respon
             'matter_version': matter.version, 'turns': turns,
             # Plan AN.43 (D84): the title the conversation shows at its beginning; None until NM names it.
             'title': _title_text(matter),
-            **({'pending': _pending(advocate_id, held, _asked(matter, held))} if held else {}),
+            **({'pending': _pending(advocate_id, held, _asked(matter, held), matter)} if held else {}),
             **({'queued': queued} if queued else {})}
 
 
@@ -2755,7 +2779,7 @@ def _asked(matter, held):
     return asked['state'] if asked else None
 
 
-def _pending(advocate_id, held, asked=None):
+def _pending(advocate_id, held, asked=None, matter=None):
     """A turn being worked on, as the page reads it (plan AN.41, D66-D69): its message and files, what its answer has shown, the
     work it has finished (D68), whether NM is working on it now and, where it is not, why it stopped (D69) and whether NM goes on
     by itself (D73); what steered it (AN.42, D79)."""
@@ -2770,11 +2794,28 @@ def _pending(advocate_id, held, asked=None):
         if stepwise.way_said(held):
             pending['way'] = stepwise.way_said(held)
     if not working:
-        pending['stopped'] = _stopped_of(held, asked)
+        pending['stopped'] = _stopped_of(held, asked, matter)
     return pending
 
 
-def _stopped_of(held, asked=None):
+def _read_back(matter, held):
+    """Plan AN.62 (D310, D327): what NM understood of a matter in guided intake, for its stop - the board's own reading of the
+    understanding (matter_board), shown in the stop while the board is not: the matter in short, its parties, each fact with where
+    its words are found, the subjects, and each paper with what NM could not read of it. A new matter's: the turn alone."""
+    try:
+        board = matter_board([_held_row(matter, [], held)])
+    except (KeyError, TypeError, ValueError) as exc:
+        logging.getLogger('nm.steps').warning('A guided stop\'s read-back could not be made (%s).', type(exc).__name__)
+        return {'state': 'unreadable'}
+    if board.get('state') != 'ready':
+        return {'state': 'empty'}
+    timeline = board.get('timeline') or {}
+    return {'state': 'ready', 'summary': board['summary'], 'asked': board['asked'], 'parties': board['parties'],
+            'facts': board['facts'], 'subjects': board['subjects'],
+            'papers': timeline['documents'] if timeline.get('state') == 'ready' else []}
+
+
+def _stopped_of(held, asked=None, matter=None):
     """Why a turn stopped part-way, in code's words (D69): what was finished and what was not, what must be put right before
     Continue works, and whether NM continues it by itself (D73) - only after a restart, the message having been sent already."""
     stopped = held.get('stopped') or {}
@@ -2785,8 +2826,16 @@ def _stopped_of(held, asked=None):
             'finished': _finished_said(work) if work is not None else [],
             'unfinished': _unfinished_said(work) if work is not None else [],
             # Plan AN.48 (48a4): a matter waiting for the advocate's go-ahead - what was done, what comes next, the go-aheads its
-            # stop offers and what NM noticed that was not asked; None for any other stop.
-            'waiting': stepwise.card(held, asked)}
+            # stop offers and what NM noticed that was not asked; None for any other stop. AN.62 (D310): before the disputes are
+            # proposed, with what NM read.
+            'waiting': _waiting_of(held, asked, matter)}
+
+
+def _waiting_of(held, asked, matter):
+    card = stepwise.card(held, asked)
+    if card is not None and card['after'] in stepwise.BEFORE_PROPOSED and matter is not None:
+        card = {**card, 'read_back': _read_back(matter, held)}
+    return card
 
 
 def _work_of(held):
@@ -3002,7 +3051,9 @@ def chat_board(chat_id: str, advocate_id: Advocate, request: Request, response: 
     turn is worked on, each dispute's section shown so far updates it (owner decision P26)."""
     matter, rows = _read_chat(chat_id, advocate_id, request)
     held = _held(matter)
-    if held is not None and ('steps' not in held or held['steps']['understood'] is not None):
+    # Plan AN.62 (D327): a matter in guided intake shows no board until NM proposes its disputes; what NM read is in the stop.
+    if (held is not None and ('steps' not in held or held['steps']['understood'] is not None)
+            and not stepwise.board_withheld(held)):
         rows = [*rows, _held_row(matter, rows, held)]
     board = _corrected(matter_board(rows), rows, held)
     if not _session_current(request, advocate_id):

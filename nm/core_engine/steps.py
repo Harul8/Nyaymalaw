@@ -13,9 +13,20 @@ of 48b (register item 1): research.retrieve_parts and answer_sections.answer eac
 
 A message sent without asking for steps runs end to end exactly as before 48a: the recorded replay (D151) and every earlier test run
 so. The record of a turn being worked on gains one addition, "go" (48a2); a record without it is read as before.
+
+Plan AN.62-AN.64 (owner decisions D310-D312, D327 and D328): guided intake. A matter whose first message brings its material and asks
+for nothing more specific (D309) is understood as before, in one step, and then stops at the first of its guided stops not yet
+settled, before any dispute is researched: the read-back of what NM understood (D310); whom the advocate acts for, where no message
+of theirs says so (D311); the offer to set out the disputes; the disputes proposed for the advocate to confirm (D312). Moving from
+one to the next runs no step and calls no model. Once the disputes are confirmed the matter stops as any matter worked step by step
+does once understood: research one confirmed dispute at a time (D313), its analysis after the advocate's go-ahead and the next
+dispute offered (D314). A record without the guided part ("guided") is read as before.
 """
 from __future__ import annotations
 
+import hashlib
+import json
+import re
 from datetime import datetime, timezone
 
 from nm.core_engine import search_said, tentative
@@ -29,19 +40,33 @@ AFTER = {"understand": "understood", "research": "researched", "write": "written
 NEXT = {"understood": "research", "researched": "write", "written": "finish"}
 #: 48d (D142, D154): a step that needs the advocate's answer to NM's questions stops for it, and resumes once they are answered.
 ASKED = "asked"
+#: Plan AN.62-AN.64 (D310-D312): guided intake's stops, in order - the read-back (read), whom the advocate acts for (client), the
+#: offer to set out the disputes (offer) and the disputes proposed for confirmation (proposed).
+READ, CLIENT, OFFER, PROPOSED = "read", "client", "offer", "proposed"
+GUIDED = (READ, CLIENT, OFFER, PROPOSED)
+#: D327: the guided stops before the disputes are proposed, at which the matter board is not shown.
+BEFORE_PROPOSED = (READ, CLIENT, OFFER)
 #: Every stop a matter may wait at.
-WAITS = (*NEXT, ASKED)
+WAITS = (*NEXT, ASKED, *GUIDED)
 #: The first calls of the finish step: while finishing is not allowed they are not sent - the turn stops before the check across the
 #: analyses, or before the overview where there is nothing to check across (48a contract).
 FINISHING = frozenset({"core_response_cross_check", "core_response_overview"})
 #: Go-aheads at a stop: an unambiguous next step, research or analysis for selected disputes or
 #: explicitly for all, end to end, done, or a retry of failed searches for one dispute (D282).
-GOS = ("next", "research", "write", "end_to_end", "done", "search_again")
+#: Plan AN.62-AN.64: the go-aheads that settle a guided stop and move the matter to its next stop without a step run - That is
+#: right (the read-back), Propose the disputes (the offer) and Confirm the disputes (D312).
+MOVES = {"right": READ, "identify": OFFER, "confirm": PROPOSED}
+GOS = ("next", "research", "write", "end_to_end", "done", "search_again", *MOVES)
 _FIELDS = {"mode", "allowed", "n", "waiting"}
 #: What a go-ahead record may add (48b: the disputes named; 48c: the messages heard while the matter waited; 48e: each step's
 #: tentative time beside the time it took; D175: how a follow-up's turn started; D287: a message worked straight through as it
-#: asked; D282: the dispute whose failed searches are made again).
-_ADDED = ({"disputes"}, {"heard"}, {"times"}, {"recheck"}, {"proposed"}, {"taken"}, {"way"}, {"again"})
+#: asked; D282: the dispute whose failed searches are made again; AN.62-AN.64: guided intake - what is settled, whom the advocate
+#: acts for and the disputes confirmed).
+_ADDED = ({"disputes"}, {"heard"}, {"times"}, {"recheck"}, {"proposed"}, {"taken"}, {"way"}, {"again"}, {"guided"})
+#: Guided intake's record: the stops settled by a go-ahead (the read-back, the offer), the parties the advocate acts for with the
+#: words of their own message that say so (D328), and each confirmed dispute with the fingerprint of the dispute as confirmed (D312).
+_GUIDED = {"settled", "client", "confirmed"}
+_FINGERPRINT = re.compile(r"[0-9a-f]{64}")
 #: D175: how a follow-up's turn started - from NM's earlier understanding of the matter, or with the whole matter read again.
 TAKEN_ROUTES = ("kept", "afresh")
 #: D287 (plan AN.58, 17 Nov 2026): how a message sent step by step asked, as the model read it, to be worked otherwise - the work
@@ -65,7 +90,9 @@ NEXT_SAID = {
 }
 #: The history's line for a conversation waiting for the advocate (D164).
 WAITING_SAID = {"understood": "Waiting for you: research", "researched": "Waiting for you: the analyses",
-                "written": "Waiting for you: finish", ASKED: "Waiting for your answers"}
+                "written": "Waiting for you: finish", ASKED: "Waiting for your answers",
+                READ: "Waiting for you: check what NM read", CLIENT: "Waiting for you: whom you act for",
+                OFFER: "Waiting for you: the disputes", PROPOSED: "Waiting for you: confirm the disputes"}
 
 
 class Waiting(Exception):
@@ -101,6 +128,7 @@ def valid(go):
                         for entry in go.get("proposed", []))
                 and _taken_valid(go.get("taken"))
                 and _way_valid(go.get("way"))
+                and _guided_valid(go.get("guided"))
                 and (go.get("again") is None or isinstance(go["again"], list) and len(go["again"]) == 1
                      and isinstance(go["again"][0], str) and bool(go["again"][0].strip()))
                 and isinstance(heard, list)
@@ -122,6 +150,20 @@ def _taken_valid(taken):
     """D175: none, or how a follow-up's turn started - its route and code's words."""
     return taken is None or (isinstance(taken, dict) and set(taken) == {"route", "said"} and taken["route"] in TAKEN_ROUTES
                              and isinstance(taken["said"], str) and bool(taken["said"].strip()))
+
+
+def _guided_valid(record):
+    """AN.62-AN.64: none, or guided intake's record (_GUIDED)."""
+    return record is None or (
+        isinstance(record, dict) and set(record) == _GUIDED
+        and isinstance(record["settled"], list) and all(stop in (READ, OFFER) for stop in record["settled"])
+        and len(set(record["settled"])) == len(record["settled"])
+        and isinstance(record["client"], list) and len(record["client"]) <= _MOST_DISPUTES
+        and all(isinstance(entry, dict) and set(entry) == {"who", "words"}
+                and all(isinstance(entry[key], str) and entry[key].strip() for key in ("who", "words")) for entry in record["client"])
+        and isinstance(record["confirmed"], dict) and len(record["confirmed"]) <= _MOST_DISPUTES
+        and all(isinstance(name, str) and name.strip() and isinstance(mark, str) and _FINGERPRINT.fullmatch(mark) is not None
+                for name, mark in record["confirmed"].items()))
 
 
 def _way_valid(way):
@@ -163,7 +205,82 @@ def straight(go, how, said):
     at a stop runs them (D135) - with how it asked and code's words saying so. It is still the first step's (attempt_part)."""
     if not opening(go) or how not in WAYS or not isinstance(said, str) or not said.strip():
         raise ValueError("Only a message's first go-ahead is worked straight through, said in code's words")
-    return {**go, "allowed": list(STEPS), "way": {"how": how, "said": said}}
+    return {**unguided(go), "allowed": list(STEPS), "way": {"how": how, "said": said}}
+
+
+def guided(go):
+    """Plan AN.62-AN.64: the go-ahead record of a matter taken through guided intake - nothing settled yet, no party known to be the
+    one the advocate acts for, no dispute confirmed."""
+    return {**go, "guided": {"settled": [], "client": [], "confirmed": {}}}
+
+
+def unguided(go):
+    """The go-ahead record without guided intake: a message that asks to be worked otherwise (D287, D309), or a follow-up."""
+    return {key: value for key, value in go.items() if key != "guided"}
+
+
+def _understanding(steps):
+    plan = (((steps or {}).get("understood") or {}).get("plan") or {})
+    return ((plan.get("proposal") or {}).get("understanding")) or {}
+
+
+def proposed_disputes(steps):
+    """The disputes the matter's understanding proposes, in its order, each as understood."""
+    return [dispute for dispute in _understanding(steps).get("disputes") or () if isinstance(dispute, dict) and dispute.get("id")]
+
+
+def fingerprint(dispute):
+    """D312: what binds a confirmation to the dispute as it was proposed - the whole dispute as understood (its name, parties,
+    facts, legal questions, why it matters): one changed word and it is not the dispute the advocate confirmed."""
+    return hashlib.sha256(json.dumps(dispute, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+
+
+def unconfirmed(go, steps):
+    """D312: the proposed disputes not confirmed as they now stand, in order. A correction that leaves a dispute exactly as it was
+    keeps its confirmation."""
+    confirmed = (((go or {}).get("guided") or {}).get("confirmed")) or {}
+    return [dispute["id"] for dispute in proposed_disputes(steps) if confirmed.get(dispute["id"]) != fingerprint(dispute)]
+
+
+def guided_stop(go, steps):
+    """The first guided stop not yet settled for this understanding - READ, CLIENT (where the understanding names parties and no
+    message of the advocate's says whom they act for), OFFER, PROPOSED - or None: the matter then stops as any matter worked step
+    by step does once it is understood, for research one dispute at a time (D313)."""
+    record = (go or {}).get("guided")
+    if record is None:
+        return None
+    if READ not in record["settled"]:
+        return READ
+    if not record["client"] and _understanding(steps).get("parties"):
+        return CLIENT
+    if OFFER not in record["settled"]:
+        return OFFER
+    return PROPOSED if unconfirmed(go, steps) else None
+
+
+def representing(go, parties):
+    """D311, D328: the go-ahead record with the parties the advocate acts for, each {"who", "words"} - the words of the advocate's
+    own message that say so, as code found them there (research.acting_for). An understanding that marks none keeps what was found
+    before: those words still stand in the advocate's messages (D311: a statement that still applies is reused)."""
+    if not parties or (go or {}).get("guided") is None:
+        return go
+    return {**go, "guided": {**go["guided"], "client": [{"who": entry["who"], "words": entry["words"]} for entry in parties]}}
+
+
+def board_withheld(held):
+    """D327: whether the matter board is not shown yet - a matter in guided intake before NM proposes its disputes."""
+    record = (((held or {}).get("go") or {}).get("guided"))
+    if record is None:
+        return False
+    after = waiting_of(held)
+    if after is not None:
+        return after in BEFORE_PROPOSED
+    return OFFER not in record["settled"]
+
+
+def moved(go):
+    """Whether a go-ahead given at a guided stop moved the matter to its next stop without a step run: it waits already."""
+    return isinstance(go, dict) and go.get("waiting") is not None
 
 
 def way_said(held):
@@ -204,7 +321,9 @@ def _carried(go):
             **({"times": list(go["times"])} if go.get("times") else {}),
             **({"recheck": True} if go.get("recheck") else {}),
             **({"proposed": list(go["proposed"])} if go.get("proposed") else {}),
-            **({"taken": dict(go["taken"])} if go.get("taken") else {})}
+            **({"taken": dict(go["taken"])} if go.get("taken") else {}),
+            # AN.62-AN.64: guided intake's record goes on with the matter, so that a later rethink keeps what was settled.
+            **({"guided": dict(go["guided"])} if go.get("guided") else {})}
 
 
 def proposing(go, entries):
@@ -310,16 +429,22 @@ def _newly(state, go):
     return [name for name in state["order"] if name in wanted and name in state["researched"]]
 
 
-def given(go, choice, *, held, disputes=None):
+def given(go, choice, *, held, disputes=None, at=None):
     """The go-ahead the advocate gives a waiting turn (48a3, 48b): "research" or "write" for the disputes named (None: every
     dispute that step can now take), "next" (the unambiguous next step), "end_to_end" (every remaining
     step for every dispute,
     without stopping, D135) or "done" (finish with what is written, D147). Returns the go-ahead for the next run, or None for Done
-    before any analysis is written - the matter is then saved as it stands, with no step run. ValueError where the turn does not
-    wait, the choice is not one its stop offers, or a dispute named is not one it can take that step for."""
+    before any analysis is written - the matter is then saved as it stands, with no step run. At a guided stop (AN.62-AN.64) its
+    move returns the record already waiting at the next stop (moved): nothing runs. at: the stop the advocate answered, as its
+    card gave it (D312: a confirmation is bound to the proposal shown). ValueError where the turn does not wait, the choice is not
+    one its stop offers, or a dispute named is not one it can take that step for."""
     waiting = go.get("waiting") if isinstance(go, dict) else None
     after = waiting.get("after") if isinstance(waiting, dict) else None
     if not valid(go) or after not in WAITS or choice not in GOS:
+        raise ValueError("This conversation is not waiting for that")
+    if after in GUIDED:
+        return _guided_given(go, choice, after, held, disputes, at)
+    if choice in MOVES:
         raise ValueError("This conversation is not waiting for that")
     if after == ASKED and choice not in ("end_to_end", "done"):
         # 48d (D154): a step stopped for answers resumes once they are given; meanwhile only end to end or done.
@@ -373,6 +498,35 @@ def given(go, choice, *, held, disputes=None):
     return None
 
 
+def _guided_given(go, choice, after, held, disputes, at):
+    """A go-ahead at a guided stop: its own move, End to end (every step for every dispute, on NM's own understanding, D309) or
+    Done (saved as it stands: nothing is written yet)."""
+    steps = held.get("steps")
+    if disputes is not None and (not isinstance(disputes, list) or not disputes or len(set(disputes)) != len(disputes)):
+        raise ValueError("Name each dispute once")
+    if choice in ("end_to_end", "done"):
+        if disputes is not None:
+            raise ValueError("End to end and Done are for the whole matter")
+        if choice == "done":
+            return None
+        return {"mode": MODE, "allowed": list(STEPS[1:]), "n": go["n"] + 1, "waiting": None, "disputes": None, **_carried(go)}
+    if MOVES.get(choice) != after:
+        raise ValueError("This stop does not offer that")
+    record = {**go["guided"]}
+    if choice == "confirm":
+        shown = proposed_disputes(steps)
+        if (at is not None and at != go["waiting"]["at"]
+                or disputes is not None and sorted(disputes) != sorted(dispute["id"] for dispute in shown)):
+            raise ValueError("Confirm the disputes as they are proposed now")
+        record["confirmed"] = {dispute["id"]: fingerprint(dispute) for dispute in shown}
+    else:
+        if disputes is not None:
+            raise ValueError("This go-ahead is for the whole matter")
+        record["settled"] = [*record["settled"], after]
+    went = {**go, "guided": record}
+    return waited(went, guided_stop(went, steps) or "understood")
+
+
 class Gate:
     """Where a run of a turn stops, and which disputes it runs (48a1, 48b). None: no go-ahead was asked for - the run goes end to
     end for every dispute, as before 48a."""
@@ -388,6 +542,16 @@ class Gate:
         self.proposed = [] if go is None else list(go.get("proposed") or ())
         #: Plan AN.52 (D282): the dispute (WHOLE: the answer written as a whole) whose failed searches this run makes again.
         self.again = [] if go is None else list(go.get("again") or ())
+    @property
+    def guided(self):
+        """AN.62-AN.64: a matter in guided intake, which stops once understood at its first guided stop not yet settled - as this
+        run's go-ahead now says: one read as asking to be worked straight through is not (through)."""
+        return self.go is not None and self.go.get("guided") is not None
+
+    def guide(self, parties):
+        """D311, D328: the parties the advocate acts for, by the words of their own message (representing); returns the go-ahead."""
+        self.go = representing(self.go, parties)
+        return self.go
 
     def through(self, go):
         """D287: this run, begun on a message's first go-ahead, goes straight through on go (straight's): every step, no stop."""
@@ -421,13 +585,14 @@ class Gate:
             return []
         return [entry for entry in self.proposed if self.disputes is None or entry["dispute_id"] in self.disputes]
 
-    def after(self, step):
+    def after(self, step, steps=None):
         """Called once a step is done: the turn stops here unless a later step is allowed. A step the go-ahead passes through was
-        done before it (the advocate is offered a step only once the steps before it are done), so it has nothing left to do."""
+        done before it (the advocate is offered a step only once the steps before it are done), so it has nothing left to do.
+        steps: the matter's steps as understood - a matter in guided intake stops at its first guided stop not yet settled."""
         if self.allowed is None or step not in AFTER:
             return
         if not any(STEPS.index(allowed) > STEPS.index(step) for allowed in self.allowed):
-            raise Waiting(AFTER[step])
+            raise Waiting((guided_stop(self.go, steps) if step == "understand" else None) or AFTER[step])
 
     def call(self, operation):
         """Asked before each model call is sent (calls.TurnCalls): the finish step's first call waits for the go-ahead to finish."""
@@ -465,6 +630,8 @@ def card(held, asked=None):
     if after is None:
         return None
     questions = _questions(asked)
+    if after in GUIDED:
+        return _guided_card(held, after, questions)
     if after == ASKED:
         open_now = [question for question in questions if question["answer"] is None]
         gos = _timed_gos(held, [{"choice": "end_to_end", "disputes": None, "said": "End to end, on NM's own understanding"},
@@ -541,6 +708,56 @@ def card(held, asked=None):
                            *([AGAIN_SAID] if failing else [])]}
 
 
+#: Plan AN.62-AN.64 (D310-D312): what each guided stop says was done, and what comes next, in code's words.
+GUIDED_SAID = {
+    READ: ("NM has read your messages and papers. This is what it understood of the matter, with where each point is found and "
+           "what it could not read.",
+           "Check it. If anything is wrong or missing, say so in a message and NM reads the matter again with it; if it is right, "
+           "press That is right. NM has not set out the disputes or researched anything yet."),
+    CLIENT: ("NM needs to know whom you act for before it sets out the disputes: none of your messages says so, and a party named "
+             "in the papers is not enough.",
+             "Choose the party you act for, or say so in a message in your own words."),
+    OFFER: ("NM has what it needs to set out the disputes in the matter.",
+            "Next: NM proposes the disputes, from your client's side, on the board, for you to confirm or correct. Nothing is "
+            "researched until you confirm them."),
+    PROPOSED: ("NM proposes the disputes on the board, from your client's side.",
+               "Confirm them, or say in a message what to change. NM then researches one confirmed dispute at a time, as you "
+               "choose."),
+}
+#: Said beside the go-aheads where a matter in guided intake may be worked through at once on NM's own understanding (D309).
+GUIDED_END_SAID = "End to end, on NM's own understanding"
+
+
+def _guided_card(held, after, questions):
+    """A guided stop's card: what was done, what comes next and its go-ahead; whom the advocate acts for, in their own words; at
+    CLIENT, the parties the understanding found, each of which the advocate may name as theirs in a message; at PROPOSED, each
+    dispute and whether it stands as the advocate confirmed it."""
+    steps = held.get("steps") or {}
+    go = held["go"]
+    record = go["guided"]
+    done_said, next_said = GUIDED_SAID[after]
+    gos = {READ: [{"choice": "right", "disputes": None, "said": "That is right"}], CLIENT: [],
+           OFFER: [{"choice": "identify", "disputes": None, "said": "Propose the disputes"}],
+           PROPOSED: [{"choice": "confirm", "disputes": [dispute["id"] for dispute in proposed_disputes(steps)],
+                       "said": "Confirm the disputes"}]}[after]
+    gos = _timed_gos(held, [*gos, {"choice": "end_to_end", "disputes": None, "said": GUIDED_END_SAID},
+                            {"choice": "done", "disputes": None, "said": "Done: save as it stands"}])
+    open_now = set(unconfirmed(go, steps))
+    disputes = []
+    if after == PROPOSED:
+        disputes = [{"id": dispute["id"], "name": dispute.get("name") or dispute["id"],
+                     "confirmed": dispute["id"] not in open_now} for dispute in proposed_disputes(steps)]
+        if any(entry["confirmed"] for entry in disputes):
+            next_said = (f"{next_said} Those marked as confirmed stand as you confirmed them; Confirm the disputes confirms them "
+                         "all as they are now.")
+    parties = ([" ".join(str(party.get("who") or "").split()) for party in _understanding(steps).get("parties") or ()
+                if isinstance(party, dict) and str(party.get("who") or "").strip()] if after == CLIENT else [])
+    return {"after": after, "done_said": done_said, "next_said": next_said, "gos": gos, "disputes": disputes,
+            "client": [dict(entry) for entry in record["client"]], "parties": list(dict.fromkeys(parties)),
+            "noticed": noticed(steps), "at": go["waiting"]["at"], "questions": questions, "heard": _heard(held),
+            "taken": _taken(held), "unsearched": []}
+
+
 #: What the stop after a follow-up's first step says was done where it started from NM's earlier understanding (D175).
 KEPT_SAID = "NM has taken up your message on the matter as it understood it: its disputes and their legal questions are on the board."
 
@@ -558,7 +775,8 @@ def _timed_gos(held, gos):
             go = given(held["go"], option["choice"], held=held, disputes=option.get("disputes"))
         except ValueError:
             go = None
-        out.append({**option, "tentative": tentative.said(estimate(go, held.get("steps"))) if go is not None else None})
+        out.append({**option, "tentative": tentative.said(estimate(go, held.get("steps")))
+                    if go is not None and not moved(go) else None})
     return out
 
 

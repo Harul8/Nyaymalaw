@@ -10,10 +10,13 @@ from nm.core_engine import steps, turn, understanding
 from nm.core_engine.conversation import TurnContext, chat_matter_id, shown_of, stored_chat
 from tests.test_a_message_while_a_matter_waits import Reader, judged, reading
 from tests.test_core_answer_sections import Scripted, scripted_answers
+from tests.guided import ACTS_FOR, intake
 from tests.test_core_served import OWNER, served  # noqa: F401 - pytest fixture
 from tests.test_nm_asks_in_the_middle_of_a_turn import proposal, proposer
 
-SENT = {"message": "Inspect this reported account.", "turn_id": "turn-1", "steps": "interactive"}
+# Plan AN.62-AN.64: a new matter worked step by step goes through guided intake first; its message says whom the advocate
+# acts for, so that NM need not ask (D311).
+SENT = {"message": f"{ACTS_FOR} Inspect this reported account.", "turn_id": "turn-1", "steps": "interactive"}
 CHAT = stored_chat(OWNER, None, "turn-1")
 ADDED = "The notice was served on 3 March."
 
@@ -39,6 +42,7 @@ def written_one(served, scripted):
     """A matter of two disputes: the first researched and its analysis written."""
     scripted_answers(served, scripted)
     assert served.client.post("/api/turn", json=SENT).json()["detail"]["code"] == "waiting"
+    intake(served.client, CHAT)
     assert go(served, "research", ["D1"]).json()["detail"]["code"] == "waiting"
     assert go(served, "write", ["D1"]).json()["detail"]["code"] == "waiting"
 
@@ -109,6 +113,7 @@ def test_an_answer_given_at_a_stop_is_the_advocates_message_too(served):
     scripted_answers(served, Scripted())
     served.app.propose_questions = proposer(proposal(depends=["D2"]))
     served.client.post("/api/turn", json=SENT)
+    intake(served.client, CHAT)
     go(served, "research")
     served.client.post("/api/turn/answers", json={"chat_id": CHAT, "turn_id": "turn-1", "answers": {"q1": {"chosen": ["The seller"]}}})
     assert [entry["text"] for entry in held(served)["added"]] == ['Answer to NM\'s question "Whom do you act for?": The seller']

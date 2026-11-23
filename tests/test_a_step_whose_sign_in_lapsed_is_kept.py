@@ -18,6 +18,7 @@ import pytest
 from nm.app import api
 from nm.arrive.directory_port import AuthenticationUnavailable
 from nm.core_engine import steps as stepwise
+from tests.guided import intake
 from tests.test_a_message_while_a_matter_waits import CHAT, SENT, held
 from tests.test_core_answer_sections import Scripted, scripted_answers
 from tests.test_core_served import OWNER, served  # noqa: F401 - served is a fixture
@@ -36,6 +37,7 @@ def _waiting(served):
     # or that late ending would let go the record a test writes next for the same turn.
     for _ in range(500):
         if not served.app.step_records.left():
+            intake(served.client, CHAT)
             return
         threading.Event().wait(0.02)
     pytest.fail("the first message's step never let its record go")

@@ -4596,6 +4596,38 @@ function renderWork(work, parts, where = null) {
 // PLAN AN.48 (48a4; D134-D135, D147, D164): A MATTER WORKED STEP BY STEP WAITS FOR THE ADVOCATE. Not a failure, so not red: what
 // NM has done, what comes next, the go-aheads it offers - the next step, End to end, Done - and what it noticed that was not asked,
 // offered and never done. In the conversation area only: the board and the reading pane are unchanged (D60).
+// Plan AN.62 (D310, D327): what NM understood, read back at the stop while the board is not shown - the matter in short, what is
+// asked, the parties, each fact with where its words were found, what the matter concerns and each paper with what NM could not read
+// of it. The server reads all of it from the understanding, as the board does; the page lays it out.
+function renderReadBack(readBack, make) {
+  const box = make('div', 'waiting-read-back');
+  if (readBack.state !== 'ready') {
+    box.appendChild(make('p', 'waiting-next', readBack.state === 'unreadable'
+      ? 'NM could not set out here what it read. Say in a message anything it should know.'
+      : 'NM found nothing in the matter to read back yet.'));
+    return box;
+  }
+  if (readBack.summary) box.appendChild(make('p', 'waiting-head', readBack.summary));
+  const listed = (title, items, line) => {
+    if (!Array.isArray(items) || !items.length) return;
+    box.appendChild(make('p', 'waiting-noticed-head', title));
+    const list = make('ul', 'waiting-noticed');
+    for (const item of items) list.appendChild(make('li', '', line(item)));
+    box.appendChild(list);
+  };
+  listed('What you ask', readBack.asked, (asked) => asked);
+  listed('The parties', readBack.parties, (party) => (party.role ? `${party.who}: ${party.role}` : party.who));
+  listed('The facts', readBack.facts, (fact) => `${fact.fact} (${CERTAINTY[fact.certainty] || fact.certainty}; `
+    + `${factPlace(fact)})`);
+  listed('What the matter concerns', readBack.subjects, (subject) => `${subject.identifier}: ${subject.what}`);
+  listed('Your papers', readBack.papers, (paper) => {
+    const unit = paper.recording ? 'part' : 'page';
+    return `${paper.name}: ${paper.pages_read} ${unit}${paper.pages_read === 1 ? '' : 's'} read`
+      + (paper.why ? ` - ${paper.why}` : '');
+  });
+  return box;
+}
+
 function renderWaiting(entry) {
   const card = entry.stopped.waiting;
   const make = (tag, className, text) => {
@@ -4616,6 +4648,32 @@ function renderWaiting(entry) {
   }
   box.appendChild(make('p', 'waiting-head', card.done_said));
   box.appendChild(make('p', 'waiting-next', card.next_said));
+  // Plan AN.62-AN.64 (D310-D312, D327, D328): guided intake. Before the disputes are proposed the stop reads back what NM understood,
+  // since the board is not shown yet; whom the advocate acts for, in their own words; at the client stop, each party they may name as
+  // theirs, sent as their message; at the proposal, each dispute and whether it stands as they confirmed it.
+  if (card.read_back) box.appendChild(renderReadBack(card.read_back, make));
+  if (Array.isArray(card.client) && card.client.length) {
+    box.appendChild(make('p', 'waiting-next', `You act for: ${card.client
+      .map((acting) => `${acting.who} (your words: “${acting.words}”)`).join('; ')}.`));
+  }
+  if (card.after === 'client' && Array.isArray(card.parties) && card.parties.length) {
+    const line = make('p', 'waiting-asked', 'I act for: ');
+    for (const who of card.parties) {
+      const party = make('button', 'ghost', who);
+      party.type = 'button';
+      party.disabled = Boolean(activeDelivery);
+      party.addEventListener('click', () => messageTurn(entry, `I act for ${who}.`));
+      line.appendChild(party);
+    }
+    box.appendChild(line);
+  }
+  if (card.after === 'proposed' && Array.isArray(card.disputes) && card.disputes.length) {
+    const list = make('ul', 'waiting-noticed');
+    for (const dispute of card.disputes) {
+      list.appendChild(make('li', '', `${dispute.name}${dispute.confirmed ? ' - confirmed as you confirmed it' : ''}`));
+    }
+    box.appendChild(list);
+  }
   // Plan AN.52 (D282): what could not be searched, in code's words, and what Search again does - offered, never done by itself.
   for (const line of Array.isArray(card.unsearched) ? card.unsearched : []) {
     box.appendChild(make('p', 'waiting-next waiting-unsearched', line));
@@ -4652,8 +4710,12 @@ function renderWaiting(entry) {
     button.type = 'button';
     button.dataset.choice = go.choice;
     button.disabled = Boolean(activeDelivery);
-    // Plan AN.48 (48b): a go-ahead for research or an analysis names its disputes; none means every dispute it can take.
-    button.addEventListener('click', () => goTurn(entry, go.choice, Array.isArray(go.disputes) ? go.disputes : null));
+    // Plan AN.48 (48b): a go-ahead for research or an analysis names its disputes; none means every dispute it can take. AN.62-AN.64:
+    // a guided stop's own go-ahead - That is right, Propose the disputes, Confirm the disputes - settles it by its own route, bound
+    // to the stop shown.
+    button.addEventListener('click', () => (['right', 'identify', 'confirm'].includes(go.choice)
+      ? guideTurn(entry, go.choice, card.at, Array.isArray(go.disputes) ? go.disputes : null)
+      : goTurn(entry, go.choice, Array.isArray(go.disputes) ? go.disputes : null)));
     buttons.appendChild(button);
   });
   box.appendChild(buttons);
@@ -5151,7 +5213,7 @@ async function deliver(entry) {
         intent.queued.push({ text: entry.lastSent, files: [] });
         renderQueued();
       }
-    } else if (['/api/turn/go', '/api/turn/message', '/api/turn/answers'].includes(entry.endpoint)
+    } else if (['/api/turn/go', '/api/turn/guide', '/api/turn/message', '/api/turn/answers'].includes(entry.endpoint)
         && [409, 422].includes(e.status)) {
       // Plan AN.48: a go-ahead the matter no longer waits for is said on its card, read again from the conversation.
       entry.goError = (entry.refusal && entry.refusal.why) || e.message;
@@ -5340,6 +5402,21 @@ function goTurn(entry, choice, disputes = null) {
   entry.goError = null;
   entry.endpoint = '/api/turn/go';
   entry.envelope = JSON.stringify({ chat_id: chatId, turn_id: entry.turnId, choice,
+    ...(Array.isArray(disputes) && disputes.length ? { disputes } : {}) });
+  entry.stopped = null;
+  deliver(entry);
+}
+
+// GUIDED INTAKE (plan AN.62-AN.64; D310-D312): That is right, Propose the disputes or Confirm the disputes settles its stop at once,
+// with no step run - bound to the stop shown (its 'at') and, for a confirmation, to the disputes it showed. The server answers as a
+// stop does, and the next stop is read from the conversation; a stop that has changed meanwhile is said on its card.
+function guideTurn(entry, choice, at, disputes = null) {
+  if (activeDelivery || !ownsIntent(entry.context)) return;
+  const chatId = entry.chatId || entry.context.chatId || entry.request?.chat_id;
+  if (!chatId || typeof at !== 'string' || !at) return;
+  entry.goError = null;
+  entry.endpoint = '/api/turn/guide';
+  entry.envelope = JSON.stringify({ chat_id: chatId, turn_id: entry.turnId, choice, at,
     ...(Array.isArray(disputes) && disputes.length ? { disputes } : {}) });
   entry.stopped = null;
   deliver(entry);

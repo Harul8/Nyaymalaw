@@ -9,6 +9,7 @@ import json
 from nm.core_engine import message_reader, research, steps
 from nm.core_engine.retrieval import HybridSearcher
 from nm.shared.model_port import Completion, ModelResult, Usage
+from tests.guided import intake
 from tests.test_a_message_while_a_matter_waits import CHAT, SENT, Reader, held, judged, reading, say
 from tests.test_additions_are_the_advocates_messages import go
 from tests.test_core_answer_sections import Scripted, scripted_answers
@@ -51,6 +52,7 @@ def test_what_is_new_is_researched_alone_on_the_go_ahead_and_its_analysis_writte
     phrased(served)
     asked = searched(monkeypatch)
     assert served.client.post("/api/turn", json=SENT).json()["detail"]["code"] == "waiting"
+    intake(served.client, CHAT)
     assert go(served, "research").json()["detail"]["code"] == "waiting"
     assert go(served, "write", ["D1"]).json()["detail"]["code"] == "waiting"
     before = held(served)["steps"]

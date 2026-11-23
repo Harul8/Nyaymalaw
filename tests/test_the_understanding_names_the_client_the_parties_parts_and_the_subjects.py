@@ -26,7 +26,8 @@ def test_the_v13_understanding_names_the_client_the_parties_parts_and_the_subjec
     assert "Is anyone's part in a proceeding the papers name, or a subject the papers identify, missed or misread?" in " ".join(
         research.CHECK.split())
     wire = research.UNDERSTANDING_V13["properties"]
-    assert set(wire["parties"]["items"]["required"]) == {"who", "role", "client", "parts"}
+    # Plan AN.63 (D328): and whom the advocate acts for, in the words of their own message (acts_for).
+    assert set(wire["parties"]["items"]["required"]) == {"who", "role", "client", "parts", "acts_for"}
     assert "subjects" in research.UNDERSTANDING_V13["required"]
     subject = understanding()
     subject["parties"] = [{"who": "the supplier", "role": "seller", "client": True,

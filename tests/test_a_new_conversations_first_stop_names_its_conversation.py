@@ -32,7 +32,8 @@ def test_the_first_stop_of_a_new_conversation_names_it_and_its_card_is_read_by_t
     assert sent.status_code == 409 and detail["code"] == "waiting" and detail["kept"] is True
     assert detail["chat_id"] == stored_chat(OWNER, None, "turn-1")
     card = served.client.get(f"/api/chats/{detail['chat_id']}").json()["pending"]["stopped"]
-    assert card["code"] == "waiting" and card["waiting"]["after"] == "understood", "the page reads the go-ahead card by it"
+    # Plan AN.62 (D310): a new matter's first stop is the read-back of guided intake.
+    assert card["code"] == "waiting" and card["waiting"]["after"] == "read", "the page reads the go-ahead card by it"
 
 
 def test_a_stop_in_an_open_conversation_names_that_conversation(served):

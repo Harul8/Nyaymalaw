@@ -5,9 +5,12 @@ never continued by the page by itself; the history says where it waits; a messag
 Offline: the scripted served application; not browser QA."""
 from nm.core_engine.conversation import stored_chat
 from tests.test_core_answer_sections import Scripted, scripted_answers
+from tests.guided import ACTS_FOR, intake
 from tests.test_core_served import OWNER, served  # noqa: F401 - pytest fixture
 
-SENT = {"message": "Inspect this reported account.", "turn_id": "turn-1", "steps": "interactive"}
+# Plan AN.62-AN.64: a new matter worked step by step goes through guided intake first; its message says whom the advocate
+# acts for, so that NM need not ask (D311).
+SENT = {"message": f"{ACTS_FOR} Inspect this reported account.", "turn_id": "turn-1", "steps": "interactive"}
 CHAT = stored_chat(OWNER, None, "turn-1")
 
 
@@ -24,6 +27,7 @@ def test_a_message_sent_step_by_step_stops_at_each_step_and_done_saves_the_answe
     scripted_answers(served, scripted)
     sent = served.client.post("/api/turn", json=SENT)
     assert sent.status_code == 409 and sent.json()["detail"]["code"] == "waiting" and sent.json()["detail"]["kept"] is True
+    intake(served.client, CHAT)
     stop = waiting(served)
     assert stop["code"] == "waiting" and stop["by_itself"] is False, "a waiting matter is never continued by itself (D153)"
     choices = [g["choice"] for g in stop["waiting"]["gos"]]
@@ -55,6 +59,7 @@ def test_next_requires_a_dispute_when_more_than_one_can_be_researched(served):
     scripted = Scripted()
     scripted_answers(served, scripted)
     assert served.client.post("/api/turn", json=SENT).status_code == 409
+    intake(served.client, CHAT)
     stop = waiting(served)["waiting"]
     calls_before = list(served.model.calls)
 
@@ -87,6 +92,7 @@ def test_next_requires_a_dispute_when_more_than_one_can_be_researched(served):
 def test_end_to_end_at_a_stop_runs_the_rest_and_done_before_an_analysis_saves_it_as_it_stands(served):
     scripted_answers(served, Scripted())
     assert served.client.post("/api/turn", json=SENT).status_code == 409
+    intake(served.client, CHAT)
     assert go(served, "sideways").status_code == 422, "only the go-aheads a stop offers"
     named = served.client.post("/api/turn/go", json={"chat_id": CHAT, "turn_id": "turn-1", "choice": "write",
                                                       "disputes": ["D1"]})

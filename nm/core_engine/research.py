@@ -202,7 +202,7 @@ Advocates bring matters to us so that we can find the law that governs them. You
 What we need from you:
 
 - What the advocate wants from us now. Often they say so. When they only tell us what has happened, they want to know where the law stands on those events: the legal questions a lawyer would need answered to advise on them. Also note, in the advocate's own words, anything they have told us not to do (for example to pause research or not to contact anyone) in ruled_out, and where they have told us nothing of the kind leave ruled_out empty. What the papers leave open or unproved is not something the advocate ruled out: it belongs in the facts as uncertain and in the facts we would still need.
-- The people involved and their roles: whether each is the advocate's client or one of the client's people (client), and, for each proceeding the papers name - a suit, appeal, revision, petition, complaint or other case - each person's part in it (who brought it, who answers it, who else is joined), with the page's own words (parts). A person the papers name in a proceeding is listed even when the advocate did not mention them.
+- The people involved and their roles: whether each is the advocate's client or one of the client's people (client), and, for each proceeding the papers name - a suit, appeal, revision, petition, complaint or other case - each person's part in it (who brought it, who answers it, who else is joined), with the page's own words (parts). A person the papers name in a proceeding is listed even when the advocate did not mention them. Where the advocate's own messages say whom they act for, give for that party the words of the advocate's message that say so, copied exactly (acts_for); leave acts_for empty for every other party, and for every party where no message of the advocate's says so: that a paper names a party, or that the papers suggest who the client is, does not tell us whom the advocate acts for.
 - Every subject of the matter the papers identify - an asset, an account, a contract, a policy, a case or a document - by the number or name the page identifies it by, exactly as the page writes it, what it is, and the page's own words (subjects). List a subject the papers name even where it seems not to bear on what the advocate asked, so that none is overlooked.
 - The facts, each kept exactly as certain as the advocate put it: confirmed, reported by someone, uncertain, or disputed. Give the advocate's own words for each fact, or, for a fact that comes from a document they sent, the document's own words. What the advocate reports is their account, and what a document says is what its author wrote; neither is proven fact, and we never add facts they did not give.
 - The separate disputes. A dispute is one set of events between particular parties that needs its own legal answer. Events that call for different kinds of law, such as a civil wrong and a crime, or that concern different transactions, are separate disputes, even when they happen together or involve the same people.
@@ -376,7 +376,10 @@ REVISED = _object({"notes": STRING, "understanding": UNDERSTANDING})
 #: v13 (AN.28, A1 and B12): whether each party is the client or one of the client's people, each party's part in each proceeding the
 #: papers name, and every subject the papers identify, each with the page's own words, which code finds.
 PART = _object({"proceeding": STRING, "part": STRING, "words": STRING})
-PARTY_V13 = _object({"who": STRING, "role": STRING, "client": {"type": "boolean"}, "parts": {"type": "array", "items": PART}})
+#: Plan AN.63 (D311, D328; register of exceptions, item 21): the words of the advocate's own message saying they act for the party
+#: (acts_for), or empty; code finds them in the advocate's messages alone (acting_for). A plan saved without it reads as before.
+PARTY_V13 = _object({"who": STRING, "role": STRING, "client": {"type": "boolean"}, "parts": {"type": "array", "items": PART},
+                     "acts_for": STRING})
 SUBJECT = _object({"identifier": STRING, "what": STRING, "words": STRING})
 UNDERSTANDING_V13 = {**UNDERSTANDING, "required": [*UNDERSTANDING["required"], "subjects"],
                      "properties": {**UNDERSTANDING["properties"], "parties": {"type": "array", "items": PARTY_V13},
@@ -1042,6 +1045,15 @@ def code_checks(understanding, context):
             problems.append({"problem": f"For {place}, the quoted words do not appear in the advocate's messages or the documents "
                                         f"they sent ({quoted!r}); {pages.stops(missing[0])}.",
                              "fix": SLIP_FIX.format(what="it")})
+    # Plan AN.63 (D328): a party is the one the advocate acts for only by the words of the advocate's own message that say so -
+    # found in their messages alone, never in a paper or in NM's notes.
+    for party in understanding.get("parties", ()):
+        words = " ".join(str(party.get("acts_for") or "").split())
+        if words and not _said_by_advocate(words, advocate):
+            problems.append({"problem": f"{party['who']} is marked as the party the advocate acts for, but those words do not "
+                                        f"appear in the advocate's own messages ({words!r}).",
+                             "fix": "Copy exactly the advocate's words that say whom they act for, or leave acts_for empty "
+                                    "where no message of the advocate's says so."})
     disputes = {d["id"] for d in understanding["disputes"]}
     if len(disputes) != len(understanding["disputes"]):
         problems.append({"problem": "Two disputes share an id.", "fix": "Give each dispute its own id."})
@@ -1061,6 +1073,26 @@ def code_checks(understanding, context):
         problems.append({"problem": "Research is marked as not needed, yet legal questions are listed for research.",
                          "fix": "Either research is needed (say so) or the questions belong with the known disputes for later."})
     return problems + _figure_problems(understanding, context)
+
+
+def _said_by_advocate(words, advocate):
+    """Whether quoted words stand in the advocate's own messages (advocate: their words as _bare gives them)."""
+    pieces = fact_pieces(words)
+    return bool(pieces) and all(piece in advocate for piece in pieces)
+
+
+def acting_for(understanding, context):
+    """Plan AN.63 (D311, D328): the parties the advocate acts for, each {"who", "words"} - the words of the advocate's own message
+    that say so, as the understanding gave them (acts_for) and code finds them in the advocate's messages alone. A party so marked
+    whose words are not there is not taken; an understanding saved without acts_for gives none."""
+    advocate = _bare(" ".join(row["text"] for row in advocate_messages(context)))
+    found = []
+    for party in (understanding or {}).get("parties") or ():
+        words = " ".join(str(party.get("acts_for") or "").split())
+        who = " ".join(str(party.get("who") or "").split())
+        if who and words and _said_by_advocate(words, advocate):
+            found.append({"who": who, "words": words})
+    return found
 
 
 def _matter_text(understanding, disputes):

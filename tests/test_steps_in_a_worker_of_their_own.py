@@ -21,6 +21,7 @@ from nm.arrive.store_directory import FileDirectory
 from nm.core_engine import steps as stepwise
 from nm.core_engine.conversation import chat_matter_id, shown_of, stored_chat
 from nm.shared.store_file_store import FileMatterStore
+from tests.guided import intake
 from tests.test_a_message_while_a_matter_waits import SENT
 from tests.test_core_answer_sections import Scripted, scripted_answers
 from tests.test_core_served import KEY, OWNER, PASSWORD
@@ -81,6 +82,7 @@ def test_the_web_server_hands_a_step_to_the_worker_and_answers_as_it_always_has(
     reply = split.client.post("/api/turn", json=SENT)
     assert reply.status_code == 409 and reply.json()["detail"]["code"] == "waiting", reply.text
     chat = stored_chat(OWNER, None, "turn-1")
+    intake(split.client, chat)
     assert stepwise.waiting_of(shown_of(split.store.load(chat_matter_id(OWNER, chat)))) == "understood"
     assert split.web.step_jobs.latest(OWNER, "turn-1").answered()["status"] == 409
     go = split.client.post("/api/turn/go", json={"chat_id": chat, "turn_id": "turn-1", "choice": "research", "disputes": ["D1"]})

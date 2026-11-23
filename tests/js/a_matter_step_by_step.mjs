@@ -180,4 +180,60 @@ const button = (node, text) => (node._text === text ? node : (node.children || [
   assert.ok(texts(card).includes('Tentative times - Research all: about 3 minutes.'));
 }
 
+// --- guided intake on the page (plan AN.62-AN.64; D310-D312, D327, D328) ----------------------------------------------------------
+{
+  const sent = [];
+  const page = vm.createContext({ document: { createElement: (tag) => new Element(tag) }, activeDelivery: null,
+    CERTAINTY: { reported: 'Reported' }, goTurn: (entry, choice) => sent.push(['go', choice]),
+    guideTurn: (entry, choice, at, disputes) => sent.push(['guide', choice, at, disputes]),
+    messageTurn: (entry, text) => sent.push(['message', text]) });
+  vm.runInContext(fn('factPlace') + fn('renderReadBack') + fn('renderWaiting'), page);
+  const stop = (waiting) => page.renderWaiting({ turnId: 't1', stopped: { code: 'waiting', waiting: { done_said: 'Done.',
+    next_said: 'Next.', noticed: [], heard: [], questions: [], disputes: [], client: [], parties: [], at: 'stop-1', ...waiting } } });
+  // The read-back, while the board is not shown: what NM understood, where each fact's words were found, what a paper did not give.
+  const read = stop({ after: 'read', gos: [{ choice: 'right', disputes: null, said: 'That is right', tentative: null },
+    { choice: 'end_to_end', disputes: null, said: "End to end, on NM's own understanding", tentative: null }],
+    read_back: { state: 'ready', summary: 'A reported position.', asked: ['Where the law stands'],
+      parties: [{ who: 'the tenant', role: 'claimant' }], subjects: [],
+      facts: [{ id: 'F1', fact: 'The rent was paid.', certainty: 'reported', from: 'advocate' }],
+      papers: [{ name: 'Lease', pages_read: 2, recording: false, why: 'page 3 could not be read' }] } });
+  for (const line of ['A reported position.', 'Where the law stands', 'the tenant: claimant',
+    'The rent was paid. (Reported; From your messages)', 'Lease: 2 pages read - page 3 could not be read']) {
+    assert.ok(texts(read).includes(line), line);
+  }
+  button(read, 'That is right').click();
+  button(read, "End to end, on NM's own understanding").click();
+  assert.deepEqual(JSON.parse(JSON.stringify(sent)), [['guide', 'right', 'stop-1', null], ['go', 'end_to_end']]);
+  // Whom the advocate acts for: each party a button that sends it as the advocate's own message.
+  sent.length = 0;
+  const client = stop({ after: 'client', gos: [], parties: ['the tenant', 'the landlord'] });
+  button(client, 'the landlord').click();
+  assert.deepEqual(JSON.parse(JSON.stringify(sent)), [['message', 'I act for the landlord.']]);
+  // The proposal: each dispute, marked where it stands as confirmed; Confirm sends the disputes shown, bound to the stop shown.
+  sent.length = 0;
+  const proposed = stop({ after: 'proposed', at: 'stop-2', client: [{ who: 'the tenant', words: 'I act for the tenant' }],
+    disputes: [{ id: 'D1', name: 'Rent', confirmed: true }, { id: 'D2', name: 'Repairs', confirmed: false }],
+    gos: [{ choice: 'confirm', disputes: ['D1', 'D2'], said: 'Confirm the disputes', tentative: null }] });
+  assert.ok(texts(proposed).includes('You act for: the tenant (your words: \u201cI act for the tenant\u201d).'));
+  assert.ok(texts(proposed).includes('Rent - confirmed as you confirmed it') && texts(proposed).includes('Repairs'));
+  button(proposed, 'Confirm the disputes').click();
+  assert.deepEqual(JSON.parse(JSON.stringify(sent)), [['guide', 'confirm', 'stop-2', ['D1', 'D2']]]);
+}
+
+// --- a guided go-ahead goes by its own route, bound to the stop shown -------------------------------------------------------------
+{
+  const delivered = [];
+  const context = vm.createContext({ activeDelivery: null, ownsIntent: () => true,
+    deliver: (entry) => delivered.push([entry.endpoint, entry.envelope]) });
+  vm.runInContext(fn('guideTurn'), context);
+  const entry = { turnId: 't1', context: { chatId: 'c1' }, stopped: { code: 'waiting' }, goError: 'earlier' };
+  context.guideTurn(entry, 'confirm', 'stop-2', ['D1', 'D2']);
+  assert.deepEqual(delivered, [['/api/turn/guide', JSON.stringify({ chat_id: 'c1', turn_id: 't1', choice: 'confirm', at: 'stop-2',
+    disputes: ['D1', 'D2'] })]]);
+  assert.equal(entry.stopped, null);
+  assert.equal(entry.goError, null);
+  context.guideTurn(entry, 'right', '');
+  assert.equal(delivered.length, 1, 'never without the stop it answers');
+}
+
 console.log('a matter step by step: ok');
