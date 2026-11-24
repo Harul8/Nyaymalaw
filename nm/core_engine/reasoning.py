@@ -8,7 +8,9 @@ cost a fifth of a cent. So reasoning is given where it can prevent a repeated pa
 thought cannot change the result or costs more than it can save:
 
   - the search steps (phrases, picks) run at the release's own setting (owner decision, 14 Oct 2026): thought does not change what they find;
-  - the steps that read the papers or understand the matter run at medium, and a step that reads a large file runs a level higher (AN.28);
+  - the steps that read the papers or understand the matter run at medium, and a step that reads a large file runs a level higher (AN.28) -
+    but not the account of what makes a dispute's case stronger and its review, which always read the dispute's whole material (AN.80,
+    D346);
   - the steps whose miss reaches the advocate and that ran at the release's own setting - the reading of the advocate's message, the check
     across the sections, the time limits - run at medium, for they are small;
   - a call that looks again at work already done runs a level above its step where its answer is small: the revising of an understanding,
@@ -43,12 +45,16 @@ STEPS = {
     "chronology_check": ("high", True), "transfers_check": ("high", True), "connections_check": ("high", True),
     # v14 (AN.33, piece 33g): the second pass over a paper for what its reading left out reads it again with care.
     "chronology_second": ("high", True),
-    # v14 (AN.33, piece 33h): the weighing of the points read is a judgement; its check looks again at it.
-    "weigh": ("medium", True), "weigh_check": ("high", True),
-    # Plan AN.35 (piece 35c1): what makes a dispute's case stronger, and its check.
-    "case": ("medium", True), "case_check": ("high", True),
-    # Plan AN.51 (D290): the independent review of that account, on the review tier - a judgement, reading what the account read.
-    "case_review": ("medium", True),
+    # v14 (AN.33, piece 33h): the weighing of the points read is a judgement; its check looks again at it - at the weighing's own
+    # level (plan AN.80, D347): its answer is large, not small, and at high it was the longest call before research (168 s, 24 Nov 2026).
+    "weigh": ("medium", True), "weigh_check": ("medium", True),
+    # Plan AN.35 (piece 35c1): what makes a dispute's case stronger, and its check. Plan AN.80 (D346): the account always reads the
+    # dispute's whole material, so its size does not raise it - raised, a large dispute's account took 244 s against 64 s at medium
+    # (24 Nov 2026); its check stays at high, the look again with more thought.
+    "case": ("medium", False), "case_check": ("high", True),
+    # Plan AN.51 (D290): the independent review of that account, on the review tier - a judgement, reading what the account read; not
+    # raised by its size, as the account (D346).
+    "case_review": ("medium", False),
     # Plan AN.35 (piece 35d): the law still missing for a dispute, named once - a lawyer's judgement on what was chosen.
     "further": ("medium", False),
     # Plan AN.37 (piece 37d): what only the advocate can settle, asked before the answer is written - a judgement, small to read.

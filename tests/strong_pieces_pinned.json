@@ -1,7 +1,7 @@
 {
  "why": "Plan AN.48, D143: the strong pieces stay as they are; re-pinned only for an exception in AN.48's register (column 6).",
  "files": {
-  "nm/core_engine/research.py": "0ca0f5ed97c97748769721bdaa8385ffa1ff590a552519ae03db120533648f90",
+  "nm/core_engine/research.py": "bc5600a9e5b3b143ea4e24fcc7eef9e42d47f3a10d7b60c23a22a0b93f0997c9",
   "nm/core_engine/retrieval.py": "7d385fd2244fc09135d5b6325c2b805bc5c5938699a24a3b0507f89ea1c2b077",
   "nm/core_engine/citations.py": "7ada35e8590d07679f84219563ec6682611e5f7d90f0a0c5bec23202decc514d",
   "nm/shared/citation_contracts.py": "5d4810a10619c06c11cf5fade33cb240849191ce9c9314a0e680968e44ee72f6",
@@ -95,6 +95,9 @@
   ],
   "25 (D344, what the advocate told NM is not asked again; plan AN.48 register, column 12)": [
    "nm/core_engine/response_writer.py"
+  ],
+  "26 (D345 and D348, the weighing begun beside the last check and named on the page; plan AN.48 register, column 13)": [
+   "nm/core_engine/research.py"
   ]
  }
 }

@@ -2381,6 +2381,12 @@ def _weighed(given, points, disputes, aside, source):
     return kept
 
 
+def _weighable(understanding, events, connections):
+    """Whether there is anything to weigh (piece 33h): a point read and a dispute it may bear on. Plan AN.80 (D348): the line on the
+    page names a weighing only where one is made."""
+    return bool(events or connections) and bool(understanding["disputes"])
+
+
 def weigh(model, context, understanding, events, connections):
     """The points read, weighed for the advice (v14, AN.33 D19, piece 33h): one call weighs every point that matters - its dispute,
     whether it helps or hurts the client, how much, why, and the legal question a critical point raises that no question covers, or
@@ -2390,7 +2396,7 @@ def weigh(model, context, understanding, events, connections):
     weighing leaves every point unweighed - background - and says so. A usage limit still stops the turn."""
     points = {item["id"] for item in [*events, *connections]}
     disputes = {dispute["id"] for dispute in understanding["disputes"]}
-    if not points or not disputes:
+    if not _weighable(understanding, events, connections):
         return [], []
     user = _points_text(context, understanding, events, connections)
     failures = []
@@ -2493,18 +2499,29 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None, res
     if interpretation is not None and not carries_matter(interpretation):
         return _no_matter(context)
     still = wanted or (lambda: True)
+    report = progress or (lambda stage, **detail: None)
     # v14 (AN.33, D18): what settling a failed check finds the papers do not record, from each reading, listed with why.
     withdrawn = {"events": [], "transfers": [], "points": []}
     # v14 (AN.33, piece 33g): each second pass over a stretch of a paper, with what it added.
     passes = []
-    with ThreadPoolExecutor(max_workers=3) as reading:
+    # Plan AN.80 (D345): the weighing begun beside the understanding's last check, and the understanding it read.
+    begun = {}
+    with ThreadPoolExecutor(max_workers=3) as reading, ThreadPoolExecutor(max_workers=1) as weighing_beside:
         papers = reading.submit(chronology_of, model, context, wanted=still, withdrawn=withdrawn["events"], passes=passes)
         moved = reading.submit(transfers_of, model, context, wanted=still, withdrawn=withdrawn["transfers"])
         # v13 (AN.28, piece 3e): the papers read side by side, beside the rest; from v14 (AN.33, piece 33f) over what each paper's
         # reading set out, once that reading is made.
         linked = reading.submit(lambda: connections_of(model, context, wanted=still, withdrawn=withdrawn["points"],
                                                        events=papers.result()[0]))
-        proposed = _proposal(model, context, still, progress, restrictions)
+
+        def settled(understanding):
+            """Plan AN.80 (D345): no revision can follow the understanding's last check, so the weighing of the points starts now,
+            beside that check, as the search phrases do - waiting, as it always has, for the papers' and the side-by-side readings."""
+            begun["understanding"] = understanding
+            begun["weighing"] = weighing_beside.submit(
+                lambda: weigh(model, context, understanding, papers.result()[0], linked.result()[0]) if still() else ([], []))
+
+        proposed = _proposal(model, context, still, progress, restrictions, settled=settled)
         if proposed is None:
             return _no_matter(context)
         if early is not None and still():
@@ -2517,10 +2534,26 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None, res
         events, unread = papers.result()
         transfers, unmoved = moved.result()
         connections, people, appearances, unlinked = linked.result()
+        # D345: the weighing begun beside the last check is kept only where what it read is what the plan's understanding gives;
+        # otherwise the points are weighed now, as before.
+        early_weighing = begun.get("weighing")
+        if early_weighing is not None and (_points_text(context, begun["understanding"], events, connections)
+                                           != _points_text(context, proposed["understanding"], events, connections)):
+            early_weighing = None
+        if early_weighing is not None and not early_weighing.done() and _weighable(proposed["understanding"], events, connections):
+            # Plan AN.80 (D348): the line names the weighing the plan now waits for - never while the check still runs.
+            report("weighing")
     # v14 (AN.33, D19; piece 33h): the points read, weighed for the advice, and the weighing checked.
-    weights, weighing = weigh(model, context, proposed["understanding"], events, connections) if still() else ([], [])
+    if early_weighing is not None:
+        weights, weighing = early_weighing.result()
+    elif still():
+        if _weighable(proposed["understanding"], events, connections):
+            report("weighing")
+        weights, weighing = weigh(model, context, proposed["understanding"], events, connections)
+    else:
+        weights, weighing = [], []
     if weights and still():
-        proposed, weights = _raise_questions(model, proposed, weights, progress or (lambda stage, **detail: None))
+        proposed, weights = _raise_questions(model, proposed, weights, report)
     return accept({**proposed, "chronology": events, "chronology_failures": unread,
                    "transfers": transfers, "transfers_failures": unmoved,
                    "connections": connections, "connections_failures": unlinked, "client_people": people,
@@ -2529,9 +2562,10 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None, res
                   context)
 
 
-def _proposal(model, context, still, progress, restrictions):
+def _proposal(model, context, still, progress, restrictions, settled=None):
     """What the v7 loop proposes - the understanding, its review and the search phrases - or None where the loop stopped because
-    there is no matter (still answered False)."""
+    there is no matter (still answered False). settled (plan AN.80, D345): told the understanding when no revision can follow it -
+    at the last check, beside which its search phrases are written."""
     report = progress or (lambda stage, **detail: None)
     text = conversation_text(context)
     report("understanding_matter")
@@ -2547,8 +2581,10 @@ def _proposal(model, context, still, progress, restrictions):
             report("checking_understanding", round=number + 1)
             if number == MAX_REVISIONS:
                 # No revision can follow the last check, so the search phrases for this
-                # understanding are written beside it (18 Oct 2026).
+                # understanding are written beside it (18 Oct 2026), and its points weighed (plan AN.80, D345).
                 phrasing = beside.submit(_phrases, model, understanding, report)
+                if settled is not None:
+                    settled(understanding)
             try:
                 # The check of a revision looks again at what the first check found (plan AN.30).
                 review = _call(model, "core_research_check", CHECK, text + note + "\n\nYour colleague's understanding:\n"

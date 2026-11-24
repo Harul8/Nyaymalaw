@@ -29,6 +29,8 @@ STAGES = {
     "checking_understanding": "Checking that understanding against the conversation",
     "revising_understanding": "Correcting the understanding",
     "writing_search_terms": "Writing search terms for each legal question",
+    # Plan AN.80 (D348): the points read, weighed for the advice - minutes on a large matter, which the line named as the search terms.
+    "weighing": "Weighing the points in your papers",
     "searching": "Searching the statutes and judgments",
     "choosing_provisions": "Choosing the provisions and judgments that answer each question",
     "writing": "Writing the answer",
