@@ -1082,6 +1082,11 @@ function restoredTurn(turn) {
     // Plan AN.79 (D337): what the foot's model line reads - the model and effort chosen and the models of the review calls -
     // carried from the saved turn's own record, and nothing else of it (no costs or counts).
     blocked_reason: turn.blocked_reason, metrics: chosenOf(turn.metrics), restored: true,
+    // Plan AN.79 (D343): how far its search went, as the server sends it with the saved turn (null: it searched nothing), drawn at
+    // the answer's foot as when it was given; 'committed' is what that fold reads to know the answer is a saved one.
+    committed: true,
+    search_said: turn.search_said === null || (turn.search_said && typeof turn.search_said === 'object')
+      ? turn.search_said : undefined,
     service_status: typeof turn.service_status === 'string' ? turn.service_status : null,
     // Plan AN.37: what NM asked while it worked, and how each answer came to stand.
     questions_asked: turn.questions_asked && typeof turn.questions_asked === 'object' ? turn.questions_asked : null,

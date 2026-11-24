@@ -80,6 +80,28 @@ const saved = { chat_id: 'chat 1', turn_id: 't/1', blocked: false, committed: tr
   assert.deepEqual(asked, []);
 }
 
+// Plan AN.79 (D343): a conversation opened from the history - the answer as the page rebuilds it from the saved turn
+// (restoredTurn) - draws the account the server sent with that turn, at once; a turn that searched nothing shows nothing.
+// Before D343 the rebuilt answer carried neither field, so a reopened answer never showed it.
+{
+  const restore = app.slice(app.indexOf('function restoredTurn(turn) {'), app.indexOf('// LB-83. WHEN THE ANSWER WAS SAVED'));
+  const asked = [];
+  const context = vm.createContext({
+    document: { createElement: (tag) => new Node(tag) }, encodeURIComponent,
+    api: async (url) => { asked.push(url); return { search_said: said }; },
+  });
+  vm.runInContext(app.slice(from, to) + '\n' + restore, context);
+  const turn = { committed: true, release_state: 'released', chat_id: 'chat 1', turn_id: 't/1', blocked: false, elements: [],
+    message: 'Asked.', search_said: said };
+  const fold = context.searchSaid(context.restoredTurn(turn).answer);
+  assert.equal(fold.hidden, false);
+  assert.equal(fold.children[0].textContent, 'How far NM searched: NM searched only the law it holds.');
+  assert.equal(context.searchSaid(context.restoredTurn({ ...turn, search_said: null }).answer), null);
+  assert.deepEqual(asked, [], 'a reopened answer asks the server for nothing');
+  // A turn not established as saved and released is not an answer, and has no account.
+  assert.equal(context.restoredTurn({ ...turn, committed: false }).answer, undefined);
+}
+
 // The account could not be fetched: that is said under the answer, in plain words, and the answer stands.
 {
   const { context } = harness(new Error('HTTP 500'));
