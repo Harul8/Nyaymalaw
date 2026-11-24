@@ -25,6 +25,13 @@ writer stated in the other parts, never the writer's to write - a part used only
 works out from a stated particular (the cheque's amount in words), and fixed notes for the advocate that go with every draft of it.
 A part of set wording is composed again after every writing, so the review, the saved draft and its reading see it as it stands; what
 the review finds in it is kept for the advocate and never written again.
+
+Piece 23d4 (D331): a draft changed as the advocate asks. A change begins from the latest version as saved - its parts, what code and
+the last review found in them - and writes again the parts the advocate's message asked to change, the writer told which message
+asks it; then code's checks and the review of the whole draft follow, with an allowance of rewrites of its own, as for any draft.
+It is saved as the draft's next version, keeping the parts asked and the message that asked; read again, it is checked from the
+version before it. Each draft keeps how many messages the advocate had added while the matter waited when it was written, and is
+checked against the conversation as it then stood (written_from), so that a later message cannot unsettle what code found of it.
 """
 from __future__ import annotations
 
@@ -60,6 +67,11 @@ WRITING, REVIEW = "writing", "review"
 _MARK = re.compile(r"\[\[([a-z0-9_]+)\]\]")
 #: The draft's status until the advocate has reviewed it (SEQ.7).
 FOR_REVIEW = "for_advocate_review"
+#: 23d4: the versions of one dispute's draft a matter keeps - a bound on what its record holds; a change beyond it is not made.
+MOST_VERSIONS = 20
+#: What every saved draft keeps; from 23d4 also how many messages the advocate had added when it was written ("added"), and, for a
+#: version that changes the one before, the change asked ("change").
+_KEYS = frozenset({"contract", "template", "rounds", "stopped", "parts", "beside", "reviewed", "state"})
 #: What the review may find of a part, and how the writer and the advocate are told it.
 FINDS = {"adds": "states what nothing given bears out",
          "leaves_out": "leaves out what it needs and the conversation gives",
@@ -87,13 +99,15 @@ WRITER = """You are an Indian advocate's junior, drafting a document for the adv
 
 Purpose: a draft the advocate can send after their own review: each part doing what it is for, in the plain, formal language of such a document, every fact in it the papers' or the advocate's own and every provision the held law's.
 
-Outcome: each part, in the order given, as its paragraphs. For each paragraph give the IDs of the passages it rests on. For each particular it states, give the particular's words exactly as the papers or the advocate's messages write them, and the ID of the passage they stand in, and write those words into the paragraph as they stand. Where a particular is given nowhere, do not supply it: write [[its id]] where it would go and list its id under missing. Give a date only as the papers, the advocate or the time limits give it; work none out. Where you are shown faults found in an earlier draft of a part, write that part again so that none of them remains. A part shown with its set wording is there so you see how the document runs: its particulars are filled in from the parts you write, so it is not yours to write. A part said to be used only when something holds is given only where the papers or the advocate show that it does.
+Outcome: each part, in the order given, as its paragraphs. For each paragraph give the IDs of the passages it rests on. For each particular it states, give the particular's words exactly as the papers or the advocate's messages write them, and the ID of the passage they stand in, and write those words into the paragraph as they stand. Where a particular is given nowhere, do not supply it: write [[its id]] where it would go and list its id under missing. Give a date only as the papers, the advocate or the time limits give it; work none out. Where you are shown faults found in an earlier draft of a part, write that part again so that none of them remains. Where you are told that the advocate asked, in one of their messages, for parts of the draft to be changed, write those parts again as that message asks, as far as the papers, the advocate's words and the held law bear it out. A part shown with its set wording is there so you see how the document runs: its particulars are filled in from the parts you write, so it is not yours to write. A part said to be used only when something holds is given only where the papers or the advocate show that it does.
 
 Work in a loop: draft each part, check each particular and each date against the passage you cite, correct what does not stand there, then give the whole."""
 
 REVIEWER = """You are a senior Indian advocate, reviewing a junior's draft of a document before it goes to the advocate who asked for it. You receive the document as its parts - what each part is for and the particulars it states - the conversation with the advocate (their messages and the papers they sent, each passage under its ID), the held law our research admitted, each passage under its ID, the time limits code worked out from the Act and the papers, and the complete draft, each paragraph under its ID.
 
 Purpose: the advocate can take the draft as a sound starting point for their own review: nothing in it that the papers, the advocate or the held law do not bear out; nothing left out that the document needs and the conversation gives; nothing presented otherwise than the papers or the advocate present it; nothing that contradicts them or the held law.
+
+Where you are told that the advocate asked, in one of their messages, for this draft to be changed, the draft should do as that message asks.
 
 Outcome: each problem you find, as the part it is in (its part_id); what kind it is - adds (states what nothing given bears out), leaves_out (leaves out what the part needs and the conversation gives), frames (presents something otherwise than the papers or the advocate do: an allegation as established, say, or one party for another), contradicts (says the opposite of the papers, the advocate or the held law); the words of the draft that carry it, copied exactly (nothing, for what is left out); why it matters to the advocate; and the IDs of the passages that show it. Where the draft says a particular is needed, the papers and the advocate do not give it and the advocate will supply it - unless the conversation does give it, which the draft then leaves out.
 
@@ -242,13 +256,21 @@ def _sent(shared, payload):
     return user, len(json.dumps(shared, ensure_ascii=False, default=str)) - 1
 
 
-def _material(template, context, sources, time_limits, asked, earlier):
+def _asked(change, sources):
+    """A change the advocate asked for (23d4), as the writer and the reviewer are told it: the message that asks it, by the ID they
+    see it under, and the parts it asked to change."""
+    shown = {identity: alias for alias, identity in answer_sources.aliases(sources).items()}
+    return {"change_asked": {"in_message": shown.get(change["asked_in"], change["asked_in"]), "parts": list(change["parts"])}}
+
+
+def _material(template, context, sources, time_limits, asked, earlier, change=None):
     """What the writer reads: the shared material first; then the parts asked for, and for a rewrite the earlier draft of each with
-    what code and the review found in it."""
+    what code and the review found in it; for a change the advocate asked for (23d4), which message asks it, in every writing of it."""
     return _sent(_shared(context, sources, time_limits),
                  {"document": _document(template, asked),
                   **({"earlier_draft": [{"part_id": part_id, "paragraphs": earlier[part_id]["paragraphs"],
-                                         "faults": earlier[part_id]["faults"]} for part_id in asked]} if earlier else {})})
+                                         "faults": earlier[part_id]["faults"]} for part_id in asked]} if earlier else {}),
+                  **(_asked(change, sources) if change else {})})
 
 
 def _needed(template):
@@ -257,15 +279,17 @@ def _needed(template):
     return lambda text: _MARK.sub(lambda match: f"[particular needed: {said.get(match.group(1), match.group(1))}]", text)
 
 
-def _review_material(template, context, sources, time_limits, draft):
+def _review_material(template, context, sources, time_limits, draft, change=None):
     """What the reviewer reads: the shared material first, then the whole document and the whole draft, each paragraph under its
-    ID (the part's id and the paragraph's place), a particular not given shown as needed."""
+    ID (the part's id and the paragraph's place), a particular not given shown as needed; for a change the advocate asked for
+    (23d4), which message asks it."""
     needed = _needed(template)
     return _sent(_shared(context, sources, time_limits),
                  {"document": _document(template, [part["id"] for part in template["parts"]]),
                   "draft": [{"part_id": part["id"], "paragraphs": [{"id": f"{part['id']}.{at}", "text": needed(paragraph["text"])}
                                                                    for at, paragraph in enumerate(draft[part["id"]]["paragraphs"], 1)]}
-                            for part in template["parts"]]})
+                            for part in template["parts"]],
+                  **(_asked(change, sources) if change else {})})
 
 
 def _unstood(particular, known, text, sources, offered, at):
@@ -417,16 +441,31 @@ def _composed(template, draft, sources):
     return draft
 
 
-def _state(template, kept, sources):
+def _begun(template, earlier=None, change=None):
+    """Where a draft's rounds begin: from nothing, every written part to be written; or, for a change the advocate asked for (23d4),
+    from the version before it as saved - its parts, what code and its last review found in them, what that review said beside them
+    and whether it was reviewed - the parts the change asked to be written first."""
+    if earlier is None:
+        return {"draft": None, "findings": {}, "beside": [], "rewrites": 0, "reviewed": False, "last": None, "changed": False,
+                "begin": _written(template)}
+    return {"draft": {part["part_id"]: {"paragraphs": deepcopy(part["paragraphs"]), "faults": list(part["faults"])}
+                      for part in earlier["parts"]},
+            "findings": {part["part_id"]: deepcopy(part["findings"]) for part in earlier["parts"] if part["findings"]},
+            "beside": deepcopy(earlier["beside"]), "rewrites": 0, "reviewed": earlier["reviewed"], "last": None,
+            "changed": False, "begin": list(change["parts"])}
+
+
+def _state(template, kept, sources, begun=None):
     """Where the kept rounds leave the draft: its parts, the findings of the last review that still bear on their words, what that
     review said beside them, the rewrites used, whether the draft as it stands was reviewed, and what the last round was and
-    whether, a writing, it changed the draft. After each writing, the parts of set wording are composed again from it."""
-    state = {"draft": None, "findings": {}, "beside": [], "rewrites": 0, "reviewed": False, "last": None, "changed": False}
+    whether, a writing, it changed the draft. After each writing, the parts of set wording are composed again from it. begun:
+    where the rounds began (_begun; a first draft where None). Every writing after a version's first is a rewrite."""
+    state = deepcopy(begun) if begun is not None else _begun(template)
     for entry in kept:
         if entry["kind"] == WRITING:
             before = state["draft"]
             after = _composed(template, _drafted(template, before, entry["proposal"], entry["faults"]), sources)
-            if before is not None:
+            if state["last"] is not None:
                 state["rewrites"] += 1
             changed = after != before
             if changed:
@@ -444,7 +483,7 @@ def _state(template, kept, sources):
 def _next(template, state):
     """What follows the rounds kept: (WRITING, the parts to write), (REVIEW, None), or (None, why the rounds end).
 
-    The first writing writes every part. After a writing, the parts code finds at fault are written again while rewrites are left
+    The first writing writes every part - or, for a change (23d4), the parts it asked to change. After a writing, the parts code finds at fault are written again while rewrites are left
     and the writing changed something; otherwise the draft is reviewed - unless it was reviewed as it stands, a rewrite having
     changed nothing (NOTHING_NEW). After a review, the parts it or code found at fault are written again while rewrites are left; a
     review that finds nothing leaves the draft COMPLETE where code finds nothing either, and otherwise (code's faults, which the
@@ -453,8 +492,8 @@ def _next(template, state):
     correct it - it is kept for the advocate."""
     draft = state["draft"]
     order = _written(template)
-    if draft is None:
-        return WRITING, order
+    if state["last"] is None:
+        return WRITING, list(state["begin"])
     faulted = [part_id for part_id in order if draft[part_id]["faults"]]
     left = state["rewrites"] < REWRITES
     if state["last"] == WRITING:
@@ -484,9 +523,10 @@ def _failed(receipt, said):
     return ModelError(said, usage=receipt.usage, latency_ms=receipt.latency_ms, retries=receipt.retries)
 
 
-def _write_call(model, template, context, sources, time_limits, asked, earlier):
-    """One writing: the whole draft first, at the writer's level; a rewrite of the parts at fault at a repair's (reasoning.py)."""
-    user, shared = _material(template, context, sources, time_limits, asked, earlier)
+def _write_call(model, template, context, sources, time_limits, asked, earlier, change=None):
+    """One writing: the whole draft first, at the writer's level; a rewrite of the parts at fault - or of the parts a change the
+    advocate asked for names (23d4) - at a repair's (reasoning.py)."""
+    user, shared = _material(template, context, sources, time_limits, asked, earlier, change)
     prompt = Prompt(system=WRITER, user=user, operation=OPERATION, cache_through=shared,
                     effort=reasoning.effort("repair" if earlier else "write"))
     writes = reasoning.room(model, Tier.HARD, WRITER, user, json.dumps(SCHEMA))
@@ -498,9 +538,9 @@ def _write_call(model, template, context, sources, time_limits, asked, earlier):
     return proposal
 
 
-def _review_call(model, template, context, sources, time_limits, draft):
+def _review_call(model, template, context, sources, time_limits, draft, change=None):
     """One review of the whole draft, on the judging tier at a review's level, as an answer's review is."""
-    user, shared = _review_material(template, context, sources, time_limits, draft)
+    user, shared = _review_material(template, context, sources, time_limits, draft, change)
     prompt = Prompt(system=REVIEWER, user=user, operation=REVIEW_OPERATION, cache_through=shared,
                     effort=reasoning.effort("review"))
     writes = reasoning.room(model, Tier.JUDGE, REVIEWER, user, json.dumps(REVIEW_SCHEMA))
@@ -520,30 +560,27 @@ def _round(template, context, sources, time_limits, state, entry):
     return {**entry, "findings": found, "beside": beside}
 
 
-def write(model, template, context, sources, *, time_limits=None):
-    """A draft of template for the matter (D323), checked by code and reviewed independently (23b), as saved: {"contract",
-    "template", "rounds": [{"kind": WRITING, "asked", "proposal", "faults"} | {"kind": REVIEW, "returned", "findings", "beside"}],
-    "stopped", "parts": [{"part_id", "paragraphs", "faults", "findings"}], "beside", "reviewed", "state"}. The rounds follow
-    _next. A writer or reviewer that cannot be asked after the first writing leaves the draft as the rounds before left it, said
-    why; a first writing that cannot be made is ModelError: there is no draft. template is one the caller chose from TEMPLATES;
-    validate reads a draft only of a template NM holds."""
-    check_template(template)
+def _run(model, template, context, sources, time_limits, begun, change):
+    """The rounds of one version of a draft, from where they begin (begun; a first draft where None), on the shared loop runner,
+    as _next calls for them: (the rounds kept, how they stopped). A writer or reviewer that cannot be asked after the version's
+    first writing leaves the draft as the rounds before left it, said why."""
     kept = []
 
     def upcoming():
-        return _next(template, _state(template, kept, sources))
+        return _next(template, _state(template, kept, sources, begun))
 
     def ask(done):
-        state = _state(template, kept, sources)
+        state = _state(template, kept, sources, begun)
         kind, asked = _next(template, state)
         if kind == WRITING:
             earlier = _earlier(state, asked) if state["draft"] is not None else None
             return {"kind": WRITING, "asked": asked,
-                    "proposal": _write_call(model, template, context, sources, time_limits, asked, earlier)}
-        return {"kind": REVIEW, "returned": _review_call(model, template, context, sources, time_limits, state["draft"])}
+                    "proposal": _write_call(model, template, context, sources, time_limits, asked, earlier, change)}
+        return {"kind": REVIEW,
+                "returned": _review_call(model, template, context, sources, time_limits, state["draft"], change)}
 
     def admit(proposal, done):
-        return _round(template, context, sources, time_limits, _state(template, kept, sources), proposal), None
+        return _round(template, context, sources, time_limits, _state(template, kept, sources, begun), proposal), None
 
     def carry_out(entry, done):
         kept.append(entry)
@@ -555,41 +592,118 @@ def write(model, template, context, sources, *, time_limits=None):
     _, stopped = runner.run(ask, admit, carry_out, lambda outcome, done: outcome != (None, runner.NOTHING_NEW), spend=spend,
                             unavailable=(ModelError, SchemaViolation),
                             finished=lambda outcome, done: outcome == (None, runner.COMPLETE))
+    return kept, stopped
+
+
+def _count(context):
+    """How many messages the advocate added while the matter waited (48h) the conversation carries."""
+    return len(context.get("added", ()))
+
+
+def written_from(record, context):
+    """The conversation as a saved draft was written from it (23d4): with only the messages the advocate had added while the matter
+    waited when it was written (its "added"), so that a later message - a change asked for, say - cannot unsettle what code found
+    of it then (a date found not given, which the later message gives). Sources for validate are built from it. A draft saved
+    before 23d4 keeps no count and is read against the conversation as it is. ValueError where the conversation has fewer."""
+    if not isinstance(record, dict) or "added" not in record:
+        return context
+    count, added = record["added"], list(context.get("added", ()))
+    if type(count) is not int or not 0 <= count <= len(added):
+        raise ValueError("A saved draft was written from messages the conversation does not have")
+    if count == len(added):
+        return context
+    return {**{key: value for key, value in context.items() if key != "added"}, **({"added": added[:count]} if count else {})}
+
+
+def _change_of(template, change, context):
+    """A change the advocate asked for (23d4) as a draft keeps it: {"parts": the written parts of the template it asked to change,
+    in the template's order, each once; "asked_in": the advocate's message that asks it, one they added while the matter waited}.
+    ValueError where it is not."""
+    if not isinstance(change, dict) or set(change) != {"parts", "asked_in"}:
+        raise ValueError("A change of a draft names its parts and the message that asked it")
+    parts, written = change["parts"], _written(template)
+    if not isinstance(parts, list) or not parts or parts != [part for part in written if part in parts]:
+        raise ValueError("A change of a draft names, once each and in order, parts the writer writes")
+    if change["asked_in"] not in {row["source_id"] for row in context.get("added", ())}:
+        raise ValueError("A change of a draft was asked in a message the conversation does not hold")
+    return change
+
+
+def write(model, template, context, sources, *, time_limits=None):
+    """A draft of template for the matter (D323), checked by code and reviewed independently (23b), as saved: {"contract",
+    "template", "rounds": [{"kind": WRITING, "asked", "proposal", "faults"} | {"kind": REVIEW, "returned", "findings", "beside"}],
+    "stopped", "parts": [{"part_id", "paragraphs", "faults", "findings"}], "beside", "reviewed", "state", "added"} - "added", from
+    23d4, how many messages the advocate had added while the matter waited. The rounds follow _next. A first writing that cannot
+    be made is ModelError: there is no draft. template is one the caller chose from TEMPLATES; validate reads a draft only of a
+    template NM holds."""
+    check_template(template)
+    kept, stopped = _run(model, template, context, sources, time_limits, None, None)
     if not kept:
         raise ModelError("The draft could not be written")
-    return _record(template, kept, stopped, sources)
+    return _record(template, kept, stopped, sources, added=_count(context))
 
 
-def _record(template, kept, stopped, sources):
-    state = _state(template, kept, sources)
+def change(model, earlier, context, sources, *, parts, asked_in, time_limits=None):
+    """23d4: the next version of a draft (earlier: its latest version, as validate read it), changed as the advocate asked in their
+    message asked_in (one they added while the matter waited, which context carries): the parts it names written again, the writer
+    told which message asks it, then code's checks and the review of the whole draft with an allowance of rewrites of its own.
+    Saved as write's record is, with "change": the parts asked and the message. A first writing that cannot be made is
+    ModelError: the draft is not changed. ValueError where parts are not parts of the draft the writer writes."""
+    template = check_template(earlier["template"])
+    written = _written(template)
+    if (not isinstance(parts, (list, tuple)) or not parts or len(set(parts)) != len(parts)
+            or not all(isinstance(part, str) for part in parts) or not set(parts) <= set(written)):
+        raise ValueError("A change of a draft names parts the writer writes")
+    request = _change_of(template, {"parts": [part for part in written if part in parts], "asked_in": asked_in}, context)
+    begun = _begun(template, earlier, request)
+    kept, stopped = _run(model, template, context, sources, time_limits, begun, request)
+    if not kept:
+        raise ModelError("The draft could not be changed")
+    return _record(template, kept, stopped, sources, begun=begun, change=request, added=_count(context))
+
+
+def _record(template, kept, stopped, sources, *, begun=None, change=None, added=None):
+    state = _state(template, kept, sources, begun)
     parts = [{"part_id": part["id"], **deepcopy(state["draft"][part["id"]]),
               "findings": deepcopy(state["findings"].get(part["id"], []))} for part in template["parts"]]
     return {"contract": CONTRACT, "template": deepcopy(template), "rounds": kept, "stopped": stopped, "parts": parts,
-            "beside": deepcopy(state["beside"]), "reviewed": state["reviewed"], "state": FOR_REVIEW}
+            "beside": deepcopy(state["beside"]), "reviewed": state["reviewed"], "state": FOR_REVIEW,
+            **({"added": added} if added is not None else {}), **({"change": deepcopy(change)} if change is not None else {})}
 
 
 _KEPT = {WRITING: ({"kind", "asked", "proposal", "faults"}, "proposal", SCHEMA),
          REVIEW: ({"kind", "returned", "findings", "beside"}, "returned", REVIEW_SCHEMA)}
 
 
-def validate(record, context, sources, *, time_limits=None, templates=None):
+def validate(record, context, sources, *, time_limits=None, templates=None, earlier=None):
     """A saved draft checked again from what it kept (P46): its template one NM holds; each round the one _next gives after the
     rounds before it, a writing finding at fault what code finds in its proposal now and a review admitting what code admits of
-    what it returned; the stop as the rounds end, and the parts, findings and review as they leave them. Returns the record."""
+    what it returned; the stop as the rounds end, and the parts, findings and review as they leave them. context: the conversation
+    as the draft was written from it (written_from), sources built from it. earlier (23d4): for a version that changes the one
+    before, that version as validate read it - the change's rounds begin from it; None for a first version. Returns the record."""
     held = TEMPLATES if templates is None else templates
-    if (not isinstance(record, dict)
-            or set(record) != {"contract", "template", "rounds", "stopped", "parts", "beside", "reviewed", "state"}
+    if (not isinstance(record, dict) or not _KEYS <= set(record) <= _KEYS | {"added", "change"}
+            or ("change" in record and "added" not in record)
             or record["contract"] != CONTRACT or record["state"] != FOR_REVIEW):
         raise ValueError("A saved draft is not one this code reads")
+    if "added" in record and (type(record["added"]) is not int or record["added"] != _count(context)):
+        raise ValueError("A saved draft is not read against the conversation it was written from")
     template = check_template(record["template"])
     if held.get((template["id"], template["version"])) != template:
         raise ValueError("A saved draft's template is not one NM holds")
+    change = record.get("change")
+    if (change is None) != (earlier is None):
+        raise ValueError("A later version of a draft is a change of the one before it, and the first is not")
+    if change is not None and (not isinstance(earlier, dict) or earlier.get("template") != template
+                               or _change_of(template, change, context) != change):
+        raise ValueError("A change of a draft keeps the template of the version it changes")
+    begun = _begun(template, earlier, change) if change is not None else None
     stopped, rounds = record["stopped"], record["rounds"]
     if (not isinstance(stopped, dict) or set(stopped) != {"why", "reason"} or stopped["why"] not in runner.STOPS
             or not isinstance(rounds, list) or not rounds):
         raise ValueError("A saved draft does not say how its rounds ended")
     for at, entry in enumerate(rounds):
-        state = _state(template, rounds[:at], sources)
+        state = _state(template, rounds[:at], sources, begun)
         kind, asked = _next(template, state)
         if kind is None:
             raise ValueError("A draft's rounds go on after they ended")
@@ -609,14 +723,14 @@ def validate(record, context, sources, *, time_limits=None, templates=None):
                                                                    if key in entry}) != entry:
             raise ValueError("A round of a draft differs from what code finds of it")
     # How the rounds ended: as the last round left them; otherwise at a writer or reviewer that could not be asked.
-    kind, why = _next(template, _state(template, rounds, sources))
+    kind, why = _next(template, _state(template, rounds, sources, begun))
     if kind is None:
         expected = stopped["why"] == why and (bool(stopped["reason"]) if why == runner.BACKSTOP else stopped["reason"] is None)
     else:
         expected = stopped["why"] == runner.UNAVAILABLE and bool(stopped["reason"])
     if not expected:
         raise ValueError("A saved draft does not end as its rounds do")
-    if record != _record(template, rounds, stopped, sources):
+    if record != _record(template, rounds, stopped, sources, begun=begun, change=change, added=record.get("added")):
         raise ValueError("A saved draft's parts are not as its rounds leave them")
     return record
 
@@ -630,17 +744,23 @@ def _used(part):
     return bool(part["paragraphs"] or part["faults"] or part["findings"])
 
 
-def shown(record):
+def shown(record, earlier=None):
     """The draft as the advocate reads it on the page (23d3): each part's title and paragraphs, a particular not given written
     where it goes as [particular needed: what it is], whether code still finds the part at fault and what the review found in it -
     in the Word file's words (word), without the IDs of passages, which mean nothing to the advocate on the page either; a part
     used only sometimes that the draft leaves out, with nothing found in it, not shown; what the review said of no part; whether
     the draft as it stands was reviewed; and the template's notes for the advocate. Code's own words of each fault stay in the
-    saved record."""
+    saved record. earlier (23d4): the version before it, where it changes one - "changed" then names, in order, the parts whose
+    words differ from it ([] where none does); None for a first version."""
     template = record["template"]
     needed = _needed(template)
     titles = {part["id"]: part["title"] for part in template["parts"]}
-    return {"title": template["title"], "state": record["state"],
+    before = {} if earlier is None else {part["part_id"]: part["paragraphs"] for part in earlier["parts"]}
+    changed = None if earlier is None else [
+        titles[part["part_id"]] for part in record["parts"]
+        if [paragraph["text"] for paragraph in part["paragraphs"]]
+        != [paragraph["text"] for paragraph in before.get(part["part_id"], [])]]
+    return {"title": template["title"], "state": record["state"], "changed": changed,
             "parts": [{"part_id": part["part_id"], "title": titles[part["part_id"]],
                        "paragraphs": [needed(paragraph["text"]) for paragraph in part["paragraphs"]],
                        "faults": [STILL_AT_FAULT] if part["faults"] else [],

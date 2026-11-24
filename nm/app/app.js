@@ -1463,6 +1463,12 @@ function renderDraft(draft, chatId, turnId, open) {
   add(fold, 'summary', 'draft-head', `Draft for your review: ${draft.title}${draft.name ? ` (${draft.name})` : ''}`
     + (draft.versions > 1 ? ` · version ${draft.versions}` : '')
     + (needed.size ? ` · ${needed.size} particular${needed.size === 1 ? '' : 's'} the papers do not give` : ''));
+  // Plan AN.67 (23d4): a version that changes the one before says which parts differ from it, as code compared them.
+  if (Array.isArray(draft.changed) && draft.versions > 1) {
+    add(fold, 'p', 'draft-changed', draft.changed.length
+      ? `Changed from version ${draft.versions - 1}: ${draft.changed.join(', ')}.`
+      : `Nothing in it differs from version ${draft.versions - 1}.`);
+  }
   if (draft.reviewed) add(fold, 'p', 'draft-unreviewed', draft.reviewed);
   for (const part of draft.parts || []) {
     add(fold, 'h4', 'draft-part-title', part.title);

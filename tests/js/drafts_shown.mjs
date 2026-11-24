@@ -108,6 +108,20 @@ const answer = { chat_id: 'chat 1', turn_id: 't/1', blocked: false, committed: t
   assert.deepEqual(saved.map((item) => item.url.split('/drafts/')[1]), ['D1/3.docx', 'D1/1.docx', 'D1/2.docx']);
 }
 
+// A version that changes the one before (23d4) says which parts differ from it, as code compared them - or that none does.
+{
+  const { context } = harness({});
+  for (const [changed, said] of [[['The cheque', 'Close'], 'Changed from version 1: The cheque, Close.'],
+                                 [[], 'Nothing in it differs from version 1.']]) {
+    const box = context.answerDrafts({ ...answer, drafts: [{ ...draft, versions: 2, changed }] });
+    const fold = box.children[0].children[0];
+    assert.equal(fold.children[1].className, 'draft-changed');
+    assert.equal(fold.children[1].textContent, said);
+  }
+  const first = context.answerDrafts({ ...answer, drafts: [{ ...draft, changed: null }] });
+  assert.equal(first.children[0].children[0].find((node) => node.className === 'draft-changed').length, 0);
+}
+
 // An answer just given: asked for once, at its own address, hidden until it comes, and kept on the answer.
 {
   const { context, asked } = harness({ drafts: [draft] });

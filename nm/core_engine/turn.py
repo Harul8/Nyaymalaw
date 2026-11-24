@@ -381,11 +381,27 @@ def _drafts_kept(drafts, context, parts, limits):
         if part is None:
             continue
         try:
-            sources = answer_sources.build(context, part)
-            kept[name] = [drafting.validate(version, context, sources, time_limits=limits) for version in versions]
+            kept[name] = _versions_checked(versions, context, part, limits)
         except _UNREADABLE as exc:
             log.warning("A dispute's saved draft was not kept: %s", type(exc).__name__)
     return kept
+
+
+def _versions_checked(versions, context, part, limits):
+    """Plan AN.67 (23d2, 23d4): one dispute's draft versions, in order, each checked again (drafting.validate) against the
+    conversation as it was written from it (drafting.written_from) and the sources of that dispute's research built from it - a
+    version that changes the one before checked from that one. ValueError where one does not pass."""
+    checked, built = [], {}
+    for version in versions:
+        written = drafting.written_from(version, context)
+        key = len(written.get("added", ()))
+        if key not in built:
+            built[key] = answer_sources.build(written, part)
+        checked.append(drafting.validate(version, written, built[key], time_limits=limits,
+                                         earlier=checked[-1] if checked else None))
+    if not checked or len(checked) > drafting.MOST_VERSIONS:
+        raise ValueError("A dispute's draft keeps between one version and the most NM keeps")
+    return checked
 
 
 def _validate_drafts(drafts, context, record, limits):
@@ -398,9 +414,7 @@ def _validate_drafts(drafts, context, record, limits):
         dispute = groups[0] if name == stepwise.WHOLE and len(groups) == 1 else name
         if dispute not in groups or not isinstance(versions, list) or not versions:
             raise ValueError("A saved draft names no dispute the answer researched")
-        sources = answer_sources.build(context, research.part_of(record, dispute))
-        for version in versions:
-            drafting.validate(version, context, sources, time_limits=limits)
+        _versions_checked(versions, context, research.part_of(record, dispute), limits)
 
 
 def _draft(calls, context, kept, name, keep, report):
@@ -417,6 +431,25 @@ def _draft(calls, context, kept, name, keep, report):
             keep.draft(name, record)
     else:
         log.warning("A draft was asked for that the matter, as kept, does not offer; nothing was drafted")
+    raise stepwise.Waiting("written")
+
+
+def _redraft(calls, context, kept, name, change, keep, report):
+    """Plan AN.67 (23d4, D331): a dispute's draft changed as the advocate asked in their message - the parts the change names
+    written again from the latest version, checked and reviewed (drafting.change) and saved as the draft's next version - and the
+    turn stops again where it was; nothing else is done. A draft no longer kept, one with the most versions NM keeps, or one whose
+    latest version is already this change (the same go-ahead run again, by Continue) is not changed."""
+    part = stepwise.part_of({"parts": kept["parts"]}, name)
+    versions = kept["drafts"].get(name) or []
+    done = bool(versions) and (versions[-1].get("change") or {}).get("asked_in") == change["asked_in"]
+    if part is not None and 0 < len(versions) < drafting.MOST_VERSIONS and not done:
+        report("redrafting")
+        record = drafting.change(calls, versions[-1], context, answer_sources.build(context, part), parts=change["parts"],
+                                 asked_in=change["asked_in"], time_limits=kept["limits"])
+        if keep is not None:
+            keep.draft(name, record)
+    else:
+        log.warning("A change was asked of a draft the matter, as kept, does not hold or keeps no more of; nothing was changed")
     raise stepwise.Waiting("written")
 
 
@@ -758,6 +791,9 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
     if keep is not None and resume and (resume.get("drafts") or {}) != kept["drafts"]:
         # Plan AN.67 (23d2): a draft that no longer passes its check again, or any draft after a steer, is not kept.
         keep.drafts_kept(kept["drafts"])
+    if gate.draft and gate.change:
+        # Plan AN.67 (23d4, D331): a change the advocate asked of a draft changes it, as its next version, and stops again.
+        _redraft(calls, context, kept, gate.draft[0], gate.change, keep, report)
     if gate.draft:
         # Plan AN.67 (23d2, D331): a go-ahead to draft drafts that dispute and stops again where it was.
         _draft(calls, context, kept, gate.draft[0], keep, report)

@@ -64,7 +64,10 @@ _FIELDS = {"mode", "allowed", "n", "waiting"}
 #: tentative time beside the time it took; D175: how a follow-up's turn started; D287: a message worked straight through as it
 #: asked; D282: the dispute whose failed searches are made again; AN.62-AN.64: guided intake - what is settled, whom the advocate
 #: acts for and the disputes confirmed).
-_ADDED = ({"disputes"}, {"heard"}, {"times"}, {"recheck"}, {"proposed"}, {"taken"}, {"way"}, {"again"}, {"guided"}, {"draft"})
+_ADDED = ({"disputes"}, {"heard"}, {"times"}, {"recheck"}, {"proposed"}, {"taken"}, {"way"}, {"again"}, {"guided"}, {"draft"},
+          {"change"})
+#: Plan AN.67 (23d4, D331): a change of a dispute's draft the advocate asked for in a message - the parts it names and the message.
+_CHANGE = {"parts", "asked_in"}
 #: Guided intake's record: the stops settled by a go-ahead (the read-back, the offer), the parties the advocate acts for with the
 #: words of their own message that say so (D328), and each confirmed dispute with the fingerprint of the dispute as confirmed (D312).
 _GUIDED = {"settled", "client", "confirmed"}
@@ -133,6 +136,7 @@ def valid(go):
                 and _guided_valid(go.get("guided"))
                 and all(go.get(key) is None or isinstance(go[key], list) and len(go[key]) == 1
                         and isinstance(go[key][0], str) and bool(go[key][0].strip()) for key in ("again", "draft"))
+                and _change_valid(go.get("change"), go.get("draft"))
                 and isinstance(heard, list)
                 and all(isinstance(entry, dict) and set(entry) == _HEARD and all(isinstance(entry[key], str) for key in _HEARD)
                         and entry["text"].strip() for entry in heard)
@@ -314,6 +318,32 @@ def heard(go, text, taken, said):
     """Append the advocate's exact message and NM's reading to the waiting record."""
     entry = {"text": text, "taken": taken, "said": said, "at": datetime.now(timezone.utc).isoformat()}
     return {**go, "heard": [*(go.get("heard") or ()), entry]}
+
+
+def _change_valid(change, draft):
+    """Plan AN.67 (23d4): a change of a draft is only of the draft a run writes, and names its parts once each and its message."""
+    if change is None:
+        return True
+    return (bool(draft) and isinstance(change, dict) and set(change) == _CHANGE and isinstance(change["parts"], list)
+            and bool(change["parts"]) and len(set(change["parts"])) == len(change["parts"])
+            and all(isinstance(part, str) and part.strip() for part in change["parts"])
+            and isinstance(change["asked_in"], str) and bool(change["asked_in"].strip()))
+
+
+def changing(go, held, name, parts, asked_in):
+    """Plan AN.67 (23d4, D331): the go-ahead for a run that changes one dispute's draft (WHOLE: the answer written as a whole) as
+    the advocate's message asked_in asks - the parts named written again and saved as the draft's next version - and stops again
+    where it was; nothing else is done. go: the waiting record, with the message heard. ValueError where the matter keeps no draft
+    of that dispute or the change names no part."""
+    state = state_of(held.get("steps"))
+    drafts = (held.get("steps") or {}).get("drafts") or {}
+    if name not in drafts or (name == WHOLE) != state["whole"]:
+        raise ValueError("NM has no draft of that dispute to change")
+    change = {"parts": list(parts or ()), "asked_in": asked_in}
+    if not _change_valid(change, [name]):
+        raise ValueError("Name the parts of the draft to change")
+    return {"mode": MODE, "allowed": ["write"], "n": go["n"] + 1, "waiting": None,
+            "disputes": None if state["whole"] else [name], "draft": [name], "change": change, **_carried(go)}
 
 
 def _carried(go):
@@ -586,6 +616,8 @@ class Gate:
         self.again = [] if go is None else list(go.get("again") or ())
         #: Plan AN.67 (23d2, D331): the dispute (WHOLE: the answer written as a whole) whose draft this run writes, and nothing else.
         self.draft = [] if go is None else list(go.get("draft") or ())
+        #: Plan AN.67 (23d4, D331): the change of that draft the advocate asked for, or None: the draft is written afresh.
+        self.change = None if go is None else go.get("change")
     @property
     def guided(self):
         """AN.62-AN.64: a matter in guided intake, which stops once understood at its first guided stop not yet settled - as this

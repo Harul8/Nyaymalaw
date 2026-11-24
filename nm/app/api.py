@@ -3069,8 +3069,10 @@ def _drafts_view(activity):
     if not drafts:
         return []
     state = stepwise.state_of({'understood': {'plan': activity['research']['plan']}})
+    # Plan AN.67 (23d4): a version that changes the one before says which parts differ from it.
     return [{'dispute': name, 'name': None if state['whole'] else state['names'][name], 'versions': len(drafts[name]),
-             **drafting.shown(drafts[name][-1]), 'said': drafting.DRAFTED} for name in state['order'] if name in drafts]
+             **drafting.shown(drafts[name][-1], drafts[name][-2] if len(drafts[name]) > 1 else None), 'said': drafting.DRAFTED}
+            for name in state['order'] if name in drafts]
 
 
 def _turn_drafts(chat_id, turn_id, advocate_id, request):

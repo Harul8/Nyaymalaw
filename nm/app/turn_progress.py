@@ -43,6 +43,8 @@ STAGES = {
     "saving": "Saving the answer",
     # Plan AN.67 (23d3): the draft the advocate asked for at a stop, being written - reported since 23d2, dropped until it had words.
     "drafting": "Drafting the document for your review",
+    # Plan AN.67 (23d4): a draft changed as the advocate asked in a message.
+    "redrafting": "Changing the draft as you asked",
     # Plan AN.37 (D37): NM has asked the advocate something only they can settle.
     "waiting_for_answer": "Waiting for your answer",
     # Plan AN.41 (D70) and AN.42 (D79).

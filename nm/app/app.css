@@ -733,6 +733,7 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .draft-block .draft-needed { background: #fff1a8; color: inherit; padding: 0 0.15em; border-radius: 3px; }
 .draft-block .draft-finding { margin: 0 0 0.45rem; color: #8a4b0f; font-size: 0.86rem; }
 .draft-block .draft-unreviewed { margin: 0 0 0.45rem; color: #8a4b0f; }
+.draft-block .draft-changed { margin: 0 0 0.45rem; color: var(--ink-3); font-size: 0.9rem; }
 .draft-block .draft-notes-head { margin: 0.8rem 0 0.2rem; color: var(--ink-2); font-weight: 600; }
 .draft-block .draft-notes { margin: 0 0 0.5rem 1.1rem; padding: 0; color: var(--ink-2); }
 .draft-block .draft-said { margin: 0.5rem 0 0; color: var(--ink-3); font-size: 0.86rem; }

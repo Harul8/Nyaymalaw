@@ -16,6 +16,11 @@ worked (way). Step by step is the default; a message that plainly asks for the w
 rather than a matter to be worked through, is worked straight through. The model reads the words - never a list of keywords - and
 code says what NM does, with the model's reading after it, marked. A reading that fails or is unclear leaves the message step by
 step, which stops before any research is paid for.
+
+Plan AN.67 (23d4, D331): at a stop that has drafted, a message may also be a change to a draft - change_draft, with its dispute and
+the parts it concerns. The reader is shown each draft at the stop, part by part; code admits only a draft the stop holds and parts
+of its template, writes again only the parts the writer writes - never set wording, whose particulars come from the parts that
+state them - and says, in its own words, which parts are written again and as which version.
 """
 from __future__ import annotations
 
@@ -27,8 +32,8 @@ from nm.core_engine import reasoning, shown_words, steps as stepwise
 log = logging.getLogger(__name__)
 
 OPERATION = "core_message_reader"
-#: What a message is (48c).
-KINDS = ("go", "information", "correction", "rethink", "question", "unclear")
+#: What a message is (48c); a change to a draft written at the stop (23d4).
+KINDS = ("go", "information", "correction", "rethink", "question", "change_draft", "unclear")
 #: Distinguish an explicit batch in a message from a targeted action missing its targets.
 BATCH_CHOICES = {"research_all": "research", "write_all": "write"}
 CHOICES = (*stepwise.GOS, *BATCH_CHOICES)
@@ -36,6 +41,7 @@ CHOICES = (*stepwise.GOS, *BATCH_CHOICES)
 SAID = {"go": "Taken as your go-ahead.", "information": "Taken as new information for the matter.",
         "correction": "Taken as a correction of what NM read.", "rethink": "Taken as a request to rethink the matter.",
         "question": "Taken as a new question; it waits until you finish this matter.",
+        "change_draft": "Taken as a change to the draft.",
         "unclear": "NM could not tell how you meant this message."}
 ASK = "Should NM take this as information for the matter, as your go-ahead, or as a new question?"
 
@@ -43,14 +49,17 @@ PROMPT = """Message: The advocate has sent a message while an Indian matter wait
 
 Purpose: Propose how to take the new message at this stop, preserving the advocate's scope and words.
 
-Look for: What the advocate authorises now, which dispute or step their words refer to, and whether the offered go-ahead matches. Use research or write for the selected disputes, and next for the next step when it is clear. Use research_all or write_all only when the advocate expressly asks for that step for all eligible disputes. An instruction to research all disputes, even if it says to research them end to end, authorises research alone. Use end_to_end only for explicit authority to run every remaining step of the whole matter. Use search_again for a failed search the advocate wants made again, draft when they ask for the draft the stop offers, and done when they ask to finish. Keep a named target where it controls the scope. If the target or action is unresolved, or the stop offers no matching action, ask for the distinction that would settle it. Treat reported or quoted directions as someone else's words unless adopted by the advocate. Identify new facts and corrections from the advocate's account. A correction may refer to NM's reading as its target, while its factual basis comes from the advocate or their original sources.
+Look for: What the advocate authorises now, which dispute or step their words refer to, and whether the offered go-ahead matches. Use research or write for the selected disputes, and next for the next step when it is clear. Use research_all or write_all only when the advocate expressly asks for that step for all eligible disputes. An instruction to research all disputes, even if it says to research them end to end, authorises research alone. Use end_to_end only for explicit authority to run every remaining step of the whole matter. Use search_again for a failed search the advocate wants made again, draft when they ask for the draft the stop offers, and done when they ask to finish. Where the advocate asks for a draft NM has written at this stop to be changed, the kind is change_draft: its dispute, and in parts the IDs of the parts the change concerns - every part, where it concerns the whole draft. Set wording is filled in from the particulars the other parts state, so for a change to such a particular name the part that states it. Keep a named target where it controls the scope. If the target or action is unresolved, or the stop offers no matching action, ask for the distinction that would settle it. Treat reported or quoted directions as someone else's words unless adopted by the advocate. Identify new facts and corrections from the advocate's account. A correction may refer to NM's reading as its target, while its factual basis comes from the advocate or their original sources.
 
-Outcome: Return one judgement with kind, choice, disputes, critical, corrects, item, value, new_questions, said and ask. The kind is go for an offered go-ahead, information for facts or papers added to the matter, correction for a change to NM's reading, rethink for a new understanding or change of task, question for a new question outside the matter, or unclear. With go return its choice and the owned IDs of the disputes it selects, or an empty list for a whole-matter or explicit batch action. For information or correction give the disputes touched and whether the change is critical because it affects work done or about to be done. With correction give what is corrected, the ID of the item if identified, and the advocate's exact corrected words if supplied. With information or correction list any new_questions, each with its dispute ID, legal question, why it matters and law to check first. Use empty fields where inapplicable. In said explain your reading briefly. In ask give a single question only when the meaning is unclear."""
+Outcome: Return one judgement with kind, choice, disputes, parts, critical, corrects, item, value, new_questions, said and ask. The kind is go for an offered go-ahead, information for facts or papers added to the matter, correction for a change to NM's reading, rethink for a new understanding or change of task, question for a new question outside the matter, change_draft for a change to a draft written at this stop, or unclear. With change_draft give the dispute in disputes and the parts in parts. With go return its choice and the owned IDs of the disputes it selects, or an empty list for a whole-matter or explicit batch action. For information or correction give the disputes touched and whether the change is critical because it affects work done or about to be done. With correction give what is corrected, the ID of the item if identified, and the advocate's exact corrected words if supplied. With information or correction list any new_questions, each with its dispute ID, legal question, why it matters and law to check first. Use empty fields where inapplicable. In said explain your reading briefly. In ask give a single question only when the meaning is unclear."""
 SCHEMA = {"type": "object", "additionalProperties": False,
-          "required": ["kind", "choice", "disputes", "critical", "corrects", "item", "value", "new_questions", "said", "ask"],
+          "required": ["kind", "choice", "disputes", "parts", "critical", "corrects", "item", "value", "new_questions", "said",
+                       "ask"],
           "properties": {"kind": {"type": "string", "enum": list(KINDS)},
                          "choice": {"type": ["string", "null"], "enum": [*CHOICES, None]},
                          "disputes": {"type": "array", "items": {"type": "string"}},
+                         # 23d4: the parts of a draft a change concerns.
+                         "parts": {"type": "array", "items": {"type": "string"}},
                          "critical": {"type": "boolean"},
                          "corrects": {"type": "string"},
                          "item": {"type": "string"},
@@ -80,6 +89,8 @@ def material(held, message):
             **({"waiting_exchanges": exchanges} if exchanges else {}),
             # 48g: what NM read of the matter, by id, so that a correction can name what it changes.
             "what_we_read": read_items(held),
+            # 23d4: the drafts written at this stop, part by part, so that a change can name what it changes.
+            **({"drafts_at_this_stop": drafts} if (drafts := drafts_at_stop(held)) else {}),
             "new_message": message}
 
 
@@ -118,6 +129,68 @@ def asked_questions(held):
     disputes = (((plan.get("proposal") or {}).get("understanding") or {}).get("disputes")) or []
     return [{"dispute": dispute["id"], "questions": [question.get("question", "") for question in dispute.get("legal_questions") or ()]}
             for dispute in disputes if isinstance(dispute, dict) and dispute.get("id")]
+
+
+def drafts_at_stop(held):
+    """Plan AN.67 (23d4): each draft the waiting turn holds, as the reader is shown it - its dispute, the document, how many
+    versions it has, and each part of its template by id and title, whether it is set wording and its paragraphs as the page shows
+    them (none, for a part the draft leaves out)."""
+    from nm.core_engine import drafting  # imported here: drafting reads the research, which imports what reads these records
+    drafts = (((held or {}).get("steps") or {}).get("drafts")) or {}
+    found = []
+    for name, versions in drafts.items():
+        try:
+            record = versions[-1]
+            shown = {part["part_id"]: part["paragraphs"] for part in drafting.shown(record)["parts"]}
+            found.append({"dispute": name, "document": record["template"]["title"], "versions": len(versions),
+                          "parts": [{"part_id": part["id"], "title": part["title"], "set_wording": "wording" in part,
+                                     "paragraphs": shown.get(part["id"], [])} for part in record["template"]["parts"]]})
+        except (KeyError, TypeError, IndexError, AttributeError):
+            continue
+    return found
+
+
+def _change_admitted(data, held, state, named, judgement):
+    """Plan AN.67 (23d4): a change to a draft at this stop, as code admits it - judgement with "draft" (the dispute whose draft it
+    changes; WHOLE for an answer written as a whole), "parts" (the parts the writer writes that it names, in the template's order;
+    [] where it names only set wording, or the draft keeps the most versions NM keeps: nothing is then written) and code's words of
+    what NM does - or (None, why)."""
+    from nm.core_engine import drafting
+    drafts = ((held.get("steps") or {}).get("drafts")) or {}
+    if not drafts:
+        return None, "no draft is written at this stop, so none can be changed"
+    if state["whole"]:
+        name = stepwise.WHOLE if stepwise.WHOLE in drafts else None
+    else:
+        drafted = [item for item in named if item in drafts]
+        name = drafted[0] if len(named) == 1 and drafted else next(iter(drafts)) if not named and len(drafts) == 1 else None
+    if name is None:
+        return None, "name the one dispute whose draft is to change: " + ", ".join(drafts)
+    try:
+        versions = drafts[name]
+        parts = versions[-1]["template"]["parts"]
+    except (KeyError, TypeError, IndexError):
+        return None, "that draft cannot be read"
+    titles = {part["id"]: part["title"] for part in parts}
+    asked = [item for item in data.get("parts") or () if isinstance(item, str)]
+    if not asked or not set(asked) <= set(titles):
+        return None, "parts must name parts of that draft by their IDs: " + ", ".join(titles)
+    written = [part["id"] for part in parts if "wording" not in part and part["id"] in asked]
+    wording = [titles[part["id"]] for part in parts if "wording" in part and part["id"] in asked]
+    of = "" if state["whole"] else f" for {state['names'].get(name, name)}"
+    kept = ("NM does not write set wording again: it fills in only its particulars, from the parts that state them. Change its "
+            "wording in the Word file.")
+    if len(versions) >= drafting.MOST_VERSIONS:
+        written, said = [], (f"Taken as a change to the draft{of}, but it already has {len(versions)} versions, the most NM keeps, "
+                             "so NM has not changed it. Make the change in its Word file.")
+    elif not written:
+        said = f"Taken as a change to the set wording of the draft{of} ({', '.join(wording)}). {kept}"
+    else:
+        said = (f"Taken as a change to the draft{of}: NM writes {', '.join(titles[item] for item in written)} again, then checks "
+                f"and reviews the draft, and keeps it as version {len(versions) + 1}; the earlier versions stay as they were."
+                + (f" {', '.join(wording)}: {kept}" if wording else ""))
+    judgement.update(disputes=[] if state["whole"] else [name], draft=name, parts=written, said=said)
+    return judgement, None
 
 
 def read_items(held):
@@ -180,6 +253,10 @@ def admitted(data, held):
             else:
                 judgement["said"] = (judgement["said"] + " NM could not tell which item of what it read this corrects, so the "
                                      "board is not marked; say which, if it matters.").strip()
+    elif kind == "change_draft":
+        judgement, why = _change_admitted(data, held, state, named, judgement)
+        if judgement is None:
+            return None, why
     elif kind == "unclear":
         judgement["ask"] = shown_words.asked(ASK, data.get("ask"))
     judgement["said"] = shown_words.after(judgement["said"], reading)

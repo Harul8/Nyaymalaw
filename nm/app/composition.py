@@ -668,6 +668,17 @@ class Application:
                 self._moved(matter, held, go)
             return ran(go)
         entry = {'text': message, 'documents': list(documents), 'at': datetime.now(timezone.utc).isoformat()}
+        if kind == 'change_draft':
+            # Plan AN.67 (23d4, D331): a change to a draft at this stop. Where it names parts the writer writes, the message joins
+            # the matter as the advocate's own, after the latest (citable, 48h), the run writes those parts again and saves the
+            # draft's next version, and the analyses written are checked against the message once at Done (D162). Otherwise
+            # (only set wording named, or the most versions kept) nothing runs: code's words say why.
+            if not judgement['parts']:
+                heard_only(kind, judgement['said'])
+            listened = stepwise.heard(held['go'], message, kind, judgement['said'])
+            go = stepwise.changing({**listened, 'recheck': True}, held, judgement['draft'], judgement['parts'],
+                                   f"{turn_id}:added{len(held.get('added', ())) + 1}")
+            return ran(go, appended=[entry])
         if kind in ('information', 'correction') and stepwise.waiting_of(held) in stepwise.GUIDED:
             # Plan AN.62-AN.64 (D310-D312): before the disputes are confirmed, what the advocate adds or corrects - papers among it -
             # is read with the whole matter: it is understood again with their words, and stops where it was or at the next guided
