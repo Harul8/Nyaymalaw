@@ -1087,6 +1087,8 @@ function restoredTurn(turn) {
     committed: true,
     search_said: turn.search_said === null || (turn.search_said && typeof turn.search_said === 'object')
       ? turn.search_said : undefined,
+    // Plan AN.67 (23d3): the drafts saved with the answer, drawn beneath it (answerDrafts).
+    drafts: Array.isArray(turn.drafts) ? turn.drafts : undefined,
     service_status: typeof turn.service_status === 'string' ? turn.service_status : null,
     // Plan AN.37: what NM asked while it worked, and how each answer came to stand.
     questions_asked: turn.questions_asked && typeof turn.questions_asked === 'object' ? turn.questions_asked : null,
@@ -1283,19 +1285,26 @@ function noteControl(answer, status, called = 'Research note:') {
   return box;
 }
 
-function noteFileName(disposition) {
+function noteFileName(disposition, fallback = 'Research note.docx') {
   const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition || '');
   if (encoded) {
     try { return decodeURIComponent(encoded[1]); } catch { /* fall back to the plain name */ }
   }
   const plain = /filename="([^"]+)"/i.exec(disposition || '');
-  return plain ? plain[1] : 'Research note.docx';
+  return plain ? plain[1] : fallback;
 }
 
 async function downloadNoteWord(answer, status) {
+  await saveWordFile(`${noteUrl(answer)}.docx`, status, { saved: 'Research note saved as a Word file',
+    failed: 'The research note could not be prepared', name: 'Research note.docx' });
+}
+
+// A Word file the server makes from what is saved - a research note, or a draft (plan AN.67, 23d3) - downloaded under the name the
+// server gives it; what happened said on the status line beside the control.
+async function saveWordFile(url, status, said) {
   status.textContent = 'Preparing the Word file…';
   try {
-    const res = await fetch(`${noteUrl(answer)}.docx`);
+    const res = await fetch(url);
     if (!res.ok) {
       let why = failureSaid(res.status);
       try {
@@ -1307,14 +1316,14 @@ async function downloadNoteWord(answer, status) {
     const blob = await res.blob();
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = noteFileName(res.headers.get('content-disposition'));
+    link.download = noteFileName(res.headers.get('content-disposition'), said.name);
     document.body.appendChild(link);
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(link.href), 30000);
-    status.textContent = 'Research note saved as a Word file';
+    status.textContent = said.saved;
   } catch (error) {
-    status.textContent = `The research note could not be prepared: ${error.message}`;
+    status.textContent = `${said.failed}: ${error.message}`;
   }
 }
 
@@ -1405,6 +1414,138 @@ async function printNote(answer, status) {
   frame.contentWindow.focus();
   frame.contentWindow.print();
   status.textContent = 'In the print window, choose “Save as PDF”.';
+}
+
+// A DRAFT THE ADVOCATE ASKED FOR (plan AN.67, 23d3; D331), shown in the conversation beneath the answer it was saved with, or
+// beneath the stop that drafted it - never on the board or in the reading pane (D60). The server gives each dispute's draft as
+// code's view of the draft as saved (drafting.shown): its parts in order, each particular the papers do not give marked where it
+// goes, what code and the review still find, the notes for the advocate; each version is a Word file the server makes from the
+// saved draft. A conversation opened from the history carries each saved answer's drafts; an answer just given, and a stop that
+// has drafted, ask for them once. Never a model's words beyond the draft's own.
+const DRAFT_NEEDED = /\[particular needed: [^\]]*\]/g;
+
+function draftsUrl(chatId, turnId) {
+  return `/api/chats/${encodeURIComponent(chatId)}/turns/${encodeURIComponent(turnId)}/drafts`;
+}
+
+function draftParagraph(text) {
+  const line = document.createElement('p');
+  line.className = 'draft-paragraph';
+  const words = String(text);
+  let at = 0;
+  for (const match of words.matchAll(DRAFT_NEEDED)) {
+    if (match.index > at) line.appendChild(document.createTextNode(words.slice(at, match.index)));
+    const mark = document.createElement('mark');
+    mark.className = 'draft-needed';
+    mark.textContent = match[0];
+    line.appendChild(mark);
+    at = match.index + match[0].length;
+  }
+  if (at < words.length) line.appendChild(document.createTextNode(words.slice(at)));
+  return line;
+}
+
+// One dispute's draft: open where the stop has just drafted it, folded beneath a saved answer as the answer's detail is.
+function renderDraft(draft, chatId, turnId, open) {
+  const add = (parent, tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    parent.appendChild(node);
+    return node;
+  };
+  const box = document.createElement('section');
+  box.className = 'draft-block';
+  const fold = add(box, 'details', 'draft-fold');
+  fold.open = Boolean(open);
+  const paragraphs = (draft.parts || []).flatMap((part) => part.paragraphs || []);
+  const needed = new Set(paragraphs.flatMap((text) => String(text).match(DRAFT_NEEDED) || []));
+  add(fold, 'summary', 'draft-head', `Draft for your review: ${draft.title}${draft.name ? ` (${draft.name})` : ''}`
+    + (draft.versions > 1 ? ` · version ${draft.versions}` : '')
+    + (needed.size ? ` · ${needed.size} particular${needed.size === 1 ? '' : 's'} the papers do not give` : ''));
+  if (draft.reviewed) add(fold, 'p', 'draft-unreviewed', draft.reviewed);
+  for (const part of draft.parts || []) {
+    add(fold, 'h4', 'draft-part-title', part.title);
+    for (const text of part.paragraphs || []) fold.appendChild(draftParagraph(text));
+    for (const finding of [...(part.faults || []), ...(part.found || [])]) add(fold, 'p', 'draft-finding', finding);
+  }
+  const notes = [...(draft.beside || []), ...(draft.notes || [])];
+  if (notes.length) {
+    add(fold, 'p', 'draft-notes-head', 'For your review - not part of the document:');
+    const list = add(fold, 'ul', 'draft-notes');
+    for (const note of notes) add(list, 'li', '', note);
+  }
+  if (draft.said) add(fold, 'p', 'draft-said', draft.said);
+  const foot = add(box, 'div', 'draft-foot');
+  const status = document.createElement('span');
+  status.className = 'reply-status';
+  status.setAttribute('role', 'status');
+  const word = (version, label, called) => {
+    const button = add(foot, 'button', 'ghost note-format', label);
+    button.type = 'button';
+    button.setAttribute('aria-label', called);
+    button.addEventListener('click', () => saveWordFile(
+      `${draftsUrl(chatId, turnId)}/${encodeURIComponent(draft.dispute)}/${version}.docx`, status,
+      { saved: 'Draft saved as a Word file', failed: 'The draft could not be prepared', name: 'Draft.docx' }));
+  };
+  add(foot, 'span', 'note-label', 'The draft:');
+  word(draft.versions, 'Word', 'Save this draft in Word');
+  if (draft.versions > 1) {
+    add(foot, 'span', 'note-label', 'Earlier versions:');
+    for (let version = 1; version < draft.versions; version += 1) {
+      word(version, `Version ${version}`, `Save version ${version} of this draft in Word`);
+    }
+  }
+  foot.appendChild(status);
+  return box;
+}
+
+function fillDrafts(box, drafts, chatId, turnId, open) {
+  box.textContent = '';
+  for (const draft of drafts) box.appendChild(renderDraft(draft, chatId, turnId, open));
+  box.hidden = !drafts.length;
+}
+
+// Asked for once where the drafts are not yet in hand; said, not passed over, where they could not be had.
+function askDrafts(box, chatId, turnId, open, keep) {
+  box.hidden = true;
+  api(draftsUrl(chatId, turnId)).then((reply) => {
+    const drafts = Array.isArray(reply && reply.drafts) ? reply.drafts : [];
+    keep(drafts);
+    fillDrafts(box, drafts, chatId, turnId, open);
+  }).catch(() => {
+    box.textContent = '';
+    const line = document.createElement('p');
+    line.className = 'draft-unreviewed';
+    line.textContent = 'A draft of this turn could not be shown just now. Open the conversation again to see it.';
+    box.appendChild(line);
+    box.hidden = false;
+  });
+}
+
+// Beneath a saved answer: the drafts it was saved with. Null where the answer is not a saved one or has none.
+function answerDrafts(answer) {
+  const saved = answer && answer.chat_id && answer.turn_id && !answer.blocked
+    && (answer.committed === true || answer.committed === 'committed');
+  if (!saved || (Array.isArray(answer.drafts) && !answer.drafts.length)) return null;
+  const box = document.createElement('div');
+  box.className = 'drafts';
+  if (Array.isArray(answer.drafts)) fillDrafts(box, answer.drafts, answer.chat_id, answer.turn_id, false);
+  else askDrafts(box, answer.chat_id, answer.turn_id, false, (drafts) => { answer.drafts = drafts; });
+  return box;
+}
+
+// Beneath a stop that has drafted: its drafts, asked for again only when what it has drafted changes.
+function heldDrafts(entry) {
+  const drafted = entry.stopped && entry.stopped.waiting && entry.stopped.waiting.drafted;
+  const chatId = entry.chatId || (entry.context && entry.context.chatId) || (entry.request && entry.request.chat_id);
+  if (!drafted || typeof drafted !== 'object' || !Object.keys(drafted).length || !chatId || !entry.turnId) return null;
+  const key = JSON.stringify(drafted);
+  const box = document.createElement('div');
+  box.className = 'drafts';
+  if (entry.heldDrafts && entry.heldDrafts.key === key) fillDrafts(box, entry.heldDrafts.drafts, chatId, entry.turnId, true);
+  else askDrafts(box, chatId, entry.turnId, true, (drafts) => { entry.heldDrafts = { key, drafts }; });
+  return box;
 }
 
 // THE LIMITS OF THE SEARCH (plan AN.51, piece 51e; D199, D253; AN.56 D262): under every answer that searched, code's own account
@@ -1508,6 +1649,9 @@ function renderTurn(entry) {
   if (entry.state === 'stopped' && !entry.answer) {
     wrap.appendChild(renderStopped(entry));
     if (Array.isArray(entry.shownElements) && entry.shownElements.length) wrap.appendChild(renderShownSoFar(entry.shownElements));
+    // Plan AN.67 (23d3): what the stop has drafted, beneath what it has shown so far.
+    const drafted = heldDrafts(entry);
+    if (drafted) wrap.appendChild(drafted);
     return wrap;
   }
   if (entry.state === 'reconnecting' && !entry.answer) {
@@ -2405,6 +2549,9 @@ function renderTurn(entry) {
     ...support.map((el) => ({ text: el.text, step: null, refs: el.refs })),
   ];
   wrap.appendChild(replyFooter(entry, () => replyText(entry.answer, shown)));
+  // Plan AN.67 (23d3): the drafts saved with this answer, beneath it and its foot.
+  const drafted = answerDrafts(entry.answer);
+  if (drafted) wrap.appendChild(drafted);
 
   // HOW THIS ANSWER WAS MADE -- gates, reads, calls and cost -- is not shown
   // in the conversation (owner, 28 September 2026). It is kept, in full and

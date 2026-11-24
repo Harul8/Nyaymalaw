@@ -223,7 +223,7 @@ def test_findings_left_at_the_allowance_are_kept_for_the_advocate(matter):
     assert drafting.validate(record, ctx, sources, templates=HELD) is record
     assert drafting.shown(record)["parts"][0]["found"] == [
         "An independent review found that this part states what nothing given bears out: The papers do not say why the cheque "
-        "came back. See M1."]
+        "came back."]  # 23d3: on the page as in the Word file, without the IDs of passages
 
 
 def test_the_rewrites_end_at_the_allowance_and_the_faults_left_are_kept(matter):
@@ -235,7 +235,8 @@ def test_the_rewrites_end_at_the_allowance_and_the_faults_left_are_kept(matter):
     assert record["stopped"]["why"] == runner.BACKSTOP and record["stopped"]["reason"]
     assert record["parts"][0]["paragraphs"] == tries[2]["paragraphs"] and record["parts"][0]["faults"]
     assert drafting.validate(record, ctx, sources, templates=HELD) is record
-    assert drafting.shown(record)["parts"][0]["faults"] == record["parts"][0]["faults"]
+    # 23d3: the page says a part is still at fault in the Word file's words; code's own words of each fault stay saved.
+    assert drafting.shown(record)["parts"][0]["faults"] == [drafting.STILL_AT_FAULT]
 
 
 def test_a_rewrite_that_changes_nothing_ends_the_rounds_once_the_draft_is_reviewed(matter):
@@ -547,7 +548,7 @@ def test_what_the_review_finds_in_set_wording_is_kept_for_the_advocate_and_never
     record = drafting.write(Writer(notice(), {"findings": [finding]}), NOTICE, ctx, sources)
     assert kinds(record) == [drafting.WRITING, drafting.REVIEW] and record["stopped"]["why"] == runner.NOTHING_NEW
     assert saved_part(record, "consequence")["findings"] == [finding]
-    assert drafting.shown(record)["parts"][6]["found"] == [drafting._told(finding)]
+    assert drafting.shown(record)["parts"][6]["found"] == [drafting._told(finding, cited=False)]
     assert drafting.validate(record, ctx, sources) is record
     # A finding in a written part as well is written again; the set wording's stays with its unchanged words.
     debt = part("debt", "The cheque was given towards a hand loan of Rs. 2,50,000 that my client made to you, as the papers show.",

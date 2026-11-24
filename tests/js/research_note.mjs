@@ -34,6 +34,9 @@ function harness(fetchReply, apiReply) {
     api: async (url) => { created.push(url); if (apiReply instanceof Error) throw apiReply; return apiReply; },
   });
   vm.runInContext(app.slice(from, to), context);
+  // The page's plain words for a refused request (AN.56, D261), which the Word download falls back on, from where the page keeps them.
+  vm.runInContext(app.slice(app.indexOf('function failureSaid(status) {'), app.indexOf('/* -------', app.indexOf('function failureSaid(status) {'))),
+    context);
   return { context, page, created };
 }
 

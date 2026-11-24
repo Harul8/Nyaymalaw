@@ -41,7 +41,7 @@ from nm.core_engine.conversation import (CONTRACT as CONVERSATION_CONTRACT, HEAD
                                          TurnContext, asking_of, chat_matter_id, checked_rows, queued_of, shown_of, stored_chat,
                                          title_of)
 from nm.core_engine import documents as document_rules
-from nm.core_engine import research_note, search_said, voice
+from nm.core_engine import drafting, research_note, search_said, voice
 from nm.core_engine.response_rendering import unit_index
 from nm.core_engine.matter_board import board as matter_board
 from nm.core_engine.turn import AUTHORITY_CONTRACT as AUTHORITY_CORE_TURN, SECTIONED as SECTIONED_CORE_TURNS
@@ -2596,7 +2596,9 @@ def chat(chat_id: str, advocate_id: Advocate, request: Request, response: Respon
     turns = [{**row['response'], 'message': row['message'], 'message_source': 'held',
               'committed': True, 'release_state': 'released',
               'documents': [_sent_document(document) for document in row.get('documents', ())],
-              'search_said': search_said.said(row.get('activities'))}
+              'search_said': search_said.said(row.get('activities')),
+              # Plan AN.67 (23d3, D331): the drafts saved with the answer, shown beneath it.
+              'drafts': _drafts_view(row.get('activities'))}
              for row in rows]
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
@@ -2841,6 +2843,11 @@ def _waiting_of(held, asked, matter):
     card = stepwise.card(held, asked)
     if card is not None and card['after'] in stepwise.BEFORE_PROPOSED and matter is not None:
         card = {**card, 'read_back': _read_back(matter, held)}
+    # Plan AN.67 (23d3, D331): the disputes this stop has drafted, with how many versions of each - for the page to ask for the
+    # drafts (turn_drafts), which are checked again as they are read; nothing of a draft itself.
+    drafted = (held.get('steps') or {}).get('drafts') if card is not None else None
+    if drafted:
+        card = {**card, 'drafted': {name: len(versions) for name, versions in drafted.items()}}
     return card
 
 
@@ -3042,6 +3049,66 @@ def research_note_word(chat_id: str, turn_id: str, advocate_id: Advocate, reques
     plain = re.sub(r'[^A-Za-z0-9 ._-]', '_', name)
     return Response(content=research_note.docx(made, row['response']['at']),
                     media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    headers={'Cache-Control': 'no-store',
+                             'Content-Disposition': f'attachment; filename="{plain}"; '
+                                                    f"filename*=UTF-8''{quote(name)}"})
+
+
+# ------------------------------------------------------------------ a turn's drafts ---
+#
+# PLAN AN.67 (23d3, D331): A DRAFT THE ADVOCATE ASKED FOR IS SHOWN IN THE CONVERSATION, beneath the answer it was saved with or
+# the stop that drafted it - never on the board or in the reading pane (D60) - and each version of it is a Word file to download.
+# Only drafts checked again as they are read: a saved answer's as the conversation's record is checked (saved_rows), a waiting
+# turn's as its saved steps are read for the board (activity_of). Code's view of the saved draft alone; no model is asked.
+
+def _drafts_view(activity):
+    """A turn's drafts as the page shows them: for each dispute drafted, in the matter's order, its latest version as
+    drafting.shown gives it, the dispute's name where the answer is written dispute by dispute (None: written as a whole) and
+    how many versions it has, each one its own Word file, and what the Word file says at its foot. [] where the turn has none."""
+    drafts = (activity or {}).get('drafts') if isinstance(activity, dict) else None
+    if not drafts:
+        return []
+    state = stepwise.state_of({'understood': {'plan': activity['research']['plan']}})
+    return [{'dispute': name, 'name': None if state['whole'] else state['names'][name], 'versions': len(drafts[name]),
+             **drafting.shown(drafts[name][-1]), 'said': drafting.DRAFTED} for name in state['order'] if name in drafts]
+
+
+def _turn_drafts(chat_id, turn_id, advocate_id, request):
+    """One turn's drafts, checked, and when they were saved: a saved answer's, or those of the turn waiting at a stop."""
+    matter, rows = _read_chat(chat_id, advocate_id, request)
+    row = next((item for item in rows if item['turn_id'] == turn_id), None)
+    if row is None:
+        held = _held(matter)
+        if held is None or held['turn_id'] != turn_id or 'steps' not in held:
+            raise HTTPException(404, 'Saved answer not available.')
+        row = _held_row(matter, rows, held)
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    return row['activities'], row['response']['at']
+
+
+@app.get('/api/chats/{chat_id}/turns/{turn_id}/drafts')
+def turn_drafts(chat_id: str, turn_id: str, advocate_id: Advocate, request: Request, response: Response):
+    """The drafts of one turn (plan AN.67, 23d3): what the page asks for an answer it has just been given, and for a stop that
+    has drafted, since a conversation opened from the history carries each saved answer's drafts with it."""
+    activity, _ = _turn_drafts(chat_id, turn_id, advocate_id, request)
+    response.headers['Cache-Control'] = 'no-store'
+    return {'drafts': _drafts_view(activity)}
+
+
+@app.get('/api/chats/{chat_id}/turns/{turn_id}/drafts/{dispute}/{version}.docx')
+def turn_draft_word(chat_id: str, turn_id: str, dispute: str, version: int,
+                    advocate_id: Advocate, request: Request):
+    """One version of one dispute's draft as a Word file (plan AN.67, 23c and 23d3): drafting.word, from the draft as saved;
+    the same draft always the same bytes."""
+    activity, at = _turn_drafts(chat_id, turn_id, advocate_id, request)
+    versions = ((activity or {}).get('drafts') or {}).get(dispute) or []
+    if not 1 <= version <= len(versions):
+        raise HTTPException(404, 'Draft not available.')
+    stem, data = drafting.word(versions[version - 1], at)
+    name = stem + (f' (version {version})' if len(versions) > 1 else '') + '.docx'
+    plain = re.sub(r'[^A-Za-z0-9 ._()-]', '_', name)
+    return Response(content=data, media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                     headers={'Cache-Control': 'no-store',
                              'Content-Disposition': f'attachment; filename="{plain}"; '
                                                     f"filename*=UTF-8''{quote(name)}"})

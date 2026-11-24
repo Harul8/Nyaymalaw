@@ -631,17 +631,20 @@ def _used(part):
 
 
 def shown(record):
-    """The draft as the advocate reads it: each part's title and paragraphs, a particular not given written where it goes as
-    [particular needed: what it is], what code still finds in a part and what the review found in it - a part used only
-    sometimes that the draft leaves out, with nothing found in it, not shown; what the review said of no part; whether the draft as
-    it stands was reviewed; and the template's notes for the advocate."""
+    """The draft as the advocate reads it on the page (23d3): each part's title and paragraphs, a particular not given written
+    where it goes as [particular needed: what it is], whether code still finds the part at fault and what the review found in it -
+    in the Word file's words (word), without the IDs of passages, which mean nothing to the advocate on the page either; a part
+    used only sometimes that the draft leaves out, with nothing found in it, not shown; what the review said of no part; whether
+    the draft as it stands was reviewed; and the template's notes for the advocate. Code's own words of each fault stay in the
+    saved record."""
     template = record["template"]
     needed = _needed(template)
     titles = {part["id"]: part["title"] for part in template["parts"]}
     return {"title": template["title"], "state": record["state"],
             "parts": [{"part_id": part["part_id"], "title": titles[part["part_id"]],
                        "paragraphs": [needed(paragraph["text"]) for paragraph in part["paragraphs"]],
-                       "faults": list(part["faults"]), "found": [_told(finding) for finding in part["findings"]]}
+                       "faults": [STILL_AT_FAULT] if part["faults"] else [],
+                       "found": [_told(finding, cited=False) for finding in part["findings"]]}
                       for part in record["parts"] if _used(part)],
             "beside": [f"The review also said: {finding['why'].strip() or FINDS[finding['kind']]}" for finding in record["beside"]],
             "reviewed": None if record["reviewed"] else NOT_REVIEWED, "notes": list(template.get("notes", []))}

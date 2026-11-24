@@ -721,6 +721,23 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 /* 48g (D148): a board item the advocate corrected - their value, marked as theirs. */
 .board-corrected { color: var(--accent-2); font-weight: 600; }
 .waiting-card .waiting-tentative { margin: 0.5rem 0 0; color: var(--ink-3); font-size: 0.86rem; }
+/* Plan AN.67 (23d3, D331): a draft the advocate asked for, beneath its answer or its stop - the document's parts as written, each
+   particular the papers do not give highlighted where it goes, what code and the review still find, and its Word file. */
+.drafts { margin: 0.4rem 0 1.4rem; }
+.draft-block { border: 1px solid var(--rule-2); border-radius: 10px; background: var(--surface); padding: 0.6rem 0.9rem;
+  margin: 0 0 0.8rem; font-size: 0.92rem; }
+.draft-block > .draft-fold > summary.draft-head { cursor: pointer; font-weight: 600; color: var(--ink-2); }
+.draft-block > .draft-fold[open] > summary.draft-head { margin-bottom: 0.4rem; }
+.draft-block .draft-part-title { margin: 0.8rem 0 0.25rem; font-size: 0.86rem; font-weight: 600; color: var(--ink-2); }
+.draft-block .draft-paragraph { margin: 0 0 0.45rem; line-height: 1.55; white-space: pre-wrap; }
+.draft-block .draft-needed { background: #fff1a8; color: inherit; padding: 0 0.15em; border-radius: 3px; }
+.draft-block .draft-finding { margin: 0 0 0.45rem; color: #8a4b0f; font-size: 0.86rem; }
+.draft-block .draft-unreviewed { margin: 0 0 0.45rem; color: #8a4b0f; }
+.draft-block .draft-notes-head { margin: 0.8rem 0 0.2rem; color: var(--ink-2); font-weight: 600; }
+.draft-block .draft-notes { margin: 0 0 0.5rem 1.1rem; padding: 0; color: var(--ink-2); }
+.draft-block .draft-said { margin: 0.5rem 0 0; color: var(--ink-3); font-size: 0.86rem; }
+.draft-block .draft-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin-top: 0.5rem; }
+.drafts > .draft-unreviewed { color: #8a4b0f; }
 
 /* THE ANSWER'S OWN HEADER (plan AN.20; the signed-off design): the NM mark, Nyaymalaw and the time the
    answer was made, above its first line. */

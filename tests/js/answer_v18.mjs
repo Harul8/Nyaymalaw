@@ -60,6 +60,8 @@ const context = {
   renderOpeningNote: () => el('div'), renderBoardNote: () => null,
   stateBlock: (_kind, message) => Object.assign(el('div'), { textContent: message }),
   replyFooter: (_entry, copyText) => Object.assign(el('div'), { copyText }),
+  // Plan AN.67 (23d3): the drafts saved with an answer, drawn beneath it - none here (tests/js/drafts_shown.mjs draws them).
+  answerDrafts: () => null,
   openSourceReader() {}, $: (id) => document.getElementById(id), withOpeningNotes: (turns) => turns,
   reconcileIntent() {},
 };
