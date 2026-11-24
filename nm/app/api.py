@@ -2191,10 +2191,16 @@ def _progress_seen(advocate_id, turn_id, chat_id):
     window = application().questions.window(advocate_id, turn_id)
     if window is None:
         return seen
-    # While NM waits for the advocate's answer, that is what it is doing, whatever its research reports beside it meanwhile. D87:
-    # how many questions the window asks, so that the page opens it again when code adds one while the turn works.
-    return {**seen, 'asking': True, 'asked': len(window.view()['questions']), 'stage': 'waiting_for_answer',
-            'label': TURN_STAGES['waiting_for_answer']}
+    view = window.view()
+    # D87: how many questions the window asks, so that the page opens it again when code adds one while the turn works; the window
+    # stays open for a later or changed answer (D44) after NM has stopped waiting.
+    told = {**seen, 'asking': True, 'asked': len(view['questions'])}
+    # While NM waits for the advocate's answer, that is what it is doing, whatever its research reports beside it meanwhile - and
+    # only while it waits (plan AN.80, D350): once each question has an answer or its default stands, the turn's own stage.
+    settled = {answer['id'] for answer in view['answers']}
+    if all(question['id'] in settled for question in view['questions']):
+        return told
+    return {**told, 'stage': 'waiting_for_answer', 'label': TURN_STAGES['waiting_for_answer']}
 
 
 #: Plan AN.48 (48f5, D167): how often the stream looks at the turn; how often it says the time so far (which also keeps a hosting
