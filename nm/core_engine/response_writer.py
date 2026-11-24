@@ -580,7 +580,11 @@ def _without_checklist(system):
     end = system.index(_LIMITS_SAID, start) + len(_LIMITS_SAID)
     system = system[:start] + _CASE_BESIDE + system[end:]
     for old, new in (('gathers them at the end under "What I need from you", where an ask for a checklist item\n  opens that item.',
-                      'gathers them at the end under "What I need from you".'),
+                      # Plan AN.79 (D344): the end-to-end run's writer asked again what the advocate had answered while
+                      # NM worked, with that answer in hand; what the advocate has told NM is not asked again.
+                      'gathers them at the end under "What I need from you". Ask only for what the advocate has not\n'
+                      '  already told you, in the conversation or in answer to the questions NM put while it worked;\n'
+                      '  where an answer leaves a point open, ask for that point alone.'),
                      ("has no row, no checklist and no time limits", "has no row and no time limits"),
                      ("dispute's part its checklist, time_limit_ids and by_when", "dispute's part its time_limit_ids and by_when"),
                      (" and the asked_words of each item words of\nyour own ask for it,", ",")):

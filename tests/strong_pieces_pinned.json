@@ -9,7 +9,7 @@
   "nm/core_engine/response_authorities.py": "1cc23a12f04fa89351665b96b92cd9da4b719f485774440b458e2c2929b2e021",
   "nm/core_engine/response_review.py": "3e145faef969dc345e49b67062e4ff77e7def608001355c4393534988a6df3cc",
   "nm/core_engine/answer_sections.py": "c91d8e5a4a3195369b671bfea259203fbb732c05f013c9dd8bd723acb7b727ee",
-  "nm/core_engine/response_writer.py": "b6077f87cd4050c805dd903a494501440a20206e540cda7292db19c1e9e31358",
+  "nm/core_engine/response_writer.py": "5ff391329c5058ac02222551500d508862c60c99f05b88d67257efd94e1ad147",
   "nm/core_engine/case_strength.py": "0548add0ede2a908d2a4c187e096ad9583b3bb9e99833bc11e48efbc850fb118",
   "nm/core_engine/response_rendering.py": "35cfb24555279b2bee3b81aba857b6ce4a075042e0b019b2515156f167c83233",
   "nm/core_engine/calculation.py": "f25c7736d802616ac764deef47a2c57d701d1b9fae69d2f6c0d9dec3aa4f5415",
@@ -92,6 +92,9 @@
   "24 (D342, a step taken on or before a later paper's date; plan AN.48 register, column 12)": [
    "nm/core_engine/calculation.py",
    "nm/core_engine/response_rendering.py"
+  ],
+  "25 (D344, what the advocate told NM is not asked again; plan AN.48 register, column 12)": [
+   "nm/core_engine/response_writer.py"
   ]
  }
 }

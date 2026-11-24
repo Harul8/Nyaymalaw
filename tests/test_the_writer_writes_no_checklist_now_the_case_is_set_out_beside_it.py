@@ -38,6 +38,19 @@ def test_the_prompt_asks_for_no_checklist_and_is_otherwise_v14s():
     assert set(response_writer.PART_SCHEMA_V15["properties"]) == {"units", "time_limit_ids", "by_when"}
 
 
+def test_the_writer_asks_only_for_what_the_advocate_has_not_already_told_nm():
+    """Plan AN.79 (D344, 24 Nov 2026): in the second end-to-end run the writer asked under 'What I need from you' whether
+    there had been earlier word of the dishonour or another notice - which the advocate had answered while NM worked, and
+    which the same draft's advice relied on. One plain sentence in the live prompt's description of its questions; the
+    earlier prompts, by which saved answers were written, keep their words."""
+    v14, v15 = response_writer.SYSTEM_V14, response_writer.SYSTEM_V15
+    said = " ".join(v15.split())
+    assert ("Ask only for what the advocate has not already told you, in the conversation or in answer to the questions NM "
+            "put while it worked; where an answer leaves a point open, ask for that point alone.") in said
+    assert "Ask only for what the advocate has not" not in v14
+    assert said.count("Ask only for what") == 1
+
+
 def test_a_v15_section_is_written_with_no_checklist_and_replays_exactly():
     # The scripted writer still sends a checklist item: code never admits one from writer v15.
     model, draft, (ctx, _, sources) = written(section)
