@@ -601,18 +601,32 @@ def _date(iso):
     return f"{day.day} {_MONTHS[day.month - 1]} {day.year} ({_WEEKDAYS[day.weekday()]})"
 
 
+def _result(standing):
+    """The result in words. D342 (calculation v9): a step taken on or before a later paper's date, whether in time not
+    known, says by when it had been taken."""
+    if standing["state"] == "taken" and standing.get("on_or_before"):
+        return f"Taken on or before {_date(standing['on_or_before'])}; whether in time is not known"
+    return _RESULTS[standing["state"]]
+
+
+def _days_label(standing):
+    """The days' label; D342 (calculation v9): counted from a later paper's date, they are the least there can be."""
+    label = _DAYS.get(standing["state"])
+    return f"{label}, at least" if label and standing.get("on_or_before") else label
+
+
 def limit_rows(entry):
     """A dispute's time limit on the board (18 Oct 2026), in the Working box's own labelled
     rows: its last day and where it stands as of the day it was worked out, or why it was
     not assessed."""
     if "not_assessed" in entry:
         return [["Not assessed", entry["not_assessed"]]]
-    state = entry["standing"]["state"]
     rows = [["Last day", _date(entry["last_day"])]]
     if entry.get("as_of"):
         rows.append(["As of", _date(entry["as_of"])])
-    rows.append(["Result", _RESULTS[state]])
-    return rows + ([[_DAYS[state], str(entry["standing"]["days"])]] if entry["standing"]["days"] is not None else [])
+    rows.append(["Result", _result(entry["standing"])])
+    return rows + ([[_days_label(entry["standing"]), str(entry["standing"]["days"])]]
+                   if entry["standing"]["days"] is not None else [])
 
 
 def _shown(working, earlier, as_of=None):
@@ -658,21 +672,24 @@ def _shown(working, earlier, as_of=None):
         row("Earliest day", _date(working["earliest_day"]))
     taken = working["step_taken"]
     if taken and taken.get("counted", True):
-        row("Taken on", _date(taken["date"]) if taken["date"] else "Not given")
+        # D342 (calculation v9): dated by a later paper, it was taken on or before that day.
+        row("Taken on or before" if taken.get("on_or_before") else "Taken on",
+            _date(taken["date"]) if taken["date"] else "Not given")
         row("Whose words", f"“{taken['quote']}”")
     elif taken:
         # D335 (calculation v8): what was done may fall short of the step the Act requires, so the limit is counted as
         # still to be taken; what was done stays beside it.
         row("Done, not counted as the step", taken.get("what") or "Not named")
-        row("Done on", _date(taken["date"]) if taken["date"] else "Not given")
+        row("Done on or before" if taken.get("on_or_before") else "Done on",
+            _date(taken["date"]) if taken["date"] else "Not given")
         row("Whose words", f"“{taken['quote']}”")
         row("Why it may not count", taken.get("falls_short"))
     standing = working["standing"]
     if as_of:
         row("As of", _date(as_of))
-    row("Result", _RESULTS[standing["state"]])
+    row("Result", _result(standing))
     if standing["days"] is not None:
-        row(_DAYS[standing["state"]], standing["days"])
+        row(_days_label(standing), standing["days"])
     row("Court closed on the last day", _COURT_CLOSED)
     lists = [[title, list(items)] for title, items in (
         ("Owner’s ruling applied", working["owner_rulings"]),
@@ -1439,8 +1456,8 @@ def _by_when(piece, boxes):
         return {"what": working["what"], "not_assessed": working["not_assessed"]}
     standing, rows = working["standing"], dict(working["rows"])
     return {"what": working["what"], "last_day": working["last_day"], "day": _date(working["last_day"]),
-            "result": _RESULTS[standing["state"]], "days": standing["days"],
-            "days_label": _DAYS.get(standing["state"]), "as_of": rows.get("As of")}
+            "result": _result(standing), "days": standing["days"],
+            "days_label": _days_label(standing), "as_of": rows.get("As of")}
 
 
 def _on_the_board(count):

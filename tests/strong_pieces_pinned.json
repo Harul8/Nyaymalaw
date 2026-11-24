@@ -11,8 +11,8 @@
   "nm/core_engine/answer_sections.py": "c91d8e5a4a3195369b671bfea259203fbb732c05f013c9dd8bd723acb7b727ee",
   "nm/core_engine/response_writer.py": "b6077f87cd4050c805dd903a494501440a20206e540cda7292db19c1e9e31358",
   "nm/core_engine/case_strength.py": "0548add0ede2a908d2a4c187e096ad9583b3bb9e99833bc11e48efbc850fb118",
-  "nm/core_engine/response_rendering.py": "8a5e838fb9f6a5bbc4b88860f6dd9dc66c5157235db8b9458a3442e8771ba41d",
-  "nm/core_engine/calculation.py": "fd9f07b1ba7f9504a2e72650346d2cbcd8fe79abca6e27b3544107cd3d8e6008",
+  "nm/core_engine/response_rendering.py": "35cfb24555279b2bee3b81aba857b6ce4a075042e0b019b2515156f167c83233",
+  "nm/core_engine/calculation.py": "f25c7736d802616ac764deef47a2c57d701d1b9fae69d2f6c0d9dec3aa4f5415",
   "nm/core_engine/understanding.py": "4e0938c7c3741396b7e008d2f90d5437f3c121930c1ab83bbab46fac37931099",
   "nm/core_engine/questions.py": "cbd01082cd170d417592c440dbc77d0d55c56fe466c81624698e5ebf73dd409d",
   "nm/core_engine/matter_board.py": "153262faef2f6852e85db8c8e6dbaea112093c90201c30fdb8f93dabff49f4a6",
@@ -87,6 +87,10 @@
   "23 (AN.79's D335, D338-D340, entered late; plan AN.48 register, column 12)": [
    "nm/core_engine/calculation.py",
    "nm/core_engine/research.py",
+   "nm/core_engine/response_rendering.py"
+  ],
+  "24 (D342, a step taken on or before a later paper's date; plan AN.48 register, column 12)": [
+   "nm/core_engine/calculation.py",
    "nm/core_engine/response_rendering.py"
   ]
  }

@@ -56,7 +56,7 @@ def step(id_, what, words, period, start, **extra):
             # a period the facts set, empty unless given.
             "start": {"dated_event": "", "same_event": True, "period_words": "", "period_quote": "", **start}, "copies": [],
             # Calculation v8 (D335): the step's own check of whether what was done is the step the Act requires.
-            "done": {"meets_the_act": True, "falls_short": "", **extra.get("done", blank)},
+            "done": {"on_or_before": False, "meets_the_act": True, "falls_short": "", **extra.get("done", blank)},
             "earliest_after": extra.get("earliest_after", ""), "reasoning": "From the Act's words.",
             "assumptions": ["The dates are as reported."], "missing": [], "may_extend": extra.get("may_extend", [])}
 
@@ -264,7 +264,7 @@ def test_a_refused_limit_gets_one_correction_that_faces_the_same_checks(store):
     assert boxes["Last day for the drawer to pay"]["last_day"] == "2026-09-13"  # checked first; stands
     row = saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]
     record = row["activities"]["calculation"]
-    assert record["contract"] == calculation.CONTRACT == "core_calculation_v8"
+    assert record["contract"] == calculation.CONTRACT == "core_calculation_v9"
     assert record["correction"]["state"] == "corrected" and [r["id"] for r in record["correction"]["refused"]] == ["bad"]
     assert record["proposal"] == chain() and record["not_assessed"] == []
     assert saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]["response"][
@@ -278,9 +278,10 @@ def test_a_step_taken_quoted_from_the_event_time_runs_from_is_refused_then_corre
     proposal = chain()
     pay = proposal["calculations"][0]
     pay["done"] = {"what": "notice delivered", "date": "2026-08-29", "quote": "Notice was delivered on 29 August 2026",
-                   "meets_the_act": True, "falls_short": ""}
+                   "on_or_before": False, "meets_the_act": True, "falls_short": ""}
     corrected = deepcopy(pay)
-    corrected["done"] = {"what": "", "date": "", "quote": "", "meets_the_act": True, "falls_short": ""}
+    corrected["done"] = {"what": "", "date": "", "quote": "", "on_or_before": False, "meets_the_act": True,
+                         "falls_short": ""}
     model = Calculating(proposal, correction={"calculations": [corrected, fixed_bad()], "cannot": []})
     reply = turn(store, model)
     prompt, = model.seen["correction"]
@@ -586,8 +587,8 @@ def test_a_step_said_to_be_taken_without_its_date_is_taken_its_date_not_given(st
     not known."""
     proposal = chain()
     complaint = proposal["calculations"][1]
-    complaint["done"] = {"what": "complaint filed", "date": "", "quote": "We filed the complaint", "meets_the_act": True,
-                         "falls_short": ""}
+    complaint["done"] = {"what": "complaint filed", "date": "", "quote": "We filed the complaint", "on_or_before": False,
+                         "meets_the_act": True, "falls_short": ""}
     reply = turn(store, Calculating(proposal))
     box = next(e["working"] for e in reply["elements"] if e["kind"] == "WORKING"
                and e["text"] == "Last day to file the complaint")
@@ -640,7 +641,7 @@ def test_a_step_the_facts_say_is_not_yet_taken_stands_open_with_its_days_left():
     assert entry["standing"] == {"state": "open", "days": 166}  # 25 Oct 2026 to the last day, 9 April 2027
     taken = deepcopy(unfiled)
     taken["calculations"][0]["done"] = {"what": "Suit filed", "date": "", "quote": "No suit has been filed yet",
-                                        "meets_the_act": True, "falls_short": ""}
+                                        "on_or_before": False, "meets_the_act": True, "falls_short": ""}
     (entry,) = calculation.work_out(Calculating(taken), ctx, CreditHeld(), now=now)["calculations"]
     # Code cannot tell words saying a step was taken from words saying it was not: that is the
     # prompt's to keep right. What code keeps is the rule it was given for a step said to be taken.
@@ -765,3 +766,68 @@ def test_whichever_is_earlier_in_the_acts_clause_is_said_beside_the_working():
     assert "other_period" not in plain["calculations"][0]["provision"]
     (box,) = response_rendering._working(plain)
     assert not [title for title, _ in box["working"]["lists"] if title.startswith("Another period")]
+
+
+def test_a_step_a_later_paper_shows_taken_counts_as_taken_on_or_before_that_day():
+    """D342 (plan AN.79, 24 Nov 2026): the second end-to-end run showed a cheque deposited for collection and returned
+    unpaid under a dated memo as 'not counted' and 'Open, 162 days left', because only the day it reached the drawee bank
+    was not shown. Doubt about when a step was taken is not doubt about the step: dated by a later paper showing it had
+    been taken by then, it counts as taken on or before that day - in time, with at least so many days to spare, where
+    that is certain; taken, whether in time not known, where it is not."""
+    from datetime import date, datetime, timezone
+    from tests.test_core_understanding import context
+    ctx = context("The cheque is dated 5 November 2026. The bank's memo of 12 November 2026 says it was returned unpaid.")
+    now = datetime(2026, 11, 24, 9, 0, tzinfo=timezone.utc)
+
+    def presented(**done):
+        return step("p1", "Last day to present the cheque", "within a period of six months from the date on which it is "
+                    "drawn", "six months", {"after": "", "event": "the cheque being drawn", "date": "2026-11-05",
+                                            "quote": "The cheque is dated 5 November 2026",
+                                            "dated_event": "the date the cheque is drawn"},
+                    done={"what": "cheque presented", "date": "2026-11-12",
+                          "quote": "The bank's memo of 12 November 2026 says it was returned unpaid", **done})
+
+    record = calculation.work_out(Calculating({"needed": True, "why": "", "not_assessed": [],
+                                               "calculations": [presented(on_or_before=True)]}), ctx, ValidityHeld(),
+                                  now=now)
+    (entry,) = record["calculations"]
+    assert entry["working"]["last_day"] == "2027-05-05"
+    assert entry["done"]["on_or_before"] is True and "counted" not in entry["done"]
+    assert entry["standing"] == {"state": "in_time", "days": 174, "on_or_before": "2026-11-12"}
+    (box,) = response_rendering._working(record)
+    rows = dict(box["working"]["rows"])
+    assert rows["Taken on or before"] == "12 November 2026 (Thursday)" and "Taken on" not in rows
+    assert rows["Result"] == "In time" and rows["Days to spare, at least"] == "174"
+    assert ["Days to spare, at least", "174"] in response_rendering.limit_rows(
+        {"last_day": "2027-05-05", "standing": entry["standing"]})
+    assert calculation.presentation(record)["worked_out"][0]["step_taken"]["on_or_before"] is True
+    assert calculation.validate(record, ctx) == record
+    # v9's mark is v9's alone; a record saved before v9 replays exactly as saved.
+    with pytest.raises(ValueError, match="v9"):
+        calculation.validate(deepcopy(record) | {"contract": calculation.V8_CONTRACT}, ctx)
+    dated = calculation.work_out(Calculating({"needed": True, "why": "", "not_assessed": [],
+                                              "calculations": [presented()]}), ctx, ValidityHeld(), now=now)
+    assert dated["calculations"][0]["standing"] == {"state": "in_time", "days": 174}  # dated by its own words, as before
+    assert "on_or_before" not in dated["calculations"][0]["done"]
+    earlier = deepcopy(dated) | {"contract": calculation.V8_CONTRACT}
+    assert calculation.validate(earlier, ctx) == earlier
+
+    # Where being in time is not certain, it is taken with whether in time not known: a day after the last day (it may
+    # have been taken before it), or a day within the limit where an earliest day could make it early. A day before the
+    # earliest day is early for certain.
+    def standing(on, earliest=None):
+        entry = {"provision": {"period_words": "six months"}, "copies": [], "earliest": earliest,
+                 "done": {"date": on, "on_or_before": True}}
+        return calculation._compute(entry, "2026-11-05", date(2026, 11, 24))[1]
+
+    assert standing("2027-06-01") == {"state": "taken", "days": None, "on_or_before": "2027-06-01"}
+    assert standing("2026-12-01", earliest="2026-11-20") == {"state": "taken", "days": None,
+                                                             "on_or_before": "2026-12-01"}
+    assert standing("2026-11-10", earliest="2026-11-20") == {"state": "early", "days": 10, "on_or_before": "2026-11-10"}
+    said = response_rendering._result(standing("2027-06-01"))
+    assert said.startswith("Taken on or before 1 June 2027") and said.endswith("whether in time is not known")
+    assert response_rendering._days_label(standing("2026-11-10", earliest="2026-11-20")) == (
+        "Days before the earliest day, at least")
+    text = " ".join(calculation.SYSTEM.split())
+    assert 'give that date with that paper\'s words showing it and set "on_or_before" true' in text
+    assert "doubt about when it was done is not doubt about the step, for its date answers that" in text
