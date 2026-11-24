@@ -36,6 +36,10 @@ checked against the conversation as it then stood (written_from), so that a late
 Piece 23d5 (D331, D309): a draft asked for in the advocate's message. Where the understanding of the message marks a request whose
 work is drafting (asked_drafting), one small call reads which held document it asks for and for which disputes (asked_for); the
 turn drafts it, as a stop's draft is, where the dispute's research rests on it (rests_on) - in a run that writes and finishes.
+
+D352 (from the paid run of 24 Nov 2026): a writer that marks a particular as not given and also lists it among the paragraph's
+particulars, its own mark as the words and no source, is taken as marking it missing (_taken_in) - not as citing a passage not
+offered, which spent every rewrite of that run and left three parts flagged.
 """
 from __future__ import annotations
 
@@ -539,7 +543,27 @@ def _write_call(model, template, context, sources, time_limits, asked, earlier, 
         raise _failed(receipt, "The draft could not be written")
     proposal = canonical_schema_data(receipt.data, SCHEMA)
     require_schema(proposal, SCHEMA)
-    return proposal
+    return _taken_in(proposal)
+
+
+def _restated_mark(particular, paragraph):
+    """D352: whether an entry among a paragraph's particulars only restates a particular the paragraph marks as not given - its
+    words exactly its own mark, no source, and the paragraph both carrying that mark and listing it under missing."""
+    name = particular["particular_id"]
+    mark = f"[[{name}]]"
+    return (particular["words"] == mark and not particular["source_id"].strip() and name in paragraph["missing"]
+            and mark in paragraph["text"])
+
+
+def _taken_in(proposal):
+    """A writing as code takes it in (D352): an entry that only restates a particular marked as not given (_restated_mark) is left
+    out - the particular is the missing one it already is, not a citation of a passage not offered. Every other entry stays, to be
+    checked. A saved round keeps the writing as taken in, so a draft saved before reads as saved."""
+    return {**proposal, "parts": [
+        {**item, "paragraphs": [{**paragraph, "particulars": [particular for particular in paragraph["particulars"]
+                                                             if not _restated_mark(particular, paragraph)]}
+                                for paragraph in item["paragraphs"]]}
+        for item in proposal["parts"]]}
 
 
 def _review_call(model, template, context, sources, time_limits, draft, change=None):
