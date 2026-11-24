@@ -32,6 +32,10 @@ asks it; then code's checks and the review of the whole draft follow, with an al
 It is saved as the draft's next version, keeping the parts asked and the message that asked; read again, it is checked from the
 version before it. Each draft keeps how many messages the advocate had added while the matter waited when it was written, and is
 checked against the conversation as it then stood (written_from), so that a later message cannot unsettle what code found of it.
+
+Piece 23d5 (D331, D309): a draft asked for in the advocate's message. Where the understanding of the message marks a request whose
+work is drafting (asked_drafting), one small call reads which held document it asks for and for which disputes (asked_for); the
+turn drafts it, as a stop's draft is, where the dispute's research rests on it (rests_on) - in a run that writes and finishes.
 """
 from __future__ import annotations
 
@@ -927,10 +931,83 @@ def rests_on(record):
         row = candidate.get("source") or {}
         title = statute_title(row.get("act_name") or row.get("title") or "", row.get("act_id") or "")
         read.add((instrument_key(title), provision_label("", str(row.get("section_number") or ""))))
+    return [template for template in held()
+            if any((instrument_key(template["law"]["act"]), provision_label("", section)) in read
+                   for section in template["law"]["sections"])]
+
+
+def held():
+    """The latest version of each template NM holds, in the order NM holds them."""
     latest = {}
     for (identity, version), template in TEMPLATES.items():
         if identity not in latest or version > latest[identity]["version"]:
             latest[identity] = template
-    return [template for template in latest.values()
-            if any((instrument_key(template["law"]["act"]), provision_label("", section)) in read
-                   for section in template["law"]["sections"])]
+    return list(latest.values())
+
+
+def law_said(template):
+    """The law a template rests on, in words: "section 138 of the Negotiable Instruments Act, 1881"."""
+    sections = template["law"]["sections"]
+    return f"{'section' if len(sections) == 1 else 'sections'} {' or '.join(sections)} of the {template['law']['act']}"
+
+
+# Piece 23d5 (D331, D309): a draft asked for in the advocate's message. The understanding of the message, made already, marks each
+# thing the advocate asks of NM with the kind of work it is (understanding.py); a request whose work is drafting is a deliverable of
+# its own. Which held document it asks for, and for which disputes, is the model's reading of the request - one small call, made only
+# where drafting is asked - never topic words; whether the law fits stays code's (rests_on).
+
+def asked_drafting(interpretation):
+    """The requests in the advocate's message whose work is drafting, as the understanding of it marked them: the advocate's words,
+    what NM understood they mean and the result they want. [] where none is."""
+    return [{"words": (unit.get("source") or {}).get("text") or "", "meaning": unit.get("meaning") or "",
+             "wanted": unit.get("desired_result") or ""}
+            for unit in (interpretation or {}).get("units") or ()
+            if isinstance(unit, dict) and unit.get("kind") == "request" and unit.get("requested_work") == "drafting"]
+
+
+ASKED_OPERATION = "core_draft_asked"
+
+ASKED = """You are an Indian advocate's junior. In their message the advocate asked for something to be drafted. You receive what they asked - their own words and what we understood they want - the disputes of the matter, each with the legal questions its research asks, and the documents we hold a template for, each with the law it rests on.
+
+Purpose: we draft from a template only the document the advocate asked for, and only for the disputes they asked it for, so that they are given what they asked and nothing they did not.
+
+Outcome: document - the id of the template that is the document the advocate asked for, or none where none of them is; disputes - the ids of the disputes they asked it for, or an empty list where they named none or asked for it for the whole matter.
+
+Work in a loop: read the request with the disputes and the documents, decide, check your answer against the advocate's exact words, correct it, then answer."""
+
+
+def _asked_refused(data, templates, ids):
+    """Why a reading of the request cannot be admitted; None where it can."""
+    if not isinstance(data, dict) or data.get("document") not in (*templates, "none"):
+        return "document must be one of: " + ", ".join([*templates, "none"])
+    named = data.get("disputes")
+    if (not isinstance(named, list) or not all(isinstance(name, str) for name in named) or len(set(named)) != len(named)
+            or not set(named) <= set(ids)):
+        return "disputes must name, once each, only these disputes: " + ", ".join(ids)
+    return None
+
+
+def asked_for(model, requests, disputes):
+    """Which held document the advocate's request to draft asks for, and for which of the matter's disputes (23d5). requests:
+    asked_drafting's; disputes: [{"id", "name", "legal_questions"}], in the matter's order. {"template": the held template asked for,
+    or None where none of them is; "disputes": the ids asked, in the matter's order - [] where the request names none}. Asked once
+    more, told why, where the reading cannot be admitted; None where it still cannot. A failure of the model raises, for the caller
+    to say so."""
+    templates = {template["id"]: template for template in held()}
+    ids = [dispute["id"] for dispute in disputes]
+    schema = _object({"document": {"type": "string", "enum": [*templates, "none"]}, "disputes": STRINGS})
+    given = {"asked": requests, "disputes": disputes,
+             "documents_we_hold": [{"id": template["id"], "title": template["title"], "rests_on": law_said(template)}
+                                   for template in templates.values()]}
+    asked = dict(given)
+    for _ in range(2):
+        user = json.dumps(asked, ensure_ascii=False)
+        receipt = model.structured(Prompt(system=ASKED, user=user, operation=ASKED_OPERATION,
+                                          effort=reasoning.effort("draft_asked")),
+                                   schema, Tier.ROUTINE, max_tokens=reasoning.room(model, Tier.ROUTINE, ASKED, user, json.dumps(schema)))
+        data = canonical_schema_data(receipt.data, schema) if receipt.usable and receipt.data is not None else None
+        why = _asked_refused(data, templates, ids)
+        if why is None:
+            return {"template": templates.get(data["document"]), "disputes": [name for name in ids if name in data["disputes"]]}
+        asked = {**given, "your_last_answer": data, "why_it_cannot_be_taken": why}
+    return None

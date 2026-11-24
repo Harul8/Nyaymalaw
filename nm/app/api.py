@@ -2597,8 +2597,9 @@ def chat(chat_id: str, advocate_id: Advocate, request: Request, response: Respon
               'committed': True, 'release_state': 'released',
               'documents': [_sent_document(document) for document in row.get('documents', ())],
               'search_said': search_said.said(row.get('activities')),
-              # Plan AN.67 (23d3, D331): the drafts saved with the answer, shown beneath it.
-              'drafts': _drafts_view(row.get('activities'))}
+              # Plan AN.67 (23d3, D331): the drafts saved with the answer, shown beneath it; 23d5: with code's words on a draft
+              # the message asked for that was not written, where there are any.
+              'drafts': _drafts_view(row.get('activities')), **_drafts_said(row.get('activities'))}
              for row in rows]
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
@@ -3075,6 +3076,13 @@ def _drafts_view(activity):
             for name in state['order'] if name in drafts]
 
 
+def _drafts_said(activity, key='drafts_said'):
+    """Plan AN.67 (23d5): code's words, saved with an answer, on a draft the advocate's message asked for that was not written -
+    {key: [its lines]} where there are any, {} otherwise."""
+    said = (activity or {}).get('drafts_said') if isinstance(activity, dict) else None
+    return {key: list(said)} if said else {}
+
+
 def _turn_drafts(chat_id, turn_id, advocate_id, request):
     """One turn's drafts, checked, and when they were saved: a saved answer's, or those of the turn waiting at a stop."""
     matter, rows = _read_chat(chat_id, advocate_id, request)
@@ -3095,7 +3103,7 @@ def turn_drafts(chat_id: str, turn_id: str, advocate_id: Advocate, request: Requ
     has drafted, since a conversation opened from the history carries each saved answer's drafts with it."""
     activity, _ = _turn_drafts(chat_id, turn_id, advocate_id, request)
     response.headers['Cache-Control'] = 'no-store'
-    return {'drafts': _drafts_view(activity)}
+    return {'drafts': _drafts_view(activity), **_drafts_said(activity, 'said')}
 
 
 @app.get('/api/chats/{chat_id}/turns/{turn_id}/drafts/{dispute}/{version}.docx')

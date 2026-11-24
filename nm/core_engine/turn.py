@@ -84,6 +84,9 @@ _ACTIVITY_FIELDS = {"contract", "interpretation", "research", "sources", "draft"
                     "review", "execution", "rendering_contract"}
 _SECTIONED_FIELDS = {"contract", "interpretation", "research", "sources", "execution", "calculation",
                      "rendering_contract", "sections", "cross_check", "overview"}
+#: Plan AN.67 (23d2, 23d5): what the current version's answer may also be saved with - its drafts, and code's words on a draft the
+#: message asked for that was not written.
+_DRAFTED = {"drafts", "drafts_said"}
 
 
 #: Receipts describe what this code did, never whether the request is fulfilled (research owns them).
@@ -451,6 +454,85 @@ def _redraft(calls, context, kept, name, change, keep, report):
     else:
         log.warning("A change was asked of a draft the matter, as kept, does not hold or keeps no more of; nothing was changed")
     raise stepwise.Waiting("written")
+
+
+def _not_drafted(why, template, name=None):
+    """Plan AN.67 (23d5): code's words, beneath the answer, on a document the advocate's message asked for that was not drafted -
+    for one dispute (name), or for the matter."""
+    named, there = (f" ({name})", " for that dispute") if name else ("", "")
+    return {"not_written": f"{template['title']}{named}: not drafted - no analysis{there} was written in this answer.",
+            "not_read": (f"{template['title']}{named}: not drafted - it rests on {drafting.law_said(template)}, which is not "
+                         f"among the law NM's research relied on{there}."),
+            "failed": f"{template['title']}{named}: the draft could not be written just now; the answer stands."}[why]
+
+
+#: Plan AN.67 (23d5): code's words where nothing the advocate's message asked to be drafted could be.
+NO_DRAFT_RESEARCH = ("NM drafted nothing you asked for: a draft rests on the law researched for a dispute, and this answer "
+                     "researched none.")
+NO_DRAFT_TOLD = "NM could not tell just now which document you asked to be drafted, so it drafted none; the answer stands."
+NO_DRAFT_HELD = "NM drafted nothing you asked for: it holds no template for the document you asked. It can draft: {held}."
+
+
+def _asked_drafts(calls, context, interpreted, record, sections, drafts, limits, report, keep):
+    """Plan AN.67 (23d5, D331, D309): a document the advocate's message asked NM to draft (drafting.asked_drafting: the requests
+    the understanding of the message marked as drafting) - which held one, and for which disputes, read by drafting.asked_for -
+    drafted as a stop's draft is (_draft), for each of those disputes whose analysis this answer wrote, which has no draft yet and
+    whose research rests on it (drafting.rests_on). A request naming no dispute is drafted for every dispute it fits, and said once
+    where it fits none. Returns (the drafts, with those written; code's words on what was not drafted). A usage limit, a stop or a
+    refusal goes on to its owner; the answer stands whatever else befalls a draft."""
+    requests = drafting.asked_drafting(interpreted)
+    if not requests:
+        return drafts, []
+    groups = list(research.dispute_work(record["plan"]))
+    if not groups:
+        return drafts, [NO_DRAFT_RESEARCH]
+    plan = record["plan"]
+    state = stepwise.state_of({"understood": {"plan": plan}, "parts": dict.fromkeys(groups),
+                               "answered": {"sections": sections}})
+    understood = ((plan.get("proposal") or {}).get("understanding") or {}).get("disputes") or []
+    questions = {dispute["id"]: [question.get("question", "") for question in dispute.get("legal_questions") or ()]
+                 for dispute in understood if isinstance(dispute, dict) and dispute.get("id")}
+    dispute_of = {name: groups[0] if name == stepwise.WHOLE else name for name in state["order"]}
+    try:
+        asked = drafting.asked_for(calls, requests, [
+            {"id": name, "name": state["names"][name], "legal_questions": questions.get(dispute_of[name], [])}
+            for name in state["order"]])
+    except UsageLimitReached:
+        raise
+    except ModelError as exc:
+        log.warning("Which document the message asked to be drafted could not be told: %s", type(exc).__name__)
+        asked = None
+    if asked is None:
+        return drafts, [NO_DRAFT_TOLD]
+    template = asked["template"]
+    if template is None:
+        return drafts, [NO_DRAFT_HELD.format(held="; ".join(held["title"] for held in drafting.held()))]
+    drafts, said, named = dict(drafts), [], asked["disputes"]
+    for name in named or state["order"]:
+        if name in drafts:
+            continue  # drafted at a stop: shown with the answer as it is
+        part = research.part_of(record, dispute_of[name]) if name in state["written"] else None
+        why = ("not_written" if part is None else
+               "not_read" if template["id"] not in {held["id"] for held in drafting.rests_on(part)} else None)
+        if why is not None:
+            if named:
+                said.append(_not_drafted(why, template, None if state["whole"] else state["names"][name]))
+            continue
+        report("drafting")
+        try:
+            drafted = drafting.write(calls, template, context, answer_sources.build(context, part), time_limits=limits)
+        except UsageLimitReached:
+            raise
+        except ModelError as exc:
+            log.warning("A draft the message asked for could not be written: %s", type(exc).__name__)
+            said.append(_not_drafted("failed", template, None if state["whole"] else state["names"][name]))
+            continue
+        drafts[name] = [drafted]
+        if keep is not None:
+            keep.draft(name, drafted)
+    if not named and not said and not any(versions[-1]["template"]["id"] == template["id"] for versions in drafts.values()):
+        said.append(_not_drafted("not_read" if state["written"] else "not_written", template))
+    return drafts, said
 
 
 def steps_from(held):
@@ -938,9 +1020,15 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
     elements = response_rendering.render_sections(context, record, sources, sections=sections, cross_check=crossed,
                                                   overview=overview, time_limits=limits,
                                                   contract=response_rendering.CASED_CONTRACT)
+    drafts, drafts_said = dict(kept.get("drafts") or {}), []
+    if gate.allows("write"):
+        # Plan AN.67 (23d5, D331): a document the message asked to be drafted, in a run that writes and finishes - worked straight
+        # through, End to end at a stop, or unasked by any gate; Done alone drafts nothing new (a stop offered the draft, 23d2).
+        drafts, drafts_said = _asked_drafts(calls, context, interpreted, record, sections, drafts, limits, report, keep)
     activity = {**base(record, sources, execution), "sections": sections, "cross_check": crossed, "overview": overview,
-                # Plan AN.67 (23d2): the drafts kept are saved with the answer.
-                **({"drafts": kept["drafts"]} if kept.get("drafts") else {})}
+                # Plan AN.67 (23d2, 23d5): the drafts kept and those the message asked for are saved with the answer, with code's
+                # words on any it asked for that was not drafted.
+                **({"drafts": drafts} if drafts else {}), **({"drafts_said": drafts_said} if drafts_said else {})}
     kept = calls.estimate()
     if kept["passed"]:
         # D45: recorded for diagnostics; the answer is saved as it would be.
@@ -1086,6 +1174,10 @@ def _validate_sections(activity, context, elements):
                              looked=activity["contract"] in _LOOKS)
     if "drafts" in activity:
         _validate_drafts(activity["drafts"], context, record, limits)
+    if "drafts_said" in activity:
+        said = activity["drafts_said"]
+        if not isinstance(said, list) or not said or not all(isinstance(line, str) and line.strip() for line in said):
+            raise ValueError("A saved answer's words on the drafts not written are not of their form")
     rebuilt = response_rendering.render_sections(context, record, sources, sections=activity["sections"],
                                                  cross_check=activity["cross_check"], overview=activity["overview"],
                                                  time_limits=limits, contract=activity["rendering_contract"])
@@ -1103,8 +1195,9 @@ def known_activity(activity):
     if version == UNANSWERED_CONTRACT:
         return set(activity) == {"contract"}
     if version in SECTIONED:
-        # Plan AN.67 (23d2): the current version's answer may be saved with its drafts.
-        return (set(activity) == _SECTIONED_FIELDS or version == CONTRACT and set(activity) == _SECTIONED_FIELDS | {"drafts"}
+        # Plan AN.67 (23d2, 23d5): the current version's answer may be saved with its drafts and code's words on those not drafted.
+        more = set(activity) - _SECTIONED_FIELDS
+        return (_SECTIONED_FIELDS <= set(activity) and (not more or version == CONTRACT and more <= _DRAFTED)
                 ) and rendering == _RENDERINGS[version]
     expected_fields =(_ACTIVITY_FIELDS if version == LEGACY_CONTRACT else
                        _ACTIVITY_FIELDS | {"authority_evidence"} if version == AUTHORITY_CONTRACT else

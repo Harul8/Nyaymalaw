@@ -739,6 +739,7 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .draft-block .draft-said { margin: 0.5rem 0 0; color: var(--ink-3); font-size: 0.86rem; }
 .draft-block .draft-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin-top: 0.5rem; }
 .drafts > .draft-unreviewed { color: #8a4b0f; }
+.drafts > .draft-not-written { margin: 0.35rem 0 0; color: var(--ink-2); font-size: 0.9rem; }
 
 /* THE ANSWER'S OWN HEADER (plan AN.20; the signed-off design): the NM mark, Nyaymalaw and the time the
    answer was made, above its first line. */

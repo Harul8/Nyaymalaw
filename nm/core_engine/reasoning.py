@@ -65,6 +65,9 @@ STEPS = {
     "message_reader": ("medium", False),
     # Plan AN.58 (D287): how a message sent step by step asks to be worked - a judgement on the advocate's words, small to read.
     "message_way": ("medium", False),
+    # Plan AN.67 (23d5): which held document a request in the message to draft asks for, and for which disputes - a judgement on
+    # the advocate's words, small to read.
+    "draft_asked": ("medium", False),
     # Research: the measured search steps stay at the release's own setting (owner decision, 14 Oct 2026).
     "phrases": (None, False), "judgment_phrases": (None, False), "pick": (None, False), "judgment_pick": (None, False),
     # The answer: a section and the overview, the review, the check across the sections, and the second looks.

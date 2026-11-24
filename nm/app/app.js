@@ -1506,10 +1506,18 @@ function renderDraft(draft, chatId, turnId, open) {
   return box;
 }
 
-function fillDrafts(box, drafts, chatId, turnId, open) {
+// Plan AN.67 (23d5): after the drafts, code's words on a draft the advocate's message asked for that was not written.
+function fillDrafts(box, drafts, chatId, turnId, open, said) {
   box.textContent = '';
   for (const draft of drafts) box.appendChild(renderDraft(draft, chatId, turnId, open));
-  box.hidden = !drafts.length;
+  const lines = Array.isArray(said) ? said : [];
+  for (const words of lines) {
+    const line = document.createElement('p');
+    line.className = 'draft-not-written';
+    line.textContent = words;
+    box.appendChild(line);
+  }
+  box.hidden = !drafts.length && !lines.length;
 }
 
 // Asked for once where the drafts are not yet in hand; said, not passed over, where they could not be had.
@@ -1517,8 +1525,9 @@ function askDrafts(box, chatId, turnId, open, keep) {
   box.hidden = true;
   api(draftsUrl(chatId, turnId)).then((reply) => {
     const drafts = Array.isArray(reply && reply.drafts) ? reply.drafts : [];
-    keep(drafts);
-    fillDrafts(box, drafts, chatId, turnId, open);
+    const said = Array.isArray(reply && reply.said) ? reply.said : [];
+    keep(drafts, said);
+    fillDrafts(box, drafts, chatId, turnId, open, said);
   }).catch(() => {
     box.textContent = '';
     const line = document.createElement('p');
@@ -1533,11 +1542,17 @@ function askDrafts(box, chatId, turnId, open, keep) {
 function answerDrafts(answer) {
   const saved = answer && answer.chat_id && answer.turn_id && !answer.blocked
     && (answer.committed === true || answer.committed === 'committed');
-  if (!saved || (Array.isArray(answer.drafts) && !answer.drafts.length)) return null;
+  const said = saved && Array.isArray(answer.drafts_said) ? answer.drafts_said : [];
+  if (!saved || (Array.isArray(answer.drafts) && !answer.drafts.length && !said.length)) return null;
   const box = document.createElement('div');
   box.className = 'drafts';
-  if (Array.isArray(answer.drafts)) fillDrafts(box, answer.drafts, answer.chat_id, answer.turn_id, false);
-  else askDrafts(box, answer.chat_id, answer.turn_id, false, (drafts) => { answer.drafts = drafts; });
+  if (Array.isArray(answer.drafts)) fillDrafts(box, answer.drafts, answer.chat_id, answer.turn_id, false, said);
+  else {
+    askDrafts(box, answer.chat_id, answer.turn_id, false, (drafts, words) => {
+      answer.drafts = drafts;
+      answer.drafts_said = words;
+    });
+  }
   return box;
 }
 

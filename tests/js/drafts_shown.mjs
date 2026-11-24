@@ -2,7 +2,8 @@
 // or beneath the stop that drafted it - never on the board or in the reading pane (D60). The server gives the draft as code's view
 // of it; the page only draws it: the parts in order, each particular the papers do not give highlighted where it goes, what code
 // and the review still find, the notes for the advocate, and each version's Word file. A conversation opened from the history
-// carries each saved answer's drafts; an answer just given and a stop that has drafted ask for them once.
+// carries each saved answer's drafts; an answer just given and a stop that has drafted ask for them once. Piece 23d5: after them,
+// code's words on a draft the advocate's message asked for that was not written.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -146,6 +147,27 @@ const answer = { chat_id: 'chat 1', turn_id: 't/1', blocked: false, committed: t
   for (const not of [{ ...answer, committed: 'unconfirmed' }, { ...answer, blocked: true }, { turn_id: 't1', committed: true }, null]) {
     assert.equal(context.answerDrafts(not), null);
   }
+  assert.equal(asked.length, 1);
+}
+
+// A draft the message asked for that was not written (23d5): code's words beneath the answer, after any drafts - from the history,
+// and as the page asks for an answer just given, kept on the answer.
+{
+  const said = ['Demand notice: not drafted - it rests on section 138, which is not among the law NM\'s research relied on.'];
+  const { context, asked } = harness({ drafts: [], said });
+  const opened = context.answerDrafts({ ...answer, drafts: [], drafts_said: said });
+  assert.equal(opened.hidden, false);
+  assert.deepEqual(opened.children.map((node) => [node.className, node.textContent]), [['draft-not-written', said[0]]]);
+  const withDraft = context.answerDrafts({ ...answer, drafts: [draft], drafts_said: said });
+  assert.deepEqual(withDraft.children.map((node) => node.className), ['draft-block', 'draft-not-written']);
+  const given = { ...answer, committed: 'committed' };
+  const box = context.answerDrafts(given);
+  await settle();
+  assert.equal(box.hidden, false);
+  assert.equal(box.children[0].textContent, said[0]);
+  assert.deepEqual(given.drafts, []);
+  assert.deepEqual(given.drafts_said, said);
+  assert.equal(context.answerDrafts({ ...answer, committed: 'unconfirmed', drafts: [], drafts_said: said }), null);
   assert.equal(asked.length, 1);
 }
 
