@@ -1149,6 +1149,9 @@ def _worked_as_asked(calls, context, go, gate, keeper, report, way):
             earlier.append(f"advocate (waiting_message)\n{exchange['text']}")
             earlier.append(f"nm (waiting_reply)\n{exchange['said']}")
         earlier.append(f"{row['speaker']} ({row['record_role']})\n{row['text']}")
+    # Plan AN.80 (D351): this is the turn's first call, a reading of the message, so the page is told so from it; the work's own
+    # report of the stage that follows adds no step.
+    report("understanding")
     try:
         reading = way(calls, context.message, earlier=earlier, papers=len(context.documents))
     except UsageLimitReached:
