@@ -4,7 +4,9 @@ as stopped by the restart, is continued by the server itself, as Continue does (
 go-ahead that had not begun is given again as given; a message not yet begun was never kept and is said as before; and nothing is
 taken up once the advocate's sign-in no longer holds - checked by its fingerprint, never its token. Offline: scripted models; the
 words are invented."""
+import sqlite3
 import threading
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -13,7 +15,7 @@ from nm.app import api
 from nm.app.step_jobs import StepJobs
 from nm.arrive.advocate_contracts import token_fingerprint
 from nm.core_engine import steps as stepwise
-from nm.shared.step_record_store import FileStepRecords
+from nm.shared.step_record_store import _SQL_V4, FileStepRecords
 from tests.guided import intake
 from tests.served_application import OTHER, OWNER
 from tests.test_a_message_while_a_matter_waits import CHAT, SENT, held
@@ -74,6 +76,28 @@ def test_the_step_threads_keep_a_record_for_each_step_they_answer_for_and_let_it
         threading.Event().wait(0.02)
     assert records.left() == []
     assert waiting.exception(1) is not None
+
+
+def test_next_keeps_its_original_stop_when_the_record_store_is_reopened(tmp_path):
+    path = tmp_path / "step-records.sqlite"
+    when = "2026-11-25T13:14:15.123456+00:00"
+    with closing(sqlite3.connect(path)) as db, db:
+        db.execute(_SQL_V4)
+        db.execute("PRAGMA user_version=4")
+        db.execute("INSERT INTO steps VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                   ("owner", "t1", "chat", "go", "next", '["D1"]', None, 0, when))
+
+    records = FileStepRecords(path)
+    old, = records.left()
+    assert old["choice"] == "next" and old["disputes"] == ["D1"] and old["taken_at"] == when
+    assert "stop_at" not in old
+    records.taken("owner", "t2", route="go", chat_id="chat", choice="next", disputes=["D1"], stop_at=when)
+    for choice, stamp in [("research", when), ("next", "some words"), ("next", "2026-11-25")]:
+        with pytest.raises(ValueError):
+            records.taken("owner", "refused", route="go", choice=choice, stop_at=stamp)
+    old_again, bound = FileStepRecords(path).left()
+    assert old_again == old
+    assert bound["turn_id"] == "t2" and bound["stop_at"] == when and bound["disputes"] == ["D1"]
 
 
 def test_a_sign_in_is_found_by_its_fingerprint_only_while_it_holds_and_only_for_its_advocate(served):

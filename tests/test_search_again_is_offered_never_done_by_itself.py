@@ -136,7 +136,7 @@ def test_a_version_two_step_store_is_carried_over_with_its_records_as_they_were(
                    ("a@example.test", "t1", "c1", "go", "write", '["D1"]', "f" * 64, 0, "2027-03-01T09:00:00+00:00"))
     records = FileStepRecords(path)
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == VERSION == 4
+        assert db.execute("PRAGMA user_version").fetchone()[0] == VERSION
     (kept,) = records.left()
     assert kept["choice"] == "write" and kept["taken_at"] == "2027-03-01T09:00:00+00:00" and kept["disputes"] == ["D1"]
     records.taken("a@example.test", "t2", route="go", chat_id="c1", choice="search_again", disputes=["D1"], session="f" * 64)

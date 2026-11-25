@@ -6,6 +6,9 @@ and turn, which route, a go-ahead's choice and the disputes it named, whether it
 its fingerprint (never its token). Never a message, an answer, an answer to a question or a file: a step whose words were not yet
 kept with its conversation cannot be taken up from here, and is said as it always was. A record goes when its step ends. SQLite
 transactions follow the turn-attempt store's BEGIN IMMEDIATE pattern; a record that cannot be written never fails its step.
+
+D225: a Next request may carry the time of the waiting stop it answered. A record made before that field was available keeps
+its original contents; the migration supplies no binding.
 """
 from __future__ import annotations
 
@@ -21,14 +24,14 @@ from nm.shared.sqlite_creation import create_if_absent, why
 
 _log = logging.getLogger("nm.steps")
 
-VERSION = 4
+VERSION = 5
 #: Plan AN.53 (D241, with the turns' attempts): a step's record is kept at most this many days from when the step was taken.
 TAKEN_KEPT_DAYS = 90
 ROUTES = ("send", "continue", "go", "answers", "message")
 #: The go-aheads a step may record (nm/core_engine/steps.GOS; plan AN.52, D282 added search_again in version 3; plan AN.67, 23d2,
 #: added draft in version 4).
 CHOICES = ("next", "research", "write", "end_to_end", "done", "search_again", "draft")
-_SQL = """CREATE TABLE steps (
+_SQL_V4 = """CREATE TABLE steps (
     advocate_id TEXT NOT NULL CHECK(length(advocate_id) BETWEEN 1 AND 320),
     turn_id TEXT NOT NULL CHECK(length(turn_id) BETWEEN 1 AND 200),
     chat_id TEXT CHECK(chat_id IS NULL OR length(chat_id) BETWEEN 1 AND 200),
@@ -40,6 +43,9 @@ _SQL = """CREATE TABLE steps (
     taken_at TEXT NOT NULL,
     PRIMARY KEY (advocate_id, turn_id)
 )"""
+#: D225: a relative go-ahead keeps the stop it answered if the server restarts before running it.
+_SQL = _SQL_V4.replace("    PRIMARY KEY", "    stop_at TEXT CHECK(stop_at IS NULL OR length(stop_at) BETWEEN 1 AND 64),\n"
+                      "    PRIMARY KEY", 1)
 #: Version 3: version 4 without the draft's choice (AN.67, 23d2). Carried over with every record as it was.
 _SQL_V3 = """CREATE TABLE steps (
     advocate_id TEXT NOT NULL CHECK(length(advocate_id) BETWEEN 1 AND 320),
@@ -66,7 +72,8 @@ _SQL_V2 = """CREATE TABLE steps (
     taken_at TEXT NOT NULL,
     PRIMARY KEY (advocate_id, turn_id)
 )"""
-_FIELDS = "advocate_id,turn_id,chat_id,route,choice,disputes,session,begun,taken_at"
+_EARLIER_FIELDS = "advocate_id,turn_id,chat_id,route,choice,disputes,session,begun,taken_at"
+_FIELDS = f"{_EARLIER_FIELDS},stop_at"
 #: Version 1: version 2 without when each step was taken. Carried over with every record, each taken as at the carrying over.
 _SQL_V1 = """CREATE TABLE steps (
     advocate_id TEXT NOT NULL CHECK(length(advocate_id) BETWEEN 1 AND 320),
@@ -100,12 +107,12 @@ class FileStepRecords:
             with closing(sqlite3.connect(self.path, timeout=10)) as db, db:
                 db.execute("BEGIN IMMEDIATE")
                 earlier = db.execute("PRAGMA user_version").fetchone()[0]
-                if (earlier == 1 and self._is(db, _SQL_V1) or earlier == 2 and self._is(db, _SQL_V2)
-                        or earlier == 3 and self._is(db, _SQL_V3)):
+                layouts = {1: _SQL_V1, 2: _SQL_V2, 3: _SQL_V3, 4: _SQL_V4}
+                if earlier in layouts and self._is(db, layouts[earlier]):
                     db.execute("ALTER TABLE steps RENAME TO steps_earlier")
                     db.execute(_SQL)
                     # Version 1 kept no time: each record is taken as at the carrying over; later versions' keep their own.
-                    db.execute(f"INSERT INTO steps ({_FIELDS}) SELECT advocate_id,turn_id,chat_id,route,choice,disputes,session,"
+                    db.execute(f"INSERT INTO steps ({_EARLIER_FIELDS}) SELECT advocate_id,turn_id,chat_id,route,choice,disputes,session,"
                                f"begun,{'?' if earlier == 1 else 'taken_at'} FROM steps_earlier", (_now(),) if earlier == 1 else ())
                     db.execute("DROP TABLE steps_earlier")
                     db.execute(f"PRAGMA user_version={VERSION}")
@@ -148,7 +155,7 @@ class FileStepRecords:
         except (OSError, sqlite3.Error, ValueError, StepRecordsRefused) as exc:
             _log.warning("A step record could not be %s (%s).", what, type(exc).__name__)
 
-    def taken(self, advocate_id, turn_id, *, route, chat_id=None, choice=None, disputes=None, session=None):
+    def taken(self, advocate_id, turn_id, *, route, chat_id=None, choice=None, disputes=None, session=None, stop_at=None):
         """A step taken by the server, not yet begun."""
         if route not in ROUTES or choice is not None and choice not in CHOICES:
             raise ValueError("not a step's route or choice")
@@ -157,9 +164,12 @@ class FileStepRecords:
             raise ValueError("not a list of dispute identities")
         if session is not None and not (isinstance(session, str) and _FINGERPRINT.match(session)):
             raise ValueError("not a sign-in's fingerprint")
+        if stop_at is not None and (route != "go" or choice != "next" or not isinstance(stop_at, str)
+                                    or not 0 < len(stop_at) <= 64 or datetime.fromisoformat(stop_at).utcoffset() is None):
+            raise ValueError("not a Next go-ahead's dated stop")
         row = (advocate_id, turn_id, chat_id, route, choice, None if disputes is None else json.dumps(list(disputes)), session, 0,
-               _now())
-        self._quietly("kept", lambda db: db.execute(f"INSERT OR REPLACE INTO steps ({_FIELDS}) VALUES (?,?,?,?,?,?,?,?,?)", row))
+               _now(), stop_at)
+        self._quietly("kept", lambda db: db.execute(f"INSERT OR REPLACE INTO steps ({_FIELDS}) VALUES (?,?,?,?,?,?,?,?,?,?)", row))
 
     def begun(self, advocate_id, turn_id):
         self._quietly("marked as begun", lambda db: db.execute(
@@ -193,5 +203,7 @@ class FileStepRecords:
             record = dict(zip(names, row))
             record["disputes"] = None if record["disputes"] is None else json.loads(record["disputes"])
             record["begun"] = bool(record["begun"])
+            if record["stop_at"] is None:
+                del record["stop_at"]
             out.append(record)
         return out

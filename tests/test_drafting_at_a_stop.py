@@ -139,7 +139,7 @@ def test_a_version_three_step_store_is_carried_over_and_records_a_draft(tmp_path
                    ("a@example.test", "t1", "c1", "go", "search_again", '["D1"]', "f" * 64, 0, "2027-03-01T09:00:00+00:00"))
     records = FileStepRecords(path)
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == VERSION == 4
+        assert db.execute("PRAGMA user_version").fetchone()[0] == VERSION
     (kept,) = records.left()
     assert kept["choice"] == "search_again" and kept["taken_at"] == "2027-03-01T09:00:00+00:00"
     records.taken("a@example.test", "t2", route="go", chat_id="c1", choice="draft", disputes=["D1"], session="f" * 64)
