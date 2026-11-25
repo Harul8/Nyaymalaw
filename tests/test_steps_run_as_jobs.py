@@ -75,6 +75,37 @@ def test_a_refusal_after_the_step_went_on_is_the_refusal_its_request_would_have_
     assert without_ids(later) == without_ids(within)
 
 
+def test_resending_the_active_request_reports_it_is_working_and_replays_its_one_answer(served):
+    scripted = Scripted()
+    scripted_answers(served, scripted)
+    held = Held(served)
+    original = {"message": SENT["message"], "turn_id": "turn-1"}
+    jobs = served.app.step_jobs
+    jobs.wait_seconds = 0.2
+    try:
+        assert served.client.post("/api/turn", json=original).status_code == 202
+        assert held.entered.wait(10)
+        jobs.wait_seconds = 5
+        second = served.client.post("/api/turn", json=original)
+        assert second.status_code == 409 and second.json()["detail"]["code"] == "turn_in_progress"
+        assert "still working" in second.json()["detail"]["why"]
+        conflict = served.client.post("/api/turn", json={**original, "message": "Different words."})
+        assert conflict.status_code == 409 and conflict.json()["detail"]["code"] == "request_conflict"
+        assert outcome(served).status_code == 202
+    finally:
+        held.go.set()
+
+    original_job = jobs.of(OWNER, "turn-1")
+    assert original_job.result(timeout=30).committed == "committed"
+    released = outcome(served).json()
+    calls = list(served.model.calls)
+    replay = served.client.post("/api/turn", json=original).json()
+    assert replay["replayed"] is True and replay["elements"] == released["elements"]
+    assert served.model.calls == calls
+    chat = served.client.get(f"/api/chats/{released['chat_id']}").json()
+    assert [row["message"] for row in chat["turns"]] == [original["message"]]
+
+
 def test_what_a_step_answered_is_read_by_its_own_advocate_only(served):
     scripted_answers(served, Scripted())
     assert served.client.post("/api/turn", json=SENT).status_code == 409

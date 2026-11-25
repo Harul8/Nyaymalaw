@@ -1823,6 +1823,9 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
 
 
 def _attempt_refusal(exc):
+    if exc.code == "busy":
+        return ConversationRefused("NM is still working on this answer.", code="turn_in_progress",
+                                   committed="unconfirmed")
     if exc.code == "terminal":
         return ConversationRefused("This message could not be answered reliably. "
             "Its previous outcome has been retained.", status=409, code="answer_withheld")
