@@ -657,6 +657,14 @@ class Application:
                                      'again.')
         kind = judgement['kind']
         entry = {'text': message, 'documents': list(documents), 'at': datetime.now(timezone.utc).isoformat()}
+        if judgement.get('queued'):
+            # Plan AN.61 (61c, D309): a new question outside the matter, asked beside the rest, waits as the next message in the
+            # advocate's own words - saved first, so that whatever else the message does keeps it.
+            try:
+                queued = queued_of(matter)
+            except ValueError:
+                queued = []
+            matter = save_waiting(self.store, matter, held, queued=[*queued, {'text': judgement['queued'], 'documents': []}])
         if kind == 'go':
             listened = stepwise.heard(held['go'], message, kind, judgement['said'])['heard']
             go = {**judgement['go'], 'heard': listened} if judgement['go'] is not None else None
@@ -669,9 +677,10 @@ class Application:
             if stepwise.moved(go):  # AN.62-AN.64: a guided stop settled in words - no step runs
                 self._moved(matter, held, go)
             if judgement.get('joins'):
-                # Plan AN.61 (61b, D309): a specific request joins the matter as the advocate's own, after the latest (citable,
-                # 48h), so that the work it asked for is done on its words - and what is new it raised names it.
-                return ran(go, appended=[entry])
+                # Plan AN.61 (61b, 61c; D309): a specific request, or a go-ahead that also gives facts or corrections, joins the
+                # matter as the advocate's own, after the latest (citable, 48h), so that the work is done on its words - and what
+                # is new it raised names it; facts given owe the analyses written a check against them (D161-D162).
+                return ran({**go, 'recheck': True} if judgement.get('recheck') else go, appended=[entry])
             return ran(go)
         if kind == 'change_draft':
             # Plan AN.67 (23d4, D331): a change to a draft at this stop. Where it names parts the writer writes, the message joins
