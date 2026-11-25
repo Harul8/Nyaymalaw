@@ -520,6 +520,132 @@ def save_title(store, matter, title):
     return _written(store, candidate, matter.version)
 
 
+# ------------------------------------------------------------------ the advocate's own name and particulars ---
+#
+# PLAN AN.55 (55c1; D255, D256, D332, D355). The advocate names a conversation, and writes its particulars - the client, the
+# court, the case number and the next date - each by their own hand. Both are kept in the conversation's own keyed record, as
+# the title is: no field of a saved matter's type changes, so its format stays as it is and code before this piece reads them
+# and saves them back untouched (50g). Each is checked as it is written and as it is read. NM writes neither: its own title
+# is kept under TITLE and is never written over the name, which is shown in its place (shown_title). The routes write them
+# only while no turn is being worked on in the conversation (D355(a)), so the write is the store's one confirmed write.
+
+#: The advocate's own name for the conversation: {"text"}. Absent where they have given none.
+NAME = "core_name"
+#: The longest name kept, in characters (D355(c)).
+NAME_MOST = 120
+#: The conversation's particulars, each optional and each the advocate's: {"client", "court", "case_number", "next_date"},
+#: only those given. Absent where none is given.
+PARTICULARS = "core_particulars"
+#: Each particular that is words, with the most characters it keeps (D355(c)); next_date is a calendar date.
+PARTICULAR_WORDS = {"client": 200, "court": 200, "case_number": 100}
+PARTICULAR_FIELDS = (*PARTICULAR_WORDS, "next_date")
+
+
+def _one_line(text, most, what):
+    """The advocate's words as kept - one line, the spaces evened - or why they cannot be: too long, or holding a link or a
+    request for a secret (the door every shown name passes, 51b3). "" where nothing is given."""
+    from nm.core_engine import shown_words
+    if not isinstance(text, str):
+        return None, f"the {what} is not text"
+    line = " ".join(text.split())
+    if len(line) > most:
+        return None, f"the {what} has {len(line)} characters; at most {most} are kept"
+    forbidden = shown_words.unsafe(line) if line else ""
+    if forbidden:
+        return None, f"the {what} cannot be kept: {forbidden}"
+    return line, None
+
+
+def named(text):
+    """The advocate's name for a conversation as it is kept, "" for none (NM's own title is then shown again), or (None, why)."""
+    return _one_line("" if text is None else text, NAME_MOST, "name")
+
+
+def name_of(matter):
+    """The advocate's own name for the conversation, or None where they gave none. ValueError where it cannot be read reliably."""
+    held = (matter.intake_answers or {}).get(NAME) if matter is not None else None
+    if held is None:
+        return None
+    if not isinstance(held, dict) or set(held) != {"text"} or not _nonempty(held["text"]) or named(held["text"])[0] != held["text"]:
+        raise ValueError("The conversation's name could not be read reliably")
+    return held["text"]
+
+
+def shown_title(matter):
+    """What the conversation is shown as: the advocate's name where they gave one ({"text", "by": "advocate"}), else NM's title
+    ({"text", "by": "nm"}), else None. ValueError where the one that would be shown cannot be read reliably."""
+    name = name_of(matter)
+    if name is not None:
+        return {"text": name, "by": "advocate"}
+    title = title_of(matter)
+    return {"text": title["text"], "by": "nm"} if title else None
+
+
+def admitted_particulars(given):
+    """The particulars as they are kept - only those given, words as one line, the next date as YYYY-MM-DD - or (None, why).
+    given: a mapping of PARTICULAR_FIELDS to text or None; a field left empty is not kept."""
+    from datetime import date
+    if not isinstance(given, dict) or set(given) - set(PARTICULAR_FIELDS):
+        return None, "the particulars are not the ones kept"
+    kept = {}
+    for field, most in PARTICULAR_WORDS.items():
+        line, why = _one_line("" if given.get(field) is None else given[field], most, field.replace("_", " "))
+        if why:
+            return None, why
+        if line:
+            kept[field] = line
+    day = given.get("next_date")
+    if day not in (None, ""):
+        try:
+            when = date.fromisoformat(day) if isinstance(day, str) and len(day) == 10 else None
+        except ValueError:
+            when = None
+        if when is None or not 1900 <= when.year <= 2199:
+            return None, "the next date is not a calendar date"
+        kept["next_date"] = when.isoformat()
+    return kept, None
+
+
+def particulars_of(matter):
+    """The conversation's particulars, only those given ({} where none). ValueError where they cannot be read reliably."""
+    held = (matter.intake_answers or {}).get(PARTICULARS) if matter is not None else None
+    if held is None:
+        return {}
+    if not isinstance(held, dict) or not held or admitted_particulars(held) != (held, None):
+        raise ValueError("The conversation's particulars could not be read reliably")
+    return dict(held)
+
+
+def _with(matter, key, value):
+    """The conversation with one of the advocate's own keys replaced, one version on; an empty value leaves no key behind."""
+    metadata = {name: held for name, held in (matter.intake_answers or {}).items() if name != key}
+    if value:
+        metadata[key] = deepcopy(value)
+    return replace(matter, intake_answers=metadata, version=matter.version + 1)
+
+
+def save_name(store, matter, text):
+    """Save the advocate's name for a conversation no turn is being worked on now; "" or None gives back NM's own title.
+    ValueError (with why) where the name cannot be kept. Returns the conversation as written."""
+    name, why = named(text)
+    if why:
+        raise ValueError(why)
+    candidate = _with(matter, NAME, {"text": name} if name else None)
+    name_of(candidate)
+    return _written(store, candidate, matter.version)
+
+
+def save_particulars(store, matter, given):
+    """Save the advocate's particulars for a conversation no turn is being worked on now, replacing those it had; none given
+    takes them away. ValueError (with why) where they cannot be kept. Returns the conversation as written."""
+    kept, why = admitted_particulars(given)
+    if why:
+        raise ValueError(why)
+    candidate = _with(matter, PARTICULARS, kept)
+    particulars_of(candidate)
+    return _written(store, candidate, matter.version)
+
+
 #: Plan AN.52 (52h, D214; the review's F-20): the steers a turn being worked on was told to take, saved beside the
 #: conversation BEFORE the advocate is told "taken" - each with the turn it is for. Until now a steer lived only in the
 #: server's memory until the turn's next step took it, so a restart in between lost the advocate's correction silently.
