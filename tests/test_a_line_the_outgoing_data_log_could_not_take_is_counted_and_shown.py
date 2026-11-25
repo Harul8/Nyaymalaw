@@ -17,7 +17,7 @@ from nm.arrive.admin_port import UNWRITTEN_LOG_LINES
 from nm.arrive.mail_outbox import FileOutbox
 from nm.arrive.store_directory import FileDirectory
 from nm.shared.store_file_store import FileMatterStore
-from tests.test_core_served import KEY
+from tests.served_application import KEY
 from tests.test_core_turn import ScriptedModel, searcher
 
 pytestmark = pytest.mark.class_a

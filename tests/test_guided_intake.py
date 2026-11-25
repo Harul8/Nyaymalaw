@@ -7,11 +7,11 @@ follow-up is not taken through intake again. Offline: the scripted served applic
 from nm.core_engine import message_reader, steps
 from nm.core_engine.conversation import chat_matter_id, shown_of, stored_chat
 from tests.guided import ACTS_FOR, intake
+from tests.served_application import OWNER
 from tests.test_a_follow_up_starts_from_the_last_understanding import reader_says
 from tests.test_a_message_while_a_matter_waits import Reader, judged, reading
 from tests.test_core_answer_sections import Scripted, scripted_answers
 from tests.test_core_research import understanding
-from tests.test_core_served import OWNER, served  # noqa: F401 - pytest fixture
 
 CHAT = stored_chat(OWNER, None, "turn-1")
 STATED = {"message": f"{ACTS_FOR} Inspect this reported account.", "turn_id": "turn-1", "steps": "interactive"}

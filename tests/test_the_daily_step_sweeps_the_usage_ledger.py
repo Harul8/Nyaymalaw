@@ -18,7 +18,7 @@ import pytest
 from nm.app import main
 from nm.arrive.store_usage import USAGE_KEPT_YEARS, years_before
 from nm.arrive.usage_port import UsageRefused, UsageSweepPort
-from tests.test_core_served import OWNER, served  # noqa: F401 - served is a fixture
+from tests.served_application import OWNER
 from tests.test_usage_store import call
 
 pytestmark = pytest.mark.class_a

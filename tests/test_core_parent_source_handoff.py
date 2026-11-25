@@ -3,26 +3,24 @@
 Synthetic ranking and review decisions exercise wiring, never legal accuracy.
 The actual local reader, source catalogue, authority check, storage and replay run.
 """
-from copy import deepcopy
-from dataclasses import replace
 import hashlib
 import json
+from copy import deepcopy
+from dataclasses import replace
 
 import pytest
 
-from nm.core_engine import answer_sources, research, response_authorities
-from nm.core_engine import response_writer, turn
+from nm.core_engine import answer_sources, research, response_authorities, turn
 from nm.core_engine.conversation import chat_matter_id
 from nm.core_engine.retrieval import HybridSearcher, validate_search
+from tests.served_application import OWNER, source_url, successful
 from tests.test_core_answer_sources import fixture
 from tests.test_core_research import Model, proposal, work
-from tests.test_core_response_writer import linked, source_use_v2, unit, worded
 from tests.test_core_response_writer import accept as writer_fixture_accept
-from tests.test_core_served import OWNER, served, source_url, successful
+from tests.test_core_response_writer import linked, source_use_v2, unit, worded
 from tests.test_core_statute_readback import _local, _row
 from tests.test_core_understanding import context
 from tests.test_current_brain_retrieval import Collection
-
 
 pytestmark = pytest.mark.class_a
 

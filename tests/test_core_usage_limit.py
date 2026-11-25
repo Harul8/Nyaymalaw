@@ -8,7 +8,7 @@ import pytest
 
 from nm.core_engine.conversation import ConversationRefused
 from nm.shared.model_port import USAGE_LIMIT_MESSAGE, ProviderUnavailable, UsageLimitReached
-from tests.test_core_served import OWNER, send, served  # noqa: F401 - the served fixture
+from tests.served_application import send
 from tests.test_core_turn import ScriptedModel, run, store  # noqa: F401 - the store fixture
 
 pytestmark = pytest.mark.class_a
@@ -54,7 +54,7 @@ def test_the_same_message_is_answered_once_the_account_is_topped_up(store):
 
 
 def test_the_served_turn_says_it_in_the_owners_words_and_saves_nothing(served):  # noqa: F811
-    from tests.test_core_served import no_answer_saved
+    from tests.served_application import no_answer_saved
     original = served.model.structured
 
     def exhausted(prompt, schema, tier, **kwargs):

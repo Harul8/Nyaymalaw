@@ -13,13 +13,20 @@ from copy import deepcopy
 import pytest
 
 from nm.core_engine import (
-    answer_sections, calculation, checklist, matter_board, research, response_rendering, response_writer, turn,
+    answer_sections,
+    calculation,
+    checklist,
+    matter_board,
+    research,
+    response_rendering,
+    response_writer,
+    turn,
 )
 from nm.core_engine.calls import CONFLICT_PURPOSE, REVIEW_PURPOSE, TurnCalls
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, ProviderUnavailable, SchemaViolation, Usage
+from tests.served_application import OWNER
 from tests.test_core_response_writer import two_disputes
-from tests.test_core_served import OWNER, served  # noqa: F401 - pytest fixture
 from tests.test_core_turn import store  # noqa: F401 - pytest fixture
 
 pytestmark = pytest.mark.class_a

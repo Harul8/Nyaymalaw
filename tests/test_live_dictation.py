@@ -19,7 +19,7 @@ from nm.shared.model_call_budget import CallBudget, SessionCallBudget
 from nm.shared.model_config import ModelConfig, TierConfig
 from nm.shared.model_openai_adapter import LiveTranscription, OpenAIModelAdapter
 from nm.shared.model_port import ConfigurationError, ProviderUnavailable, Tier
-from tests.test_core_served import OWNER, served  # noqa: F401 - pytest fixture
+from tests.served_application import OWNER
 
 pytestmark = pytest.mark.class_a
 ORIGIN = {"origin": "http://testserver"}

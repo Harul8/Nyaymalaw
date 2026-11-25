@@ -19,7 +19,7 @@ from nm.arrive.advocate_contracts import AdvocateIdentity, Enrolment, enrol
 from nm.arrive.mail_outbox import FileOutbox
 from nm.arrive.store_directory import FileDirectory
 from nm.shared.store_file_store import FileMatterStore
-from tests.test_core_served import KEY, PASSWORD
+from tests.served_application import KEY, PASSWORD
 from tests.test_core_turn import ScriptedModel, searcher
 
 pytestmark = pytest.mark.class_a

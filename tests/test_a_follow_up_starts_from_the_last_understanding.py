@@ -15,9 +15,9 @@ from nm.core_engine import follow_up, message_reader, research, steps, turn
 from nm.core_engine.conversation import TurnContext, chat_matter_id, shown_of
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, ProviderUnavailable, Usage
+from tests.served_application import OWNER
 from tests.test_a_message_while_a_matter_waits import CHAT, SENT, judged
 from tests.test_core_answer_sections import Scripted, scripted_answers
-from tests.test_core_served import OWNER, served  # noqa: F401 - pytest fixture
 from tests.test_research_only_what_is_new import NEW, phrased, searched
 
 FOLLOW = {"message": "Could the client also say the notice was sent only by email?", "turn_id": "turn-2", "chat_id": CHAT,

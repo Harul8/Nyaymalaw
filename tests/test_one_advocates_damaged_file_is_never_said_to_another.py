@@ -13,7 +13,7 @@ import logging
 import pytest
 
 from nm.app import api
-from tests.test_core_served import OTHER, OWNER, served, successful  # noqa: F401 - served is a fixture
+from tests.served_application import OTHER, OWNER, successful
 
 pytestmark = pytest.mark.class_a
 

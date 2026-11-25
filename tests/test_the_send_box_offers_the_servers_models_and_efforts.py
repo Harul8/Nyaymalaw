@@ -11,7 +11,7 @@ import pytest
 
 from nm.core_engine.conversation import chat_matter_id
 from nm.core_engine.turn import saved_rows
-from tests.test_core_served import send, served, successful  # noqa: F401 - pytest fixture
+from tests.served_application import send, successful
 
 pytestmark = pytest.mark.class_a
 

@@ -22,9 +22,9 @@ from nm.core_engine import steps as stepwise
 from nm.core_engine.conversation import chat_matter_id, shown_of, stored_chat
 from nm.shared.store_file_store import FileMatterStore
 from tests.guided import intake
+from tests.served_application import KEY, OWNER, PASSWORD
 from tests.test_a_message_while_a_matter_waits import SENT
 from tests.test_core_answer_sections import Scripted, scripted_answers
-from tests.test_core_served import KEY, OWNER, PASSWORD
 from tests.test_core_turn import ScriptedModel, searcher
 from tests.test_steps_run_as_jobs import Held
 

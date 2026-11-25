@@ -18,7 +18,6 @@ import pytest
 
 from nm.shared import step_record_store
 from nm.shared.step_record_store import _SQL_V1, TAKEN_KEPT_DAYS, VERSION, FileStepRecords
-from tests.test_core_served import served  # noqa: F401 - served is a fixture
 
 pytestmark = pytest.mark.class_a
 

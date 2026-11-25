@@ -17,8 +17,8 @@ import pytest
 
 from nm.app import api
 from nm.core_engine.conversation import chat_matter_id
+from tests.served_application import OTHER, OWNER, successful
 from tests.test_core_answer_sections import Scripted, scripted_answers
-from tests.test_core_served import OTHER, OWNER, served, successful  # noqa: F401 - served is a fixture
 from tests.test_steps_run_as_jobs import Held
 
 pytestmark = pytest.mark.class_a

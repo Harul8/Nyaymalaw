@@ -14,7 +14,7 @@ from nm.shared.storage_errors_port import StoredObjectUnreadable
 from nm.shared.store_envelope import KeyUnavailable
 from nm.shared.store_file_store import FileMatterStore
 from nm.work_the_file.matter_contracts import Matter
-from tests.test_core_served import OWNER, served, successful  # noqa: F401 - served is a fixture
+from tests.served_application import OWNER, successful
 
 pytestmark = pytest.mark.class_a
 DAMAGE = {

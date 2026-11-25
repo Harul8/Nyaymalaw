@@ -7,13 +7,13 @@ CSRF are the served ones.
 import time
 from urllib.parse import quote
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
 from nm.app import api
 from nm.core_engine import documents
+from tests.served_application import OTHER, OWNER
 from tests.test_core_documents import Checker
-from tests.test_core_served import OTHER, OWNER, served  # noqa: F401 - pytest fixture
 
 pytestmark = pytest.mark.class_a
 

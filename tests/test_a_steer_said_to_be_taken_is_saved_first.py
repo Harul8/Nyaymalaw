@@ -103,8 +103,8 @@ def test_a_steer_that_cannot_be_read_reliably_is_not_saved_and_one_of_an_earlier
 
 # ---- through the server (52h2): saved before "taken" is said; a restart; Continue ----
 
+from tests.served_application import OWNER  # noqa: E402
 from tests.test_core_answer_sections import scripted_answers  # noqa: E402
-from tests.test_core_served import OWNER, served  # noqa: E402, F401 - pytest fixture
 
 SENT = {"message": "Inspect this reported account.", "turn_id": "turn-1"}
 WORDS = "Weigh the later notice too."

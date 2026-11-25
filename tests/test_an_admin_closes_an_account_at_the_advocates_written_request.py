@@ -17,11 +17,17 @@ import pytest
 
 from nm.app import api
 from nm.arrive.admin_access import Action, Level, permits
+from tests.served_application import PASSWORD
 from tests.test_an_admins_change_is_made_only_with_the_level_the_password_a_reason_and_an_audit_entry import (  # noqa: F401
-    ADMIN, ADVOCATE, OTHER, VIEWER, audit, served)
+    ADMIN,
+    ADVOCATE,
+    OTHER,
+    VIEWER,
+    audit,
+    served,
+)
 from tests.test_core_document_routes import upload
 from tests.test_core_documents import Checker
-from tests.test_core_served import PASSWORD
 
 pytestmark = pytest.mark.class_a
 REQUEST = "Written request of 12 Nov 2026 from the advocate"

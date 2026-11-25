@@ -19,7 +19,6 @@ from tests.guided import intake
 from tests.test_a_message_while_a_matter_waits import CHAT, SENT, held
 from tests.test_additions_are_the_advocates_messages import go
 from tests.test_core_answer_sections import Scripted, scripted_answers
-from tests.test_core_served import served  # noqa: F401 - pytest fixture
 
 AWAY = "Synthetic: the ranking machine was away"
 

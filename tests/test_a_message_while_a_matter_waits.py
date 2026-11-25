@@ -10,12 +10,20 @@ from dataclasses import replace
 import pytest
 
 from nm.core_engine import message_reader, steps
-from nm.core_engine.conversation import HEADER, chat_matter_id, checked_rows, digest, queued_of, shown_of, stored_chat
-from nm.shared.model_port import ModelResult, ProviderUnavailable, Usage
+from nm.core_engine.conversation import (
+    HEADER,
+    chat_matter_id,
+    checked_rows,
+    digest,
+    queued_of,
+    shown_of,
+    stored_chat,
+)
 from nm.shared.budget_contracts import Completion
-from tests.test_core_answer_sections import Scripted, scripted_answers
+from nm.shared.model_port import ModelResult, ProviderUnavailable, Usage
 from tests.guided import ACTS_FOR, intake
-from tests.test_core_served import OWNER, served  # noqa: F401 - pytest fixture
+from tests.served_application import OWNER
+from tests.test_core_answer_sections import Scripted, scripted_answers
 
 # Plan AN.62-AN.64: a new matter worked step by step goes through guided intake first; its message says whom the advocate
 # acts for, so that NM need not ask (D311).

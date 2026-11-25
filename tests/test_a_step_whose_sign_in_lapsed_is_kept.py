@@ -19,9 +19,9 @@ from nm.app import api
 from nm.arrive.directory_port import AuthenticationUnavailable
 from nm.core_engine import steps as stepwise
 from tests.guided import intake
+from tests.served_application import OWNER
 from tests.test_a_message_while_a_matter_waits import CHAT, SENT, held
 from tests.test_core_answer_sections import Scripted, scripted_answers
-from tests.test_core_served import OWNER, served  # noqa: F401 - served is a fixture
 from tests.test_steps_are_taken_up_after_a_restart import fingerprint_of
 from tests.test_steps_run_as_jobs import outcome
 

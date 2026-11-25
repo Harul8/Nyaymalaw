@@ -21,7 +21,7 @@ import pytest
 from nm.app import api
 from nm.core_engine.conversation import chat_matter_id
 from nm.work_the_file.matter_contracts import Matter
-from tests.test_core_served import OTHER, OWNER, served, source_url, successful  # noqa: F401 -- the fixture
+from tests.served_application import OTHER, OWNER, successful
 
 pytestmark = pytest.mark.class_a
 

@@ -20,13 +20,19 @@ from nm.app.admin_views import content_free, diagnostics_view
 from nm.app.composition import Application
 from nm.arrive.admin_access import SETTING, roster_from
 from nm.arrive.admin_checks import AdminChecks
-from nm.arrive.admin_port import AdminChecksPort, AdminTurnsPort, AdminUnavailable, Consumption, TurnDay, TurnsSummary
+from nm.arrive.admin_port import (
+    AdminChecksPort,
+    AdminUnavailable,
+    Consumption,
+    TurnDay,
+    TurnsSummary,
+)
 from nm.arrive.advocate_contracts import AdvocateIdentity, Enrolment, csrf_token, enrol, utcnow
 from nm.arrive.mail_outbox import FileOutbox
 from nm.arrive.store_directory import FileDirectory
 from nm.shared.store_file_store import FileMatterStore
 from nm.shared.turn_attempt_store import FileTurnAttempts
-from tests.test_core_served import KEY, PASSWORD
+from tests.served_application import KEY, PASSWORD
 from tests.test_core_turn import ScriptedModel, searcher
 
 pytestmark = pytest.mark.class_a

@@ -11,8 +11,7 @@ from nm.core_engine.conversation import chat_matter_id
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, Usage
 from tests.guided import intake
-from tests.test_core_served import served  # noqa: F401 - pytest fixture
-from tests.test_core_served import OWNER
+from tests.served_application import OWNER
 from tests.test_guided_intake import CHAT, counted, go, held, sent, stop
 
 NI_ACT = "The Negotiable Instruments Act, 1881"

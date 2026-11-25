@@ -15,7 +15,6 @@ from fastapi.testclient import TestClient
 
 from nm.app import api
 from nm.app.composition import NOT_CHECKED, NOT_READY, READY
-from tests.test_core_served import served  # noqa: F401 - served is a fixture
 from tests.test_steps_in_a_worker_of_their_own import split, until  # noqa: F401 - split is a fixture
 
 pytestmark = pytest.mark.class_a

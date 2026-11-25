@@ -18,8 +18,8 @@ import pytest
 
 from nm.app import api
 from nm.core_engine.conversation import ConversationRefused, stored_chat
+from tests.served_application import OWNER
 from tests.test_core_answer_sections import Scripted, scripted_answers
-from tests.test_core_served import OWNER, served  # noqa: F401 - pytest fixture
 
 pytestmark = pytest.mark.class_a
 SENT = {"message": "Inspect this reported account.", "turn_id": "turn-1", "steps": "interactive"}

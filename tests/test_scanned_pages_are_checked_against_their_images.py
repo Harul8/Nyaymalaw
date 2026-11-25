@@ -14,7 +14,6 @@ import pytest
 from nm.core_engine import copy_figures, documents, page_reading
 from nm.shared.model_port import ModelResult, ProviderUnavailable, Usage
 from tests.test_core_documents import ADVOCATE, desk, pdf  # noqa: F401 - pytest fixture
-from tests.test_core_served import served  # noqa: F401 - pytest fixture
 
 pytestmark = pytest.mark.class_a
 

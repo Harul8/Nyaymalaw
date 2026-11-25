@@ -11,7 +11,6 @@ from nm.core_engine.calls import TurnCalls
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_config import AUTO_TURN, DEFAULT_TURN_MODEL, KNOWN_TURN_CHOICES, TURN_CHOICES, TURN_MODELS
 from nm.shared.model_port import ModelResult, Prompt, Tier, Usage
-from tests.test_core_served import served  # noqa: F401 -- the fixture
 
 pytestmark = pytest.mark.class_a
 SCHEMA = {"type": "object", "properties": {"a": {"type": "string"}}, "required": ["a"]}

@@ -10,13 +10,13 @@ from contextlib import closing
 import pytest
 
 from nm.arrive.turn_event_port import TurnEventRefused
+from nm.arrive.usage_port import AllowanceUsedUp
 from nm.core_engine import turn as turn_code
 from nm.core_engine.conversation import ConversationRefused
 from nm.core_engine.documents import DocumentRefused
 from nm.shared.egress_contracts import EgressRefused
 from nm.shared.external_ai_contracts import ModelPermissionRefused
-from nm.arrive.usage_port import AllowanceUsedUp
-from tests.test_core_served import OWNER, served, successful  # noqa: F401 -- the fixture
+from tests.served_application import OWNER, successful
 
 pytestmark = pytest.mark.class_a
 DIGEST = hashlib.sha256(OWNER.encode("utf8")).hexdigest()

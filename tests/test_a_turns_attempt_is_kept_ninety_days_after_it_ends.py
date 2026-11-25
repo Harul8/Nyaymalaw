@@ -20,7 +20,7 @@ import pytest
 from nm.shared import turn_attempt_store
 from nm.shared.turn_attempt_port import AttemptRefused
 from nm.shared.turn_attempt_store import _SQL_V3, ENDED_KEPT_DAYS, VERSION, FileTurnAttempts
-from tests.test_core_served import served, successful  # noqa: F401 - served is a fixture
+from tests.served_application import successful
 
 pytestmark = pytest.mark.class_a
 

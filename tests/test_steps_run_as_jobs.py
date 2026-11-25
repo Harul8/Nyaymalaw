@@ -9,9 +9,9 @@ import pytest
 
 from nm.app.step_jobs import WAIT_SECONDS, StepJobs, wait_from
 from nm.shared.model_port import ProviderUnavailable
+from tests.served_application import OTHER, OWNER
 from tests.test_a_message_while_a_matter_waits import SENT
 from tests.test_core_answer_sections import Scripted, scripted_answers
-from tests.test_core_served import OTHER, OWNER, served  # noqa: F401 - pytest fixture
 
 
 class Held:

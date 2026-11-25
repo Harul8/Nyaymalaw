@@ -18,10 +18,16 @@ from nm.app.documents import ReadingJobs
 from nm.core_engine import page_reading
 from nm.core_engine.documents import DocumentRefused
 from nm.shared.external_ai_contracts import ModelPermissionRefused
-from nm.shared.model_port import USAGE_LIMIT_MESSAGE, ModelError, ModelResult, Usage, UsageLimitReached
+from nm.shared.model_port import (
+    USAGE_LIMIT_MESSAGE,
+    ModelError,
+    ModelResult,
+    Usage,
+    UsageLimitReached,
+)
+from tests.served_application import OTHER
 from tests.test_core_document_routes import desk, upload  # noqa: F401 - pytest fixtures and helper
 from tests.test_core_documents import pdf
-from tests.test_core_served import OTHER, OWNER, served  # noqa: F401 - pytest fixture
 from tests.test_pages_are_read_many_at_once_within_one_shared_limit import Counting, images
 
 pytestmark = pytest.mark.class_a

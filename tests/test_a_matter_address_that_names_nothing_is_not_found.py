@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.test_core_served import OTHER, OWNER, served, successful  # noqa: F401 - served is a fixture
+from tests.served_application import OTHER, OWNER, successful
 
 pytestmark = pytest.mark.class_a
 ADDRESSES = ("/api/matters/{}", "/api/matters/{}/transcript")

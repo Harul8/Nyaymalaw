@@ -3,12 +3,13 @@ turn asks it. Scripted models; what a real model asks is measured in a paid run,
 from __future__ import annotations
 
 import json
+
 import pytest
 
 from nm.core_engine import questions
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, ProviderUnavailable, Tier, Usage, UsageLimitReached
-from tests.test_core_served import OWNER, served  # noqa: F401 -- the fixture
+from tests.served_application import OWNER
 
 pytestmark = pytest.mark.class_a
 

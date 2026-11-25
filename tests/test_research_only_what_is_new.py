@@ -13,7 +13,6 @@ from tests.guided import intake
 from tests.test_a_message_while_a_matter_waits import CHAT, SENT, Reader, held, judged, reading, say
 from tests.test_additions_are_the_advocates_messages import go
 from tests.test_core_answer_sections import Scripted, scripted_answers
-from tests.test_core_served import served  # noqa: F401 - pytest fixture
 
 NEW = {"dispute": "D1", "question": "Whether a notice sent only by email was valid notice?",
        "why_needed": "The claim rests on the notice.", "law_to_check": ["Indian Contract Act, 1872"]}

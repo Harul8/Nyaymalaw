@@ -12,8 +12,8 @@ import pytest
 from nm.core_engine import research_note
 from nm.core_engine.conversation import chat_matter_id
 from nm.core_engine.turn import saved_rows
+from tests.served_application import OTHER
 from tests.test_core_calculation import MESSAGE, Calculating, Held, chain
-from tests.test_core_served import OTHER, served  # noqa: F401 - pytest fixture
 from tests.test_core_turn import ScriptedModel, run, store  # noqa: F401 - pytest fixture
 from tests.test_core_turn_documents import DocumentModel, material
 

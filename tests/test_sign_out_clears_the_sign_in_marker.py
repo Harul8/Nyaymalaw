@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import pytest
 
-from tests.test_core_served import served  # noqa: F401 -- the fixture
 
 pytestmark = pytest.mark.class_a
 

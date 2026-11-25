@@ -6,9 +6,9 @@ is added and the go-ahead in the same message is not taken (D310, D312). Code sa
 invented - no claim about how the real model reads real messages; not browser QA."""
 from nm.core_engine import message_reader, steps
 from nm.core_engine.conversation import chat_matter_id, queued_of
+from tests.served_application import OWNER
 from tests.test_a_message_while_a_matter_waits import CHAT, Reader, held, judged, reading, say
 from tests.test_a_specific_request_at_a_stop import waiting
-from tests.test_core_served import OWNER, served  # noqa: F401 - pytest fixture
 
 FACT = "The notice reached them on the fourth. Go ahead with the first dispute."
 QUESTION = "Separately, what is the court fee on a suit for possession?"

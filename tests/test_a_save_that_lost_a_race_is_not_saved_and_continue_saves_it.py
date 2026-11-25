@@ -17,11 +17,20 @@ import pytest
 
 from nm.core_engine import titles, turn
 from nm.core_engine.conversation import (
-    HEADER, SHOWN, ConversationRefused, commit_turn, hold_shown, open_turn, queued_of, sent, shown_of, title_of,
+    HEADER,
+    SHOWN,
+    ConversationRefused,
+    commit_turn,
+    hold_shown,
+    open_turn,
+    queued_of,
+    sent,
+    shown_of,
+    title_of,
 )
 from nm.shared.store_file_store import FileMatterStore
 from nm.shared.store_port import StaleWrite
-from tests.test_core_served import OWNER, send, served, successful  # noqa: F401 - pytest fixture
+from tests.served_application import OWNER, send, successful
 
 pytestmark = pytest.mark.class_a
 

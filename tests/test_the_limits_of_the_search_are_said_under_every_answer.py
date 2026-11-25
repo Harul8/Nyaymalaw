@@ -12,7 +12,7 @@ from __future__ import annotations
 import pytest
 
 from nm.core_engine import search_said
-from tests.test_core_served import served, successful  # noqa: F401 - pytest fixture
+from tests.served_application import successful
 
 pytestmark = pytest.mark.class_a
 

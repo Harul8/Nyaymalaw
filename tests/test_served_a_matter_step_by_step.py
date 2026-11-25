@@ -4,9 +4,9 @@ Done before any analysis saves the matter as it stands; a go-ahead the matter do
 never continued by the page by itself; the history says where it waits; a message sent without steps runs end to end as before.
 Offline: the scripted served application; not browser QA."""
 from nm.core_engine.conversation import stored_chat
-from tests.test_core_answer_sections import Scripted, scripted_answers
 from tests.guided import ACTS_FOR, intake
-from tests.test_core_served import OWNER, served  # noqa: F401 - pytest fixture
+from tests.served_application import OWNER
+from tests.test_core_answer_sections import Scripted, scripted_answers
 
 # Plan AN.62-AN.64: a new matter worked step by step goes through guided intake first; its message says whom the advocate
 # acts for, so that NM need not ask (D311).

@@ -16,9 +16,9 @@ import pytest
 
 from nm.arrive.admin_port import AdminChangeRefused
 from nm.arrive.advocate_contracts import utcnow
+from tests.served_application import OTHER, OWNER, successful
 from tests.test_core_document_routes import upload
 from tests.test_core_documents import Checker
-from tests.test_core_served import OTHER, OWNER, served, successful  # noqa: F401,F811 - served is a fixture
 
 pytestmark = pytest.mark.class_a
 

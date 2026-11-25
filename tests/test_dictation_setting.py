@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import pytest
 
 from nm.arrive.directory_port import AuthenticationUnavailable
-from tests.test_core_served import OTHER, OWNER, served  # noqa: F401 - pytest fixture
+from tests.served_application import OTHER, OWNER
 
 pytestmark = pytest.mark.class_a
 NOW = datetime(2026, 10, 15, 18, 0, tzinfo=timezone.utc)

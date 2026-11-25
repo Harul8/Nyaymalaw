@@ -19,9 +19,14 @@ import pytest
 from nm.arrive.admin_port import UNWRITTEN_LOG_LINES
 from nm.core_engine.conversation import stored_chat
 from nm.shared.egress_contracts import DataClass, EgressRefused, Processor, Sink
-from nm.shared.egress_policy import INDEX_PROCESSOR, OUTBOX_PROCESSOR, SCRIPTED_PROCESSOR, STORAGE_PROCESSOR
+from nm.shared.egress_policy import (
+    INDEX_PROCESSOR,
+    OUTBOX_PROCESSOR,
+    SCRIPTED_PROCESSOR,
+    STORAGE_PROCESSOR,
+)
+from tests.served_application import OWNER
 from tests.test_core_answer_sections import Scripted, scripted_answers
-from tests.test_core_served import OWNER, served  # noqa: F401 - served is a fixture
 
 pytestmark = pytest.mark.class_a
 

@@ -15,7 +15,7 @@ import json
 import pytest
 
 from nm.app import api
-from tests.test_core_served import served, successful  # noqa: F401 - served is a fixture
+from tests.served_application import successful
 
 pytestmark = pytest.mark.class_a
 MB = 1024 * 1024

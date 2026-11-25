@@ -22,7 +22,6 @@ from nm.shared.model_policed import PolicedModel
 from nm.shared.model_port import (USAGE_LIMIT_WORDS, ConfigurationError, ProviderUnavailable, Tier, Transcription,
                                   UsageLimitReached)
 from tests.test_core_documents import ADVOCATE, OTHER, Checker, desk  # noqa: F401 - pytest fixture
-from tests.test_core_served import served  # noqa: F401 - pytest fixture
 from tests.test_core_turn import run, store  # noqa: F401 - pytest fixture
 from tests.test_core_turn_documents import DocumentModel
 
@@ -231,5 +230,5 @@ def test_only_its_owner_plays_a_recording_back(served):
     played = served.client.get(f"/api/documents/{ref}/recording")
     assert played.status_code == 200 and played.content == wav()
     assert played.headers["content-type"] == "audio/wav" and played.headers["cache-control"] == "no-store"
-    from tests.test_core_served import OTHER as SECOND
+    from tests.served_application import OTHER as SECOND
     assert served.login(SECOND).get(f"/api/documents/{ref}/recording").status_code == 404

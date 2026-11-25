@@ -8,7 +8,6 @@ from nm.core_engine import calculation, steps
 from tests.test_a_message_while_a_matter_waits import CHAT, Reader, held, judged, reading, say, waiting_matter
 from tests.test_additions_are_the_advocates_messages import reviews_reading, written_one
 from tests.test_core_answer_sections import Scripted
-from tests.test_core_served import served  # noqa: F401 - pytest fixture
 
 FACT = "The advocate seeks the applicable law."
 VALUE = "The advocate seeks the law on a lease."

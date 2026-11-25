@@ -21,7 +21,6 @@ from nm.arrive.account_confirmation_contracts import PENDING_HOURS
 from nm.arrive.advocate_contracts import AdvocateIdentity, Enrolment, enrol, registration_consent, utcnow
 from nm.arrive.store_directory import EXPIRED_KEPT_DAYS, FileDirectory
 from tests.registration import CONSENT
-from tests.test_core_served import served  # noqa: F401 - served is a fixture
 from tests.test_turn_contract import KEY
 
 pytestmark = pytest.mark.class_a

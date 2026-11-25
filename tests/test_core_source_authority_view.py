@@ -5,15 +5,21 @@ from dataclasses import replace
 import pytest
 
 from nm.app import api
-from nm.core_engine import answer_sections, response_authorities, response_rendering, response_review, turn
+from nm.core_engine import (
+    answer_sections,
+    response_authorities,
+    response_rendering,
+    response_review,
+    turn,
+)
 from nm.core_engine.conversation import HEADER, chat_matter_id, commit_turn, digest, open_turn
 from tests import core_whole_answer
+from tests.served_application import OWNER, source_url, successful
 from tests.test_citation_check import _build
 from tests.test_core_authority_admission import use_statute
 from tests.test_core_response_authorities import Reader, draft_for, judgments, setup
-from tests.test_core_response_writer import source_use_v2, unit
 from tests.test_core_response_writer import accept as writer_fixture_accept
-from tests.test_core_served import OWNER, served, source_url, successful
+from tests.test_core_response_writer import source_use_v2, unit
 from tests.test_core_turn import ScriptedModel, searcher
 
 pytestmark = pytest.mark.class_a

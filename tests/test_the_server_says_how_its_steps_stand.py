@@ -6,7 +6,6 @@ from pathlib import Path
 
 from tests.test_a_message_while_a_matter_waits import SENT
 from tests.test_core_answer_sections import Scripted, scripted_answers
-from tests.test_core_served import served  # noqa: F401 - pytest fixture
 from tests.test_steps_in_a_worker_of_their_own import split, until  # noqa: F401 - pytest fixture
 from tests.test_steps_run_as_jobs import Held
 

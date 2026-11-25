@@ -10,10 +10,16 @@ import time
 import pytest
 
 from nm.core_engine import questions, research, steps
-from nm.core_engine.conversation import asking_of, chat_matter_id, save_asking, shown_of, stored_chat
-from tests.test_core_answer_sections import Scripted, scripted_answers
+from nm.core_engine.conversation import (
+    asking_of,
+    chat_matter_id,
+    save_asking,
+    shown_of,
+    stored_chat,
+)
 from tests.guided import ACTS_FOR, intake
-from tests.test_core_served import OWNER, served  # noqa: F401 - pytest fixture
+from tests.served_application import OWNER
+from tests.test_core_answer_sections import Scripted, scripted_answers
 from tests.test_nm_asks_in_the_middle_of_a_turn import Desk, proposal, proposer
 
 # Plan AN.62-AN.64: a new matter worked step by step goes through guided intake first; its message says whom the advocate

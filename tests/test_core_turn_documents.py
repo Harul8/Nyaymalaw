@@ -16,8 +16,8 @@ from nm.core_engine.conversation import ConversationRefused, chat_matter_id, ope
 from nm.core_engine.documents import DocumentRefused
 from nm.core_engine.turn import saved_rows
 from nm.shared.model_port import Prompt
+from tests.served_application import OTHER, OWNER
 from tests.test_core_documents import ADVOCATE, Checker, desk, pdf  # noqa: F401 - pytest fixture
-from tests.test_core_served import OTHER, OWNER, served  # noqa: F401 - pytest fixture
 from tests.test_core_turn import ScriptedModel, run, store  # noqa: F401 - pytest fixture
 
 pytestmark = pytest.mark.class_a

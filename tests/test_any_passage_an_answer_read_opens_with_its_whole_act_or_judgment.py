@@ -12,7 +12,7 @@ from nm.app.api import _words_stand_together
 from nm.core_engine.conversation import chat_matter_id
 from nm.core_engine.retrieval import SearchUnavailable
 from nm.core_engine.turn import saved_rows
-from tests.test_core_served import OTHER, OWNER, served, successful  # noqa: F401 - served is the fixture
+from tests.served_application import OTHER, OWNER, successful
 
 pytestmark = pytest.mark.class_a
 

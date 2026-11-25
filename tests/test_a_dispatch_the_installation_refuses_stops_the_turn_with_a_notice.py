@@ -15,8 +15,8 @@ import pytest
 from nm.core_engine import turn
 from nm.core_engine.conversation import stored_chat
 from nm.shared.egress_contracts import EgressRefused
+from tests.served_application import OWNER
 from tests.test_core_answer_sections import Scripted, scripted_answers
-from tests.test_core_served import OWNER, served  # noqa: F401 - served is a fixture
 
 pytestmark = pytest.mark.class_a
 SENT = {"message": "Inspect this reported account.", "turn_id": "turn-1"}

@@ -8,10 +8,10 @@ HTTPS. Offline: the app is asked directly; nobody signs in.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
-
-from pathlib import Path
 
 from nm.app import api
 from nm.app.composition import Application
@@ -19,7 +19,7 @@ from nm.app.main import create_app
 from nm.arrive.mail_outbox import FileOutbox
 from nm.arrive.store_directory import FileDirectory
 from nm.shared.store_file_store import FileMatterStore
-from tests.test_core_served import KEY
+from tests.served_application import KEY
 from tests.test_core_turn import ScriptedModel, searcher
 
 pytestmark = pytest.mark.class_a

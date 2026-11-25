@@ -1,12 +1,12 @@
 """Fresh exact-source refusal through HTTP; scripted review is wiring evidence."""
+import json
 from copy import deepcopy
 from dataclasses import replace
-import json
 
 import pytest
 
 from nm.core_engine.retrieval import _candidate
-from tests.test_core_served import OWNER, send, served
+from tests.served_application import OWNER, send
 from tests.test_current_brain_retrieval import Collection
 
 pytestmark = pytest.mark.class_a

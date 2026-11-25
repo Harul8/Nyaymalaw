@@ -8,7 +8,7 @@ import time
 
 import pytest
 
-from tests.test_core_served import OTHER, served  # noqa: F401 -- the fixture
+from tests.served_application import OTHER
 
 pytestmark = pytest.mark.class_a
 

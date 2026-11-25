@@ -19,8 +19,12 @@ import pytest
 from nm.app import main
 from nm.core_engine.conversation import chat_matter_id
 from nm.shared.store_file_store import PUT_BACK_DAYS
-from tests.test_core_served import OTHER, OWNER, served  # noqa: F401 - served is a fixture
-from tests.test_erase_now_erases_the_conversations_papers_unless_another_names_them import _sent, _upload, papers  # noqa: F401
+from tests.served_application import OTHER, OWNER
+from tests.test_erase_now_erases_the_conversations_papers_unless_another_names_them import (  # noqa: F401
+    _sent,
+    _upload,
+    papers,
+)
 
 pytestmark = pytest.mark.class_a
 

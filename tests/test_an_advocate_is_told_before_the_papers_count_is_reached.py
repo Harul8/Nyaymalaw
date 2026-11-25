@@ -19,7 +19,6 @@ import pytest
 from nm.app import documents as desk_rules
 from tests.test_core_document_routes import upload
 from tests.test_core_documents import Checker
-from tests.test_core_served import served  # noqa: F401 - served is a fixture
 
 pytestmark = pytest.mark.class_a
 ROOT = Path(__file__).resolve().parents[1]

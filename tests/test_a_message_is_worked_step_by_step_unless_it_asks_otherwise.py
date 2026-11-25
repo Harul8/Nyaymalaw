@@ -6,12 +6,13 @@ after the understanding as before. A go-ahead and a message sent without steps a
 application and scripted readers - no claim about how the real model reads real messages; not browser QA."""
 import pytest
 
-from nm.core_engine import message_reader, shown_words, steps as stepwise
+from nm.core_engine import message_reader, shown_words
+from nm.core_engine import steps as stepwise
 from nm.core_engine.conversation import chat_matter_id, shown_of, stored_chat
 from nm.shared.model_port import Completion, ModelResult, ProviderUnavailable, Usage
-from tests.test_core_answer_sections import Scripted, scripted_answers
 from tests.guided import ACTS_FOR, intake
-from tests.test_core_served import OWNER, served  # noqa: F401 - pytest fixture
+from tests.served_application import OWNER
+from tests.test_core_answer_sections import Scripted, scripted_answers
 
 # Plan AN.62-AN.64: a new matter worked step by step goes through guided intake first; its message says whom the advocate
 # acts for, so that NM need not ask (D311).

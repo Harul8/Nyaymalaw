@@ -18,7 +18,6 @@ from nm.app import api
 from nm.core_engine import steps
 from nm.shared.model_port import REQUEST_REJECTED_MESSAGE, ModelError, ProviderUnavailable, RequestRejected
 from tests.test_a_message_while_a_matter_waits import Reader, held, reading, say, waiting_matter
-from tests.test_core_served import served  # noqa: F401 - served is a fixture
 from tests.test_core_voice import Hearing, wav
 
 pytestmark = pytest.mark.class_a

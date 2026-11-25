@@ -10,7 +10,6 @@ from fastapi.testclient import TestClient
 from nm.app import api
 from nm.arrive.usage_port import TRIAL_MICRO_USD
 from nm.shared.model_port import USAGE_LIMIT_MESSAGE
-from tests.test_core_served import OWNER, served  # noqa: F401 -- the fixture
 from tests.test_usage_is_metered_and_limited import use_up
 
 pytestmark = pytest.mark.class_a

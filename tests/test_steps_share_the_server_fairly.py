@@ -9,9 +9,9 @@ import pytest
 from nm.app.step_jobs import AT_ONCE, PER_ADVOCATE, StepCancelled, StepJobs, count_from
 from nm.core_engine.conversation import chat_matter_id, stored_chat
 from tests.guided import intake
+from tests.served_application import OWNER
 from tests.test_a_message_while_a_matter_waits import SENT
 from tests.test_core_answer_sections import Scripted, scripted_answers
-from tests.test_core_served import OWNER, served  # noqa: F401 - pytest fixture
 from tests.test_steps_run_as_jobs import Held, outcome
 
 

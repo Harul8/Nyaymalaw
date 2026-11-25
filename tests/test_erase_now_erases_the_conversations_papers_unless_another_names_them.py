@@ -17,8 +17,8 @@ import logging
 import pytest
 
 from nm.app.documents import space
+from tests.served_application import OTHER, OWNER
 from tests.test_core_documents import Checker
-from tests.test_core_served import OTHER, OWNER, served  # noqa: F401 - served is a fixture
 from tests.test_core_turn_documents import without_documents
 
 pytestmark = pytest.mark.class_a

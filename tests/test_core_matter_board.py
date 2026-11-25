@@ -7,7 +7,7 @@ import pytest
 from nm.core_engine.conversation import chat_matter_id
 from nm.core_engine.matter_board import board
 from nm.core_engine.turn import saved_rows
-from tests.test_core_served import OTHER, OWNER, served, successful  # noqa: F401 - pytest fixture
+from tests.served_application import OTHER, successful
 from tests.test_core_turn import ScriptedModel, run, store  # noqa: F401 - pytest fixture
 
 pytestmark = pytest.mark.class_a

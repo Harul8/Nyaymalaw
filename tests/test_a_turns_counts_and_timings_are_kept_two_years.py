@@ -14,7 +14,6 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from nm.arrive.store_turn_events import KEPT_DAYS, FileTurnEvents
-from tests.test_core_served import served  # noqa: F401 - served is a fixture
 from tests.test_the_turn_record_keeps_a_content_free_line_for_each_finished_turn import ACCOUNT, line, rows
 
 pytestmark = pytest.mark.class_a

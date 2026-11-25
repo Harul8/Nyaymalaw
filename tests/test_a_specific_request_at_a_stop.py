@@ -10,7 +10,6 @@ from nm.core_engine import message_reader, steps
 from tests.guided import intake
 from tests.test_a_message_while_a_matter_waits import CHAT, SENT, Reader, held, judged, reading, say
 from tests.test_core_answer_sections import Scripted, scripted_answers
-from tests.test_core_served import served  # noqa: F401 - pytest fixture
 from tests.test_research_only_what_is_new import NEW, phrased
 
 ASKED = "What notice did the first dispute need, and was it given in time?"

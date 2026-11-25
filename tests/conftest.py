@@ -437,3 +437,17 @@ def client(tmp_path, monkeypatch, scripted_application_environment):
     c.sign_in = sign_in
     sign_in()
     return c
+
+
+@pytest.fixture
+def served(tmp_path, monkeypatch):
+    """THE SERVED APPLICATION on a throwaway store with scripted models, the owner signed in (tests/served_application.py).
+
+    Declared here once, so a test asks for it by name and imports nothing to get it (plan AN.57, 57e; D266): about ninety test
+    files used to import it from tests/test_core_served.py, each one then flagged by the lint as redefining what it imported.
+    The support module is read only when a test asks, so a fault in the application cannot stop unrelated tests from being
+    collected. A test file that declares its own `served` keeps its own.
+    """
+    from tests.served_application import application
+
+    yield from application(tmp_path, monkeypatch)

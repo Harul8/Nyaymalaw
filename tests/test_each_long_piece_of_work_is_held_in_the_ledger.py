@@ -23,8 +23,8 @@ from nm.shared.egress_contracts import Gatekeeper
 from nm.shared.egress_policy import egress_policy
 from nm.shared.store_file_store import FileMatterStore
 from nm.work_the_file.matter_contracts import Matter
+from tests.served_application import OWNER
 from tests.test_core_documents import ADVOCATE, ROOT, Checker
-from tests.test_core_served import OWNER, served  # noqa: F401 - served is a fixture
 from tests.test_core_voice import Hearing, wav
 
 pytestmark = pytest.mark.class_a

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.test_core_served import OWNER, served, successful  # noqa: F401 - served is a fixture
+from tests.served_application import OWNER, successful
 
 pytestmark = pytest.mark.class_a
 DAMAGE = {

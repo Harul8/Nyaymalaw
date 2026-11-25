@@ -10,7 +10,7 @@ import pytest
 from nm.arrive.usage_port import TRIAL_MICRO_USD
 from nm.core_engine.conversation import chat_matter_id
 from nm.shared.model_port import USAGE_LIMIT_MESSAGE
-from tests.test_core_served import OTHER, OWNER, no_answer_saved, send, served, successful  # noqa: F401 -- the fixture
+from tests.served_application import OTHER, OWNER, no_answer_saved, send, successful
 
 pytestmark = pytest.mark.class_a
 
