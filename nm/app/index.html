@@ -426,6 +426,13 @@
       <!-- Plan AN.53 (D241): what the advocate deleted, to put back within thirty days or erase now. -->
       <button type="button" id="deleted-chats-open" class="ghost rail-deleted">Recently deleted</button>
     </div>
+    <!-- THE HISTORY'S SEARCH (plan AN.55, 55b; D254, D355(e)): every word typed, in a title, the particulars or the advocate's own
+         messages; an empty box is the whole history. -->
+    <form id="history-search" class="history-search" role="search">
+      <label for="history-search-words" class="sr-only">Search your conversations</label>
+      <input id="history-search-words" type="search" maxlength="200" autocomplete="off"
+             placeholder="Search titles, particulars and your messages">
+    </form>
     <div class="rail-meta" id="rail-meta"></div>
     <div id="rail-body"></div>
   </aside>

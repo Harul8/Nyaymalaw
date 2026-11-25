@@ -159,7 +159,12 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 /* The conversation history reads as a list of conversations, not a full-width wall. */
 #pane-advise[data-view="list"] > .rail .rail-head,
 #pane-advise[data-view="list"] > .rail .rail-meta,
-#pane-advise[data-view="list"] #rail-body { width: min(52rem, 100%); margin-inline: auto; }
+#pane-advise[data-view="list"] #rail-body,
+#pane-advise[data-view="list"] > .rail .history-search { width: min(52rem, 100%); margin-inline: auto; }
+/* The history's search (plan AN.55, D254): one box under its heading; each row found says where. */
+.history-search { padding: 0 1.2rem 0.7rem; box-sizing: border-box; }
+.history-search input { width: 100%; box-sizing: border-box; font: inherit; padding: 0.45rem 0.6rem; }
+.row .found-in { font-style: italic; }
 /* LOAD MORE under the conversation history (owner decision O29; plan AN.23): a line saying how many are shown of
    how many, and the button that adds the next ten. */
 .rail-more { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem 1rem; padding: 0.3rem 0.2rem 1.4rem; }

@@ -46,6 +46,8 @@ PAGE_TESTS = [
     "a_conversation_is_renamed.mjs",
     # Plan AN.55 (55d3, D256): the conversation's particulars, with NM's proposals, and on the history row.
     "a_conversations_particulars.mjs",
+    # Plan AN.55 (55b, D254): the history's search box, paged like the history, each row saying where it was found.
+    "history_search.mjs",
 ]
 #: Run, with the cases it is given, by tests/test_the_screen_never_folds_a_disclosure.py.
 RUN_ELSEWHERE = {"render_turn_partition.mjs"}

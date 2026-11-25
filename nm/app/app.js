@@ -890,7 +890,31 @@ const HISTORY_PAGE = 10;
 // THE HISTORY LISTS CONVERSATIONS (plan AN.57, D292). The server's list holds a matter saved before conversations after them; those
 // records stay stored and the page no longer opens them, so their rows, their count and the pages that hold only them are not shown.
 function historyCounts(data) {
-  return `${data.chat_count} conversation${data.chat_count === 1 ? '' : 's'}`;
+  const counted = `${data.chat_count} conversation${data.chat_count === 1 ? '' : 's'}`;
+  // Plan AN.55 (55b, D254): a search's count says what it was for.
+  return typeof data.searched === 'string' && data.searched ? `${counted} found for “${data.searched}”` : counted;
+}
+
+// THE HISTORY'S SEARCH (plan AN.55, piece 55b; D254, D332, D355(e)). The box at the head of the history asks the server for the
+// conversations holding every word typed - in a title, the particulars or the advocate's own messages - shown as the history is,
+// ten at a time, each row saying where they were found. It asks once typing pauses, or at once on Enter; an empty box is the
+// whole history again. The words of answers and papers are not searched, and the page says so where nothing is found.
+const HISTORY_SEARCH_PAUSE = 300;
+
+function historyAddress(offset, words) {
+  return `/api/work?limit=${HISTORY_PAGE}&offset=${offset}${words ? `&q=${encodeURIComponent(words)}` : ''}`;
+}
+
+function searchHistory(words, { now = false } = {}) {
+  clearTimeout(state.historySearchTimer);
+  const wanted = String(words || '').trim();
+  const run = () => {
+    if (wanted === (state.historyWords || '')) return;
+    state.historyWords = wanted;
+    loadMatterList();
+  };
+  if (now) run();
+  else state.historySearchTimer = setTimeout(run, HISTORY_SEARCH_PAUSE);
 }
 
 function moreConversations(page) {
@@ -955,6 +979,13 @@ function historyChatRow(chat, generation, session, counter = 'matterListGenerati
     line.textContent = written;
     row.appendChild(line);
   }
+  // Plan AN.55 (55b, D355(e)): where a search found its words.
+  if (Array.isArray(chat.found_in) && chat.found_in.length) {
+    const found = document.createElement('div');
+    found.className = 'hint found-in';
+    found.textContent = `Found in: ${chat.found_in.filter((place) => typeof place === 'string').join(', ')}`;
+    row.appendChild(found);
+  }
   // Plan AN.48 (D164): where the conversation waits for the advocate, and for what.
   if (typeof chat.waiting === 'string' && chat.waiting) {
     const waiting = document.createElement('div');
@@ -984,7 +1015,7 @@ function historyChatRow(chat, generation, session, counter = 'matterListGenerati
 
 // THE LOAD MORE BUTTON under the rows, with a line saying how many are shown of how many. Each press asks for
 // the next ten; a press that fails says so and leaves what is shown where it is.
-function offerMoreHistory(body, first, shownCount, rowsOf, stale) {
+function offerMoreHistory(body, first, shownCount, rowsOf, stale, words = '') {
   if (!moreConversations(first)) return;
   const footer = document.createElement('div');
   footer.className = 'rail-more';
@@ -1006,7 +1037,7 @@ function offerMoreHistory(body, first, shownCount, rowsOf, stale) {
     status.textContent = 'Loading more…';
     let page;
     try {
-      page = await api(`/api/work?limit=${HISTORY_PAGE}&offset=${next}`);
+      page = await api(historyAddress(next, words));
     } catch (e) {
       if (stale()) return;
       status.textContent = `More could not be loaded: ${e.message}. What is shown stays.`;
@@ -1039,11 +1070,12 @@ async function loadMatterList() {
   const session = state.sessionGeneration;
   const body = $('rail-body');
   const stale = () => generation !== state.matterListGeneration || session !== state.sessionGeneration;
-  body.replaceChildren(stateBlock('building', 'Loading your conversations…'));
+  const words = state.historyWords || '';
+  body.replaceChildren(stateBlock('building', words ? 'Searching your conversations…' : 'Loading your conversations…'));
 
   let data;
   try {
-    data = await api(`/api/work?limit=${HISTORY_PAGE}&offset=0`);
+    data = await api(historyAddress(0, words));
   } catch (e) {
     if (stale()) return;
     // NEVER render an unreadable board as an empty one.
@@ -1062,7 +1094,11 @@ async function loadMatterList() {
     'Some work could not be loaded. This list may be incomplete. Retry before relying on it.') : null;
 
   if (!data.chats.length) {
-    body.replaceChildren(notice || stateBlock('empty', 'No conversations yet. Start one with + New matter.'));
+    const none = words
+      ? stateBlock('empty', `No conversation holds every one of these words. A title, the particulars and your own messages `
+        + 'are searched; the words of answers and papers are not.')
+      : stateBlock('empty', 'No conversations yet. Start one with + New matter.');
+    body.replaceChildren(...(notice ? [notice] : []), ...(notice && !words ? [] : [none]));
     return;
   }
 
@@ -1080,7 +1116,7 @@ async function loadMatterList() {
   };
   const firstRows = rowsOf(data);
   body.replaceChildren(...firstRows);
-  offerMoreHistory(body, data, firstRows.length, rowsOf, stale);
+  offerMoreHistory(body, data, firstRows.length, rowsOf, stale, words);
   if (notice) body.prepend(notice);
   selectMatterRow();
 }
@@ -7949,6 +7985,12 @@ $('delete-chat-confirm').addEventListener('click', () => deleteChat());
 $('delete-chat-erase').addEventListener('click', () => deleteChat({ erase: true }));
 $('deleted-chats-open').addEventListener('click', () => openDeletedChats());
 $('deleted-chats-close').addEventListener('click', () => $('deleted-chats-dialog').close());
+// Plan AN.55 (55b, D254): the history's search.
+$('history-search-words').addEventListener('input', (event) => searchHistory(event.target.value));
+$('history-search').addEventListener('submit', (event) => {
+  event.preventDefault();
+  searchHistory($('history-search-words').value, { now: true });
+});
 // Plan AN.55 (55c3, D255): renaming a conversation.
 $('rename-chat-close').addEventListener('click', () => $('rename-chat-dialog').close());
 $('rename-chat-form').addEventListener('submit', (event) => { event.preventDefault(); renameChat(); });
