@@ -75,12 +75,15 @@ from nm.core_engine.conversation import (
     SHOWN,
     ConversationRefused,
     TurnContext,
+    admitted_particulars,
     asking_of,
     chat_matter_id,
     checked_rows,
     named,
+    particulars_of,
     queued_of,
     save_name,
+    save_particulars,
     shown_of,
     shown_title,
     stored_chat,
@@ -2412,7 +2415,8 @@ _KEPT_LOCK = threading.Lock()
 #: checks it rests on. A line kept under anything else is derived again from its file.
 #: history-line-2 (plan AN.43, D81): a line carries the conversation's title.
 #: history-line-3 (plan AN.55, 55c2; D255): the title is the advocate's own name where they gave one, and the line says so.
-_LINE_VERSION = f'history-line-3/{CONVERSATION_CONTRACT}'
+#: history-line-4 (plan AN.55, 55d2; D256): a line carries the conversation's particulars, where it has any.
+_LINE_VERSION = f'history-line-4/{CONVERSATION_CONTRACT}'
 #: The most a page of the history may ask for; the page asks for ten (O29, 26 Oct 2026).
 _HISTORY_PAGE_MAX = 100
 _history_log = logging.getLogger('nm.history')
@@ -2491,6 +2495,13 @@ def _derived_line(store, matter_id):
                 # Plan AN.55 (55c2, D255): where that title is the advocate's own name for the conversation.
                 if _named_by_advocate(matter):
                     line['chat']['named'] = True
+                # Plan AN.55 (55d2, D256): its particulars, shown on the history row; none where they cannot be read reliably.
+                try:
+                    particulars = particulars_of(matter)
+                except ValueError:
+                    particulars = {}
+                if particulars:
+                    line['chat']['particulars'] = particulars
                 # Plan AN.48 (D164): where the conversation waits for the advocate, and for what.
                 waiting = stepwise.waiting_said(_held(matter))
                 if waiting:
@@ -2761,6 +2772,89 @@ def name_chat(chat_id: str, req: ChatName, advocate_id: Advocate, request: Reque
     # The history's line is derived again ahead of the next opening of the history (O29).
     background.add_task(_prepare_chat_line, advocate_id, chat_id)
     return {'state': 'saved', 'chat_id': chat_id, 'title': _title_text(written), 'named': _named_by_advocate(written)}
+
+
+# PLAN AN.55 (55d2; D256, D332, D355). The conversation's particulars - the client, the court, the case number, the next date -
+# are the advocate's, written by their hand. NM proposes some of them only from what its last understanding of the matter
+# already holds: no model call is made for them, and a proposal is filled in only when the advocate presses it. The next date
+# is the advocate's alone; the court is not proposed.
+
+#: Code's own words for where each proposal came from (D355(d)).
+_PROPOSED_SAID = {'client': 'NM took this party as your client', 'party': "A party in NM's understanding of the matter",
+                  'proceeding': 'A proceeding the papers name'}
+
+
+def _last_understanding(rows):
+    """NM's last understanding of the matter that names any party: the latest saved answer's research plan holding one, or
+    None. Read as saved; a record that does not hold one is passed over."""
+    for row in reversed(rows):
+        try:
+            understanding = row['activities']['research']['plan']['proposal']['understanding']
+        except (KeyError, TypeError):
+            continue
+        if isinstance(understanding, dict) and isinstance(understanding.get('parties'), list) and understanding['parties']:
+            return understanding
+    return None
+
+
+def _proposed_particulars(rows, kept):
+    """What NM proposes for the particulars (D355(d)): for the client, the parties of its last understanding, the one it took as
+    the client first; for the case number, each proceeding that understanding names with a number in it. Each passes the same
+    check the advocate's own words do, is not one already kept, and comes with code's words for where it came from."""
+    understanding = _last_understanding(rows) or {}
+    found = {'client': [], 'case_number': []}
+
+    def offer(field, value, said):
+        held, why = admitted_particulars({field: value if isinstance(value, str) else ''})
+        if why or field not in held or held[field] == kept.get(field):
+            return
+        if all(entry['value'] != held[field] for entry in found[field]):
+            found[field].append({'value': held[field], 'said': _PROPOSED_SAID[said]})
+
+    parties = [party for party in understanding.get('parties') or () if isinstance(party, dict)]
+    for party in sorted(parties, key=lambda party: party.get('client') is not True):
+        offer('client', party.get('who'), 'client' if party.get('client') is True else 'party')
+    for party in parties:
+        for part in party.get('parts') or ():
+            proceeding = part.get('proceeding') if isinstance(part, dict) else None
+            if isinstance(proceeding, str) and any(character.isdigit() for character in proceeding):
+                offer('case_number', proceeding, 'proceeding')
+    return found
+
+
+@app.get('/api/chats/{chat_id}/particulars')
+def chat_particulars(chat_id: str, advocate_id: Advocate, request: Request, response: Response):
+    """The conversation's particulars as kept, and what NM proposes for them from its last understanding of the matter."""
+    matter, rows = _read_chat(chat_id, advocate_id, request)
+    try:
+        kept = particulars_of(matter)
+    except ValueError as exc:
+        raise HTTPException(503, "This conversation's particulars could not be read reliably.") from exc
+    response.headers['Cache-Control'] = 'no-store'
+    return {'chat_id': chat_id, 'particulars': kept, 'proposed': _proposed_particulars(rows, kept)}
+
+
+class ChatParticulars(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    client: str | None = Field(default=None, max_length=2000)
+    court: str | None = Field(default=None, max_length=2000)
+    case_number: str | None = Field(default=None, max_length=2000)
+    next_date: str | None = Field(default=None, max_length=40)
+
+
+@app.put('/api/chats/{chat_id}/particulars', dependencies=[CsrfProtected])
+def write_particulars(chat_id: str, req: ChatParticulars, advocate_id: Advocate, request: Request,
+                      background: BackgroundTasks):
+    """The advocate's particulars for their conversation (D256), replacing those it had; a field left empty is not kept.
+    Refused, with why, where one cannot be kept."""
+    given = req.model_dump()
+    _, why = admitted_particulars(given)
+    if why:
+        raise HTTPException(422, {'code': 'particulars_not_kept', 'why': why[0].upper() + why[1:] + '.'})
+    written = _write_own(chat_id, advocate_id, request, lambda store, matter: save_particulars(store, matter, given),
+                         'Change its particulars')
+    background.add_task(_prepare_chat_line, advocate_id, chat_id)
+    return {'state': 'saved', 'chat_id': chat_id, 'particulars': particulars_of(written)}
 
 
 # ------------------------------------------------------------------ deleted, put back, erased ---
