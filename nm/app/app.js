@@ -5044,14 +5044,66 @@ function threadTitle() {
   heading.className = known ? 'thread-title' : 'thread-title unnamed';
   heading.textContent = typeof known === 'string' ? known : '';
   if (!chatId) return [heading];
-  // Plan AN.53 (D241): the conversation's own Delete, once it is saved - it asks first, naming the conversation.
+  // The conversation's own actions, once it is saved, in one row under its heading (plan AN.55, D355(b)).
+  const actions = document.createElement('div');
+  actions.className = 'thread-actions';
+  // Plan AN.55 (55c3, D255): Rename - the advocate's own name for it, shown in place of NM's title.
+  const rename = document.createElement('button');
+  rename.type = 'button';
+  rename.className = 'ghost thread-rename';
+  rename.textContent = 'Rename';
+  rename.setAttribute('aria-label', 'Rename this conversation');
+  rename.addEventListener('click', () => askToRenameChat(chatId, typeof known === 'string' ? known : ''));
+  // Plan AN.53 (D241): the conversation's own Delete - it asks first, naming the conversation.
   const remove = document.createElement('button');
   remove.type = 'button';
   remove.className = 'ghost thread-delete';
   remove.textContent = 'Delete';
   remove.setAttribute('aria-label', 'Delete this conversation');
   remove.addEventListener('click', () => askToDeleteChat(chatId, typeof known === 'string' ? known : null));
-  return [heading, remove];
+  actions.append(rename, remove);
+  return [heading, actions];
+}
+
+// RENAMING A CONVERSATION (plan AN.55, piece 55c3; D255, D355). The advocate's own name for it stands in place of NM's title in
+// the history, at its heading and in Recently deleted; an empty name gives NM's title back. The server's own words are said
+// where it refuses - a name it cannot keep, or while NM is working on the conversation - and nothing else changes.
+function askToRenameChat(chatId, shown) {
+  const dialog = $('rename-chat-dialog');
+  $('rename-chat-name').value = shown || '';
+  $('rename-chat-status').textContent = '';
+  $('rename-chat-save').disabled = false;
+  dialog.dataset.chatId = chatId;
+  if (!dialog.open) dialog.showModal();
+  $('rename-chat-name').focus();
+}
+
+async function renameChat() {
+  const dialog = $('rename-chat-dialog');
+  const chatId = dialog.dataset.chatId;
+  if (!chatId) return;
+  const save = $('rename-chat-save');
+  save.disabled = true;
+  $('rename-chat-status').textContent = 'Saving…';
+  let said;
+  try {
+    said = await api(`/api/chats/${encodeURIComponent(chatId)}/name`, { method: 'PUT',
+      headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: $('rename-chat-name').value }) });
+  } catch (e) {
+    if (e.obsolete) return;
+    $('rename-chat-status').textContent = [409, 422].includes(e.status) ? e.message : `It could not be renamed: ${e.message}`;
+    save.disabled = false;
+    return;
+  }
+  dialog.close();
+  delete dialog.dataset.chatId;
+  $('rename-chat-status').textContent = '';
+  // The heading shows the new name at once; a heading is otherwise kept as first named (D84).
+  if (shownChatId() === chatId) {
+    state.chatTitle = { chatId, text: typeof said.title === 'string' && said.title.trim() ? said.title.trim() : null };
+    repaint();
+  }
+  loadMatterList();
 }
 
 // DELETING A CONVERSATION (plan AN.53, D241). Asked first, naming the conversation: Delete takes it out of the history at once,
@@ -7782,6 +7834,9 @@ $('delete-chat-confirm').addEventListener('click', () => deleteChat());
 $('delete-chat-erase').addEventListener('click', () => deleteChat({ erase: true }));
 $('deleted-chats-open').addEventListener('click', () => openDeletedChats());
 $('deleted-chats-close').addEventListener('click', () => $('deleted-chats-dialog').close());
+// Plan AN.55 (55c3, D255): renaming a conversation.
+$('rename-chat-close').addEventListener('click', () => $('rename-chat-dialog').close());
+$('rename-chat-form').addEventListener('submit', (event) => { event.preventDefault(); renameChat(); });
 $('sessions-dialog').addEventListener('close', () => {
   state.sessionsGeneration += 1;
   $('sessions-body').textContent = '';

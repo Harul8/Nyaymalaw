@@ -42,6 +42,8 @@ PAGE_TESTS = [
     "start_or_resume.mjs",
     # Plan AN.67 (23d3, D331): a draft the advocate asked for, beneath its answer or its stop, with each version's Word file.
     "drafts_shown.mjs",
+    # Plan AN.55 (55c3, D255): Rename beside Delete under the conversation's heading.
+    "a_conversation_is_renamed.mjs",
 ]
 #: Run, with the cases it is given, by tests/test_the_screen_never_folds_a_disclosure.py.
 RUN_ELSEWHERE = {"render_turn_partition.mjs"}

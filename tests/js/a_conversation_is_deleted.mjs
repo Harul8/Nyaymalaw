@@ -67,8 +67,11 @@ const DELETED = { state: 'deleted', chat_id: 'new_c1', ref: 'chat_r1', deleted_a
 // ------------------------------------------------------------------ the conversation's own Delete, asked first ---
 {
   const { page, $ } = withAFirstMessage();
-  assert.equal(page.threadTitle().length, 2, 'a heading and its Delete');
-  const [, remove] = page.threadTitle();
+  assert.equal(page.threadTitle().length, 2, 'a heading and its actions');
+  // Plan AN.55 (D355(b)): the conversation's own actions in one row under its heading - Rename, then Delete.
+  const [, actions] = page.threadTitle();
+  assert.equal(actions.className, 'thread-actions');
+  const remove = actions.children.at(-1);
   assert.equal(remove.textContent, 'Delete');
   assert.equal(remove.attributes['aria-label'], 'Delete this conversation');
   await remove.click();
@@ -80,7 +83,7 @@ const DELETED = { state: 'deleted', chat_id: 'new_c1', ref: 'chat_r1', deleted_a
   assert.ok($('delete-chat-confirm').focused);
 
   page.state.chatTitle = { chatId: 'new_c1', text: 'Asha Rao v. Greenfield Builders' };
-  await page.threadTitle()[1].click();
+  await page.threadTitle()[1].children.at(-1).click();
   assert.equal($('delete-chat-named').textContent, '“Asha Rao v. Greenfield Builders”', 'a named one by its name');
 }
 {
@@ -97,7 +100,7 @@ function withAFirstMessage(options) {
 }
 
 async function asked(made) {
-  await made.page.threadTitle()[1].click();
+  await made.page.threadTitle()[1].children.at(-1).click();
   return made.$('delete-chat-dialog');
 }
 

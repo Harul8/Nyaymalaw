@@ -1662,7 +1662,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 
 /* ---------------------------------------------------- deleting a conversation (plan AN.53, D241) --- */
 .rail-head .rail-deleted { margin-left: auto; font-size: 0.85rem; padding: 0.2rem 0.55rem; }
-.thread-title + .thread-delete { display: block; margin: -0.7rem 0 1rem auto; font-size: 0.85rem; padding: 0.2rem 0.6rem; }
+/* The conversation's own actions under its heading: Rename and Delete (plan AN.55, D355(b); AN.53, D241). */
+.thread-title + .thread-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.4rem; margin: -0.7rem 0 1rem; }
+.thread-actions button { font-size: 0.85rem; padding: 0.2rem 0.6rem; }
+.rename-chat-form { display: grid; gap: 0.35rem; }
+.rename-chat-form input { font: inherit; padding: 0.45rem 0.55rem; }
 .delete-chat-named { font: 600 1.05rem/1.4 var(--f-serif); margin: 0.2rem 0 0.8rem; overflow-wrap: anywhere; }
 .delete-chat-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1rem; }
 button.danger { color: var(--signal); border-color: var(--signal); }

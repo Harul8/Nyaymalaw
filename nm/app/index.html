@@ -653,6 +653,20 @@
     <button type="button" id="delete-chat-erase" class="ghost danger">Erase now &ndash; this cannot be undone</button>
   </div>
 </dialog>
+<!-- RENAMING A CONVERSATION (plan AN.55, 55c3; D255): the advocate's own name for it, shown in place of NM's title; an empty
+     name gives NM's title back. -->
+<dialog id="rename-chat-dialog" class="account-dialog" aria-labelledby="rename-chat-title">
+  <div class="dialog-heading"><h2 id="rename-chat-title">Rename this conversation</h2>
+    <button type="button" id="rename-chat-close" class="ghost">Cancel</button></div>
+  <form id="rename-chat-form" class="rename-chat-form">
+    <label for="rename-chat-name">Name</label>
+    <input id="rename-chat-name" type="text" maxlength="120" autocomplete="off" spellcheck="true">
+    <p class="help">Shown in your history and at the conversation's beginning in place of NM's title. Leave it empty to show
+      NM's title again.</p>
+    <p id="rename-chat-status" role="status" aria-live="polite"></p>
+    <div class="delete-chat-actions"><button type="submit" id="rename-chat-save" class="primary">Save</button></div>
+  </form>
+</dialog>
 <dialog id="deleted-chats-dialog" class="account-dialog" aria-labelledby="deleted-chats-title">
   <div class="dialog-heading"><h2 id="deleted-chats-title">Recently deleted</h2>
     <button type="button" id="deleted-chats-close" class="ghost">Close</button></div>
