@@ -4,6 +4,7 @@ Account boundaries are retained from the previous active API. Retired legal
 engine routes are deliberately absent; their saved files are not modified.
 """
 from __future__ import annotations
+
 import asyncio
 import hmac
 import json
@@ -21,48 +22,97 @@ from math import ceil
 from pathlib import Path
 from typing import Annotated, Literal
 from urllib.parse import quote, unquote
-from fastapi import (BackgroundTasks, Cookie, Depends, FastAPI, Header, HTTPException, Query, Request, Response,
-                     WebSocket, WebSocketDisconnect)
+
+from fastapi import (
+    BackgroundTasks,
+    Cookie,
+    Depends,
+    FastAPI,
+    Header,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
-from starlette.concurrency import run_in_threadpool
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StrictBool, field_validator
-from nm.app.admin_api import admin_router
+from starlette.concurrency import run_in_threadpool
+
 from nm.app import held_pages
+from nm.app.admin_api import admin_router
 from nm.app.documents import papers_named
 from nm.app.static_assets import browser_assets_router
 from nm.app.turn_progress import STAGES as TURN_STAGES
 from nm.arrive import attempts_contracts as attempts
-from nm.arrive.advocate_contracts import PASSWORD_RESET_MINUTES, SESSION_IDLE_MINUTES, csrf_token, token_fingerprint, utcnow
+from nm.arrive.advocate_contracts import (
+    PASSWORD_RESET_MINUTES,
+    SESSION_IDLE_MINUTES,
+    csrf_token,
+    token_fingerprint,
+    utcnow,
+)
 from nm.arrive.directory_port import AccountBusy, AuthenticationUnavailable
 from nm.arrive.mail_port import MailNotConfirmed
 from nm.arrive.professional_access import read_professional_status
-from nm.core_engine.conversation import (CONTRACT as CONVERSATION_CONTRACT, HEADER, SHOWN, ConversationRefused,
-                                         TurnContext, asking_of, chat_matter_id, checked_rows, queued_of, shown_of, stored_chat,
-                                         title_of)
+from nm.core_engine import (
+    answer_sections,
+    checklist,
+    drafting,
+    research,
+    research_note,
+    response_writer,
+    search_said,
+    voice,
+)
 from nm.core_engine import documents as document_rules
-from nm.core_engine import drafting, research_note, search_said, voice
-from nm.core_engine.response_rendering import unit_index
-from nm.core_engine.matter_board import board as matter_board
-from nm.core_engine.turn import AUTHORITY_CONTRACT as AUTHORITY_CORE_TURN, SECTIONED as SECTIONED_CORE_TURNS
-from nm.core_engine.turn import CALCULATION_CONTRACT as CALCULATION_CORE_TURN
-from nm.core_engine.turn import RELEASE_CONTRACT as RELEASE_CORE_TURN
-from nm.core_engine.turn import RECORDS_CONTRACT as RECORDS_CORE_TURN
-from nm.core_engine import answer_sections
-from nm.core_engine.turn import LEGACY_CONTRACT as LEGACY_CORE_TURN, STOP_NEEDS, STOPS, activity_of, saved_rows
-from nm.core_engine import research, response_writer
 from nm.core_engine import steps as stepwise
-from nm.core_engine import checklist
+from nm.core_engine.conversation import CONTRACT as CONVERSATION_CONTRACT
+from nm.core_engine.conversation import (
+    HEADER,
+    SHOWN,
+    ConversationRefused,
+    TurnContext,
+    asking_of,
+    chat_matter_id,
+    checked_rows,
+    named,
+    queued_of,
+    save_name,
+    shown_of,
+    shown_title,
+    stored_chat,
+)
+from nm.core_engine.matter_board import board as matter_board
+from nm.core_engine.reasoning import CHOICE_WORDS as EFFORT_WORDS
+from nm.core_engine.reasoning import CHOICES as EFFORT_CHOICES
+from nm.core_engine.reasoning import DEFAULT_CHOICE as DEFAULT_EFFORT
+from nm.core_engine.response_rendering import unit_index
 from nm.core_engine.retrieval import SearchUnavailable
+from nm.core_engine.turn import AUTHORITY_CONTRACT as AUTHORITY_CORE_TURN
+from nm.core_engine.turn import CALCULATION_CONTRACT as CALCULATION_CORE_TURN
+from nm.core_engine.turn import LEGACY_CONTRACT as LEGACY_CORE_TURN
+from nm.core_engine.turn import RECORDS_CONTRACT as RECORDS_CORE_TURN
+from nm.core_engine.turn import RELEASE_CONTRACT as RELEASE_CORE_TURN
+from nm.core_engine.turn import SECTIONED as SECTIONED_CORE_TURNS
+from nm.core_engine.turn import STOP_NEEDS, STOPS, activity_of, saved_rows
 from nm.shared.citation_contracts import judgment_place, provision_label, statute_title
-from nm.core_engine.reasoning import CHOICE_WORDS as EFFORT_WORDS, CHOICES as EFFORT_CHOICES, DEFAULT_CHOICE as DEFAULT_EFFORT
+from nm.shared.clock_contracts import FORUM
 from nm.shared.egress_contracts import EgressRefused
 from nm.shared.external_ai_contracts import ModelPermissionRefused
-from nm.shared.model_config import DEFAULT_TURN_MODEL, TURN_CHOICES
-from nm.shared.model_port import REQUEST_REJECTED_MESSAGE, USAGE_LIMIT_MESSAGE, ModelError, RequestRejected, UsageLimitReached
-from nm.shared.clock_contracts import FORUM
 from nm.shared.identity_contracts import source_fingerprint
+from nm.shared.model_config import DEFAULT_TURN_MODEL, TURN_CHOICES
+from nm.shared.model_port import (
+    REQUEST_REJECTED_MESSAGE,
+    USAGE_LIMIT_MESSAGE,
+    ModelError,
+    RequestRejected,
+    UsageLimitReached,
+)
 from nm.shared.storage_errors_port import StoredObjectUnreadable
+from nm.shared.store_port import StaleWrite
 from nm.shared.traceability_contracts import implements
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -2361,7 +2411,8 @@ _KEPT_LOCK = threading.Lock()
 #: What a line kept on disk was derived under (O29): its shape, and the conversation contract whose receipt
 #: checks it rests on. A line kept under anything else is derived again from its file.
 #: history-line-2 (plan AN.43, D81): a line carries the conversation's title.
-_LINE_VERSION = f'history-line-2/{CONVERSATION_CONTRACT}'
+#: history-line-3 (plan AN.55, 55c2; D255): the title is the advocate's own name where they gave one, and the line says so.
+_LINE_VERSION = f'history-line-3/{CONVERSATION_CONTRACT}'
 #: The most a page of the history may ask for; the page asks for ten (O29, 26 Oct 2026).
 _HISTORY_PAGE_MAX = 100
 _history_log = logging.getLogger('nm.history')
@@ -2437,6 +2488,9 @@ def _derived_line(store, matter_id):
             if line['chat'] is not None:
                 # Plan AN.43 (D81): the line is shown under its title; until there is one, the page shows the message's first words.
                 line['chat']['title'] = _title_text(matter)
+                # Plan AN.55 (55c2, D255): where that title is the advocate's own name for the conversation.
+                if _named_by_advocate(matter):
+                    line['chat']['named'] = True
                 # Plan AN.48 (D164): where the conversation waits for the advocate, and for what.
                 waiting = stepwise.waiting_said(_held(matter))
                 if waiting:
@@ -2448,12 +2502,23 @@ def _derived_line(store, matter_id):
 
 
 def _title_text(matter):
-    """The conversation's title as the history shows it (D81), or None where it has none yet or it cannot be read reliably."""
+    """The conversation's title as the history shows it (D81), or None where it has none yet or it cannot be read reliably. Plan
+    AN.55 (55c2, D255): the advocate's own name for it where they gave one, in place of NM's title - here, so that the history,
+    the conversation's heading and Recently deleted all show it."""
     try:
-        title = title_of(matter)
+        title = shown_title(matter)
     except ValueError:
         return None
     return title['text'] if title else None
+
+
+def _named_by_advocate(matter):
+    """Whether the title shown is the advocate's own name for the conversation (D255)."""
+    try:
+        title = shown_title(matter)
+    except ValueError:
+        return False
+    return bool(title) and title['by'] == 'advocate'
 
 
 def _first_message(matter):
@@ -2636,6 +2701,68 @@ def chat_title(chat_id: str, advocate_id: Advocate, request: Request, response: 
     return {'chat_id': chat_id, 'title': _title_text(matter)}
 
 
+# ------------------------------------------------------------------ the advocate's own name and particulars ---
+#
+# PLAN AN.55 (55c2, D255, D355). The advocate renames their own conversation; the name stands in place of NM's title wherever
+# the title is shown, and NM's title is never written over it. The write is the advocate's own, made only while NM is not
+# working on the conversation (D355(a)): a write made meanwhile, beside a turn at work, would make that turn's own save be
+# refused. The store decides whose a conversation is; another's is not there for them.
+
+def _at_work(matter, advocate_id):
+    """Whether NM is working on this conversation now - a turn of it in progress (D241, D355(a))."""
+    held = _held(matter) if matter is not None else None
+    return held is not None and application().turn_running(advocate_id, held['turn_id'])
+
+
+def _write_own(chat_id, advocate_id, request, write, what):
+    """One of the advocate's own writes to their conversation (D355(a)), confirmed by the store: write(store, matter) returns the
+    conversation as written. Refused while NM works on it; where the conversation moved between reading and writing, it is read
+    again once and the write made on it as it then stands. what: the change, as the refusal names it ("Rename it")."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    store, matter_id = application().store, chat_matter_id(advocate_id, chat_id)
+    for attempt in range(2):
+        try:
+            matter = store.load_for(matter_id, advocate_id)
+        except _UNREADABLE as exc:
+            raise HTTPException(503, 'This conversation could not be read reliably.') from exc
+        if matter is None or HEADER not in (matter.intake_answers or {}):
+            raise HTTPException(404, 'Conversation not available.')
+        if _at_work(matter, advocate_id):
+            raise HTTPException(409, {'code': 'conversation_at_work',
+                                      'why': f'NM is working on this conversation. {what} once NM has finished or stopped.'})
+        try:
+            written = write(store, matter)
+        except StaleWrite as exc:
+            if attempt:
+                raise HTTPException(409, {'code': 'changed_meanwhile', 'why': 'The conversation changed while this was being '
+                                          'saved, so nothing was saved. Try again.'}) from exc
+            continue
+        except OSError as exc:
+            raise HTTPException(503, {'code': 'not_saved', 'why': 'It could not be saved just now. Nothing was changed.'}) from exc
+        _let_go(matter_id)
+        return written
+    raise AssertionError('unreachable')  # pragma: no cover - the loop returns or raises
+
+
+class ChatName(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    name: str | None = Field(default=None, max_length=2000)
+
+
+@app.put('/api/chats/{chat_id}/name', dependencies=[CsrfProtected])
+def name_chat(chat_id: str, req: ChatName, advocate_id: Advocate, request: Request, background: BackgroundTasks):
+    """The advocate's own name for their conversation (D255): it stands in place of NM's title; an empty one gives NM's title
+    back. Refused, with why, where it cannot be kept (one line, at most 120 characters, no link or request for a secret)."""
+    name, why = named(req.name)
+    if why:
+        raise HTTPException(422, {'code': 'name_not_kept', 'why': why[0].upper() + why[1:] + '.'})
+    written = _write_own(chat_id, advocate_id, request, lambda store, matter: save_name(store, matter, name), 'Rename it')
+    # The history's line is derived again ahead of the next opening of the history (O29).
+    background.add_task(_prepare_chat_line, advocate_id, chat_id)
+    return {'state': 'saved', 'chat_id': chat_id, 'title': _title_text(written), 'named': _named_by_advocate(written)}
+
+
 # ------------------------------------------------------------------ deleted, put back, erased ---
 #
 # AN ADVOCATE DELETES A CONVERSATION (plan AN.53, D241's third piece, its routes - 53h3a). The store marks a conversation
@@ -2675,8 +2802,7 @@ def delete_chat(chat_id: str, advocate_id: Advocate, request: Request):
         matter = store.load_for(matter_id, advocate_id)
     except _UNREADABLE:
         matter = None  # the advocate's own conversation that will not open may be deleted all the same; nothing works on it
-    held = _held(matter) if matter is not None else None
-    if held is not None and application().turn_running(advocate_id, held['turn_id']):
+    if _at_work(matter, advocate_id):
         raise HTTPException(409, {'code': 'conversation_at_work',
                                   'why': 'NM is working on this conversation. Stop it, or let it finish, and then delete it.'})
     try:
