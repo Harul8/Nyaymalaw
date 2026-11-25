@@ -17,6 +17,10 @@ rather than a matter to be worked through, is worked straight through. The model
 code says what NM does, with the model's reading after it, marked. A reading that fails or is unclear leaves the message step by
 step, which stops before any research is paid for.
 
+Plan AN.61 (61a, D309): that reading may also say research_all - the advocate plainly asks for the law on every dispute to be
+researched, and no more; the turn then understands the matter and researches every dispute, and stops for review before any
+analysis is written (turn._worked_as_asked).
+
 Plan AN.67 (23d4, D331): at a stop that has drafted, a message may also be a change to a draft - change_draft, with its dispute and
 the parts it concerns. The reader is shown each draft at the stop, part by part; code admits only a draft the stop holds and parts
 of its template, writes again only the parts the writer writes - never set wording, whose particulars come from the parts that
@@ -264,8 +268,10 @@ def admitted(data, held):
 
 
 WAY_OPERATION = "core_message_way"
-#: How a message may ask to be worked (D287): step by step, the default; end to end; one specific thing.
-WAYS = ("steps", *stepwise.WAYS)
+#: How a message may ask to be worked (D287): step by step, the default; end to end; one specific thing; and (61a, D309) the research
+#: of every dispute and no more.
+RESEARCH_ALL = "research_all"
+WAYS = ("steps", *stepwise.WAYS, RESEARCH_ALL)
 #: Code's words where a message is worked straight through: NM's status, said as the work begins; the model's reading after them.
 WAY_SAID = {"end_to_end": "NM read your message as asking for the work end to end, so it is working straight through without "
                           "stopping for your go-ahead. Press Stop to stop it.",
@@ -276,7 +282,7 @@ WAY_PROMPT = """You are an Indian advocate's junior. The advocate has just sent 
 
 Purpose: tell whether the advocate wants this message worked otherwise - straight through - so that they are not stopped where they did not want to be, and are stopped wherever they may want to see the work first.
 
-Outcome: way - end_to_end where the advocate plainly asks for the work to be done straight through, end to end, without stopping; specific where the message asks for one specific thing - a question answered, a document drafted, a point looked up - rather than a matter to be worked through with them; steps otherwise, and wherever you are not sure. Then said: in a sentence, to the advocate, how you read the message, so that they can correct you.
+Outcome: way - end_to_end where the advocate plainly asks for the work to be done straight through, end to end, without stopping; research_all where they ask for the law on every dispute to be researched and no more - research alone, even where they say to research it end to end - so that they see what was found before anything is written; specific where the message asks for one specific thing - a question answered, a document drafted, a point looked up - rather than a matter to be worked through with them; steps otherwise, and wherever you are not sure. Then said: in a sentence, to the advocate, how you read the message, so that they can correct you.
 
 Work in a loop: read the message with what came before it in the conversation, decide, check your reading against the advocate's exact words, correct it, then answer."""
 WAY_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["way", "said"],
@@ -291,10 +297,10 @@ def way_material(message, *, earlier=(), papers=0):
 
 
 def way(model, message, *, earlier=(), papers=0):
-    """How a message sent step by step asks to be worked (D287): {"how": "steps" | "end_to_end" | "specific", "said": code's words
-    with the model's reading after them, marked where it may be shown at all ("" for steps)}. Asked once more, told why, where the
-    first answer cannot be admitted; step by step where it still cannot. A failure of the model raises, for the caller to work the
-    message step by step."""
+    """How a message sent step by step asks to be worked (D287): {"how": "steps" | "end_to_end" | "specific" | "research_all",
+    "said": code's words with the model's reading after them, marked where it may be shown at all ("" for steps and for
+    research_all, whose stop says what was done)}. Asked once more, told why, where the first answer cannot be admitted; step by
+    step where it still cannot. A failure of the model raises, for the caller to work the message step by step."""
     from nm.shared.model_port import Prompt, Tier, canonical_schema_data
 
     given = way_material(message, earlier=earlier, papers=papers)
@@ -307,8 +313,8 @@ def way(model, message, *, earlier=(), papers=0):
                                                                                        json.dumps(WAY_SCHEMA)))
         data = canonical_schema_data(receipt.data, WAY_SCHEMA) if receipt.usable and receipt.data is not None else None
         how = data.get("way") if isinstance(data, dict) else None
-        if how == "steps":
-            return {"how": "steps", "said": ""}
+        if how in ("steps", RESEARCH_ALL):
+            return {"how": how, "said": ""}
         if how in WAY_SAID:
             return {"how": how, "said": shown_words.said(WAY_SAID[how], data.get("said"))}
         log.info("How the message asks to be worked was not admitted")

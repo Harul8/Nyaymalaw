@@ -95,6 +95,24 @@ def test_a_fresh_research_only_route_saves_every_dispute_and_pauses(served, monk
     assert readings == [requested['message']]
 
 
+def test_the_reading_of_the_words_can_ask_for_the_research_of_every_dispute_and_no_more(served):
+    # Plan AN.61 (61a, D309): the route above is taken from the reading itself - one call - with no analysis written.
+    scripted = Scripted()
+    scripted_answers(served, scripted)
+    served.model.way, served.model.way_reading = message_reader.RESEARCH_ALL, "Research both disputes and stop."
+    assert message_reader.RESEARCH_ALL in message_reader.WAY_SCHEMA["properties"]["way"]["enum"]
+    requested = {**SENT, "message": "Research the law on both disputes and show me what you find before any analysis."}
+    reply = served.client.post("/api/turn", json=requested)
+    assert reply.status_code == 409 and reply.json()["detail"]["code"] == "waiting"
+    assert [asked["new_message"] for asked in served.model.ways] == [requested["message"]]
+    held = shown_of(served.store.load(chat_matter_id(OWNER, CHAT)))
+    # Not through guided intake, not straight through: the understanding and the research, then the stop for review.
+    assert held["go"]["allowed"] == ["understand", "research"] and "guided" not in held["go"] and "way" not in held["go"]
+    assert set(held["steps"]["parts"]) == {"D1", "D2"} and held["steps"]["answered"] is None
+    assert not scripted.payloads("core_response_writer")
+    assert served.client.get(f"/api/chats/{CHAT}").json()["pending"]["stopped"]["waiting"]["after"] == "researched"
+
+
 def test_the_page_is_told_how_a_message_worked_straight_through_asked_for_it(served):
     # The review refused part-way: the turn stops with what it finished kept, and its record is what the page reads.
     scripted_answers(served, Scripted(refuse={"core_response_review"}))
