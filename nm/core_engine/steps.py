@@ -59,6 +59,10 @@ MOVES = {"right": READ, "identify": OFFER, "confirm": PROPOSED}
 #: Plan AN.67 (23d2, D331): "draft" - the draft of a held template, for a dispute whose analysis is written and whose research
 #: rests on it, offered by code and written only on the advocate's go-ahead.
 GOS = ("next", "research", "write", "end_to_end", "done", "search_again", "draft", *MOVES)
+#: Plan AN.61 (61b, D309): a specific request at a stop, read from the advocate's message and never a button (so neither a step's
+#: record nor the go-ahead route takes it): for the disputes it concerns, the research where not yet researched and the analysis;
+#: the other disputes wait.
+WORK = "work"
 _FIELDS = {"mode", "allowed", "n", "waiting"}
 #: What a go-ahead record may add (48b: the disputes named; 48c: the messages heard while the matter waited; 48e: each step's
 #: tentative time beside the time it took; D175: how a follow-up's turn started; D287: a message worked straight through as it
@@ -320,6 +324,18 @@ def heard(go, text, taken, said):
     return {**go, "heard": [*(go.get("heard") or ()), entry]}
 
 
+def added_id(turn_id, number):
+    """The source of the number-th message the advocate added while the turn's matter waited (48h, D159; conversation.added_messages
+    numbers them so)."""
+    return f"{turn_id}:added{number}"
+
+
+def added_source(held):
+    """The source the advocate's next message joins the waiting matter under (48h, D159): the turn's own, numbered after those
+    added before - so that a question proposed for what is new (48i) names the message it came from."""
+    return added_id(held["turn_id"], len(held.get("added", ())) + 1)
+
+
 def _change_valid(change, draft):
     """Plan AN.67 (23d4): a change of a draft is only of the draft a run writes, and names its parts once each and its message."""
     if change is None:
@@ -495,14 +511,15 @@ def given(go, choice, *, held, disputes=None, at=None):
     """The go-ahead the advocate gives a waiting turn (48a3, 48b): "research" or "write" for the disputes named (None: every
     dispute that step can now take), "next" (the unambiguous next step), "end_to_end" (every remaining
     step for every dispute,
-    without stopping, D135) or "done" (finish with what is written, D147). Returns the go-ahead for the next run, or None for Done
+    without stopping, D135), "done" (finish with what is written, D147) or "work" (61b: a specific request - the research where
+    needed and the analysis of the disputes named, the others waiting). Returns the go-ahead for the next run, or None for Done
     before any analysis is written - the matter is then saved as it stands, with no step run. At a guided stop (AN.62-AN.64) its
     move returns the record already waiting at the next stop (moved): nothing runs. at: the stop the advocate answered, as its
     card gave it (D312: a confirmation is bound to the proposal shown). ValueError where the turn does not wait, the choice is not
     one its stop offers, or a dispute named is not one it can take that step for."""
     waiting = go.get("waiting") if isinstance(go, dict) else None
     after = waiting.get("after") if isinstance(waiting, dict) else None
-    if not valid(go) or after not in WAITS or choice not in GOS:
+    if not valid(go) or after not in WAITS or choice not in (*GOS, WORK):
         raise ValueError("This conversation is not waiting for that")
     if after in GUIDED:
         return _guided_given(go, choice, after, held, disputes, at)
@@ -541,6 +558,23 @@ def given(go, choice, *, held, disputes=None, at=None):
             raise ValueError("NM offers no draft for that dispute")
         return {"mode": MODE, "allowed": ["write"], "n": go["n"] + 1, "waiting": None,
                 "disputes": None if state["whole"] else names, "draft": names, **_carried(go)}
+    if choice == WORK:
+        # Plan AN.61 (61b, D309): a specific request authorises its deliverable and the work it needs - for each dispute it
+        # concerns, its research where not yet researched (or extended for what is new, 48i) and its analysis; the other disputes
+        # wait, and the matter stops as after any analysis. For an answer written as a whole: its remaining steps, as End to end.
+        if state["whole"]:
+            if disputes is not None:
+                raise ValueError("This request is for the whole answer")
+            if not unresearched and not unwritten:
+                raise ValueError("NM has nothing left to research or write for this answer")
+            start = "research" if unresearched else "write"
+            return {"mode": MODE, "allowed": list(STEPS[STEPS.index(start):]), "n": go["n"] + 1, "waiting": None,
+                    "disputes": None, **_carried(go)}
+        if disputes is None or not set(disputes) <= set(unresearched) | set(unwritten):
+            raise ValueError("Name the disputes the request concerns, each still to be researched or written")
+        named = [name for name in state["order"] if name in disputes]
+        return {"mode": MODE, "allowed": ["research", "write"] if set(named) & set(unresearched) else ["write"],
+                "n": go["n"] + 1, "waiting": None, "disputes": named, **_carried(go)}
     if choice == "next":
         if unwritten:
             choice, eligible = "write", unwritten

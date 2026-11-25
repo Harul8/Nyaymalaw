@@ -601,7 +601,8 @@ class Application:
 
     def message_turn(self, *, advocate_id, chat_id, turn_id, message, session_current, document_refs=()):
         """A message sent while a matter waits for the advocate (plan AN.48, 48c; D146, D158): the message reader judges what it is.
-        A go-ahead runs its step, as its button would; information, a correction or a rethink joins the matter as the advocate's
+        A go-ahead runs its step, as its button would; a specific request (work, plan AN.61, 61b) runs the work it needs for the
+        disputes it concerns, the message joining the matter as the advocate's own; information, a correction or a rethink joins the matter as the advocate's
         words and the matter is understood again with them (D149); a new question waits above the message box until the matter is
         done; an unclear message is answered with the question that would settle it. Papers sent with it are information. How NM
         took the message is kept with the matter ('heard') and said at its stop. Returns the step's outcome as go_turn does, or
@@ -655,6 +656,7 @@ class Application:
                 heard_only('unread', 'NM could not read this message just now. It is kept here: use the buttons, or send it '
                                      'again.')
         kind = judgement['kind']
+        entry = {'text': message, 'documents': list(documents), 'at': datetime.now(timezone.utc).isoformat()}
         if kind == 'go':
             listened = stepwise.heard(held['go'], message, kind, judgement['said'])['heard']
             go = {**judgement['go'], 'heard': listened} if judgement['go'] is not None else None
@@ -666,8 +668,11 @@ class Application:
                                  session_current=session_current)
             if stepwise.moved(go):  # AN.62-AN.64: a guided stop settled in words - no step runs
                 self._moved(matter, held, go)
+            if judgement.get('joins'):
+                # Plan AN.61 (61b, D309): a specific request joins the matter as the advocate's own, after the latest (citable,
+                # 48h), so that the work it asked for is done on its words - and what is new it raised names it.
+                return ran(go, appended=[entry])
             return ran(go)
-        entry = {'text': message, 'documents': list(documents), 'at': datetime.now(timezone.utc).isoformat()}
         if kind == 'change_draft':
             # Plan AN.67 (23d4, D331): a change to a draft at this stop. Where it names parts the writer writes, the message joins
             # the matter as the advocate's own, after the latest (citable, 48h), the run writes those parts again and saves the
@@ -677,7 +682,7 @@ class Application:
                 heard_only(kind, judgement['said'])
             listened = stepwise.heard(held['go'], message, kind, judgement['said'])
             go = stepwise.changing({**listened, 'recheck': True}, held, judgement['draft'], judgement['parts'],
-                                   f"{turn_id}:added{len(held.get('added', ())) + 1}")
+                                   stepwise.added_source(held))
             return ran(go, appended=[entry])
         if kind in ('information', 'correction') and stepwise.waiting_of(held) in stepwise.GUIDED:
             # Plan AN.62-AN.64 (D310-D312): before the disputes are confirmed, what the advocate adds or corrects - papers among it -
@@ -696,7 +701,7 @@ class Application:
             critical = judgement['critical']
             said = judgement['said']
             proposed = [{'dispute_id': entry['dispute'], 'question': entry['question'], 'why_needed': entry['why_needed'],
-                         'law_to_check': entry['law_to_check'], 'source': f"{turn_id}:added{len(held.get('added', ())) + 1}"}
+                         'law_to_check': entry['law_to_check'], 'source': stepwise.added_source(held)}
                         for entry in (judgement.get('new_questions') or ())]
             if proposed:
                 # 48i (D156): what is new offered for research, run only on the advocate's go-ahead (D136, D144); code says it.

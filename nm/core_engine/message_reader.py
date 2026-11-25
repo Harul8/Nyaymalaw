@@ -21,6 +21,12 @@ Plan AN.61 (61a, D309): that reading may also say research_all - the advocate pl
 researched, and no more; the turn then understands the matter and researches every dispute, and stops for review before any
 analysis is written (turn._worked_as_asked).
 
+Plan AN.61 (61b, D309): at a stop, a request for one specific thing about the matter - a question answered, a point looked up, a
+dispute's analysis - is a go-ahead of its own, work: for the disputes it concerns NM researches each not yet researched and writes
+its analysis, the other disputes waiting (steps.given admits it only for disputes still to be researched or written). A point no
+question of their research asks is researched as what is new for that dispute (48i), and the message joins the matter as the
+advocate's own (48h). Code says what NM does.
+
 Plan AN.67 (23d4, D331): at a stop that has drafted, a message may also be a change to a draft - change_draft, with its dispute and
 the parts it concerns. The reader is shown each draft at the stop, part by part; code admits only a draft the stop holds and parts
 of its template, writes again only the parts the writer writes - never set wording, whose particulars come from the parts that
@@ -40,7 +46,7 @@ OPERATION = "core_message_reader"
 KINDS = ("go", "information", "correction", "rethink", "question", "change_draft", "unclear")
 #: Distinguish an explicit batch in a message from a targeted action missing its targets.
 BATCH_CHOICES = {"research_all": "research", "write_all": "write"}
-CHOICES = (*stepwise.GOS, *BATCH_CHOICES)
+CHOICES = (*stepwise.GOS, stepwise.WORK, *BATCH_CHOICES)
 #: The words NM says of a message where the reader gave none code can show, by kind.
 SAID = {"go": "Taken as your go-ahead.", "information": "Taken as new information for the matter.",
         "correction": "Taken as a correction of what NM read.", "rethink": "Taken as a request to rethink the matter.",
@@ -53,9 +59,9 @@ PROMPT = """Message: The advocate has sent a message while an Indian matter wait
 
 Purpose: Propose how to take the new message at this stop, preserving the advocate's scope and words.
 
-Look for: What the advocate authorises now, which dispute or step their words refer to, and whether the offered go-ahead matches. Use research or write for the selected disputes, and next for the next step when it is clear. Use research_all or write_all only when the advocate expressly asks for that step for all eligible disputes. An instruction to research all disputes, even if it says to research them end to end, authorises research alone. Use end_to_end only for explicit authority to run every remaining step of the whole matter. Use search_again for a failed search the advocate wants made again, draft when they ask for the draft the stop offers, and done when they ask to finish. Where the advocate asks for a draft NM has written at this stop to be changed, the kind is change_draft: its dispute, and in parts the IDs of the parts the change concerns - every part, where it concerns the whole draft. Set wording is filled in from the particulars the other parts state, so for a change to such a particular name the part that states it. Keep a named target where it controls the scope. If the target or action is unresolved, or the stop offers no matching action, ask for the distinction that would settle it. Treat reported or quoted directions as someone else's words unless adopted by the advocate. Identify new facts and corrections from the advocate's account. A correction may refer to NM's reading as its target, while its factual basis comes from the advocate or their original sources.
+Look for: What the advocate authorises now, which dispute or step their words refer to, and whether the offered go-ahead matches. Use research or write for the selected disputes, and next for the next step when it is clear. Where the advocate asks for one specific thing about the matter - a question answered, a point looked up, the analysis of a dispute - use work for the disputes it concerns: NM researches each of them not yet researched and writes its analysis, while the other disputes wait; where the point is not among the legal questions a dispute's research asks, give it in new_questions for that dispute. Use research_all or write_all only when the advocate expressly asks for that step for all eligible disputes. An instruction to research all disputes, even if it says to research them end to end, authorises research alone. Use end_to_end only for explicit authority to run every remaining step of the whole matter. Use search_again for a failed search the advocate wants made again, draft when they ask for the draft the stop offers, and done when they ask to finish. Where the advocate asks for a draft NM has written at this stop to be changed, the kind is change_draft: its dispute, and in parts the IDs of the parts the change concerns - every part, where it concerns the whole draft. Set wording is filled in from the particulars the other parts state, so for a change to such a particular name the part that states it. Keep a named target where it controls the scope. If the target or action is unresolved, or the stop offers no matching action, ask for the distinction that would settle it. Treat reported or quoted directions as someone else's words unless adopted by the advocate. Identify new facts and corrections from the advocate's account. A correction may refer to NM's reading as its target, while its factual basis comes from the advocate or their original sources.
 
-Outcome: Return one judgement with kind, choice, disputes, parts, critical, corrects, item, value, new_questions, said and ask. The kind is go for an offered go-ahead, information for facts or papers added to the matter, correction for a change to NM's reading, rethink for a new understanding or change of task, question for a new question outside the matter, change_draft for a change to a draft written at this stop, or unclear. With change_draft give the dispute in disputes and the parts in parts. With go return its choice and the owned IDs of the disputes it selects, or an empty list for a whole-matter or explicit batch action. For information or correction give the disputes touched and whether the change is critical because it affects work done or about to be done. With correction give what is corrected, the ID of the item if identified, and the advocate's exact corrected words if supplied. With information or correction list any new_questions, each with its dispute ID, legal question, why it matters and law to check first. Use empty fields where inapplicable. In said explain your reading briefly. In ask give a single question only when the meaning is unclear."""
+Outcome: Return one judgement with kind, choice, disputes, parts, critical, corrects, item, value, new_questions, said and ask. The kind is go for an offered go-ahead, information for facts or papers added to the matter, correction for a change to NM's reading, rethink for a new understanding or change of task, question for a new question outside the matter, change_draft for a change to a draft written at this stop, or unclear. With change_draft give the dispute in disputes and the parts in parts. With go return its choice and the owned IDs of the disputes it selects, or an empty list for a whole-matter or explicit batch action. For information or correction give the disputes touched and whether the change is critical because it affects work done or about to be done. With correction give what is corrected, the ID of the item if identified, and the advocate's exact corrected words if supplied. With information, correction or work list any new_questions, each with its dispute ID, legal question, why it matters and law to check first. Use empty fields where inapplicable. In said explain your reading briefly. In ask give a single question only when the meaning is unclear."""
 SCHEMA = {"type": "object", "additionalProperties": False,
           "required": ["kind", "choice", "disputes", "parts", "critical", "corrects", "item", "value", "new_questions", "said",
                        "ask"],
@@ -209,9 +215,47 @@ def read_items(held):
     return {"facts": facts, "events": events}
 
 
+def _new_questions(data, held, scope=None):
+    """48i (D156): the legal questions a message raises for what is new, as code admits them - each for one of the matter's disputes
+    that has questions (and, where scope is given, one of those), in words; at most MOST_PROPOSED."""
+    ids = {entry["dispute"] for entry in asked_questions(held) if entry["questions"]}
+    return [{"dispute": entry["dispute"], "question": " ".join(entry["question"].split()),
+             "why_needed": " ".join(str(entry.get("why_needed") or "").split()),
+             "law_to_check": [" ".join(law.split()) for law in entry.get("law_to_check") or () if isinstance(law, str) and law.strip()]}
+            for entry in data.get("new_questions") or () if isinstance(entry, dict) and entry.get("dispute") in ids
+            and (scope is None or entry["dispute"] in scope)
+            and isinstance(entry.get("question"), str) and entry["question"].strip()][:stepwise.MOST_PROPOSED]
+
+
+def _listed(names):
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+
+
+def _work_said(go, state, proposed):
+    """Plan AN.61 (61b): code's words on what NM does for a specific request at a stop."""
+    if state["whole"]:
+        said = "Taken as a request for the answer: NM works it through to the end and saves it."
+    else:
+        names, named = state["names"], go["disputes"]
+        grown = {entry["dispute_id"] for entry in proposed}
+        to_research = [name for name in named if "research" in go["allowed"]
+                       and (name not in state["researched"] or name in grown)]
+        others = [name for name in state["order"] if name not in named and name not in state["written"]]
+        said = (f"Taken as a request for {_listed([names[name] for name in named])}: NM "
+                + (f"researches {_listed([names[name] for name in to_research])} and " if to_research else "")
+                + ("writes its analysis" if len(named) == 1 else "writes their analyses")
+                + ("; the other disputes wait for you." if others else "."))
+    for entry in proposed:
+        name = "this matter" if state["whole"] else state["names"].get(entry["dispute_id"], entry["dispute_id"])
+        question = entry["question"] if entry["question"][-1:] in ".?!" else entry["question"] + "."
+        said += f" It researches what is new for {name}: {question}"
+    return said
+
+
 def admitted(data, held):
     """The reader's judgement as code admits it - {"kind", "choice", "disputes", "go" (steps.given's go-ahead, or None for Done
-    before any analysis), "critical", "corrects", "said", "ask"} - or (None, why) where it cannot be."""
+    before any analysis), "critical", "corrects", "said", "ask", "joins" (61b: the message joins the matter as the advocate's own
+    when its step runs)} - or (None, why) where it cannot be."""
     if not isinstance(data, dict) or data.get("kind") not in KINDS:
         return None, "the kind is not one of the kinds given"
     kind = data["kind"]
@@ -225,24 +269,31 @@ def admitted(data, held):
     said, reading = SAID[kind], shown_words.reading(data.get("said"))
     judgement = {"kind": kind, "choice": None, "disputes": [], "go": None, "critical": data.get("critical") is True,
                  "corrects": (data.get("corrects") or "").strip() if isinstance(data.get("corrects"), str) else "",
-                 "item": "", "value": "", "new_questions": [], "said": " ".join(said.split()), "ask": ""}
+                 "item": "", "value": "", "new_questions": [], "said": " ".join(said.split()), "ask": "", "joins": False}
     if kind == "go":
         try:
             choice, disputes = _go_scope(data.get("choice"), named, held, state)
-            go = stepwise.given(held["go"], choice, held=held, disputes=disputes)
+            proposed = []
+            if choice == stepwise.WORK:
+                # Plan AN.61 (61b, D309): a point the request asks that no question of its disputes' research asks is researched
+                # as what is new for that dispute (48i), named by the message it came from, which joins the matter.
+                proposed = [{"dispute_id": entry["dispute"], "question": entry["question"], "why_needed": entry["why_needed"],
+                             "law_to_check": entry["law_to_check"], "source": stepwise.added_source(held)}
+                            for entry in _new_questions(data, held, None if state["whole"] else disputes or ())]
+            go = stepwise.given(stepwise.proposing(held["go"], proposed) if proposed else held["go"], choice, held=held,
+                                disputes=disputes)
         except (ValueError, KeyError, TypeError) as exc:
             return None, f"that go-ahead is not one this stop offers ({exc})"
         judgement.update(choice=choice, disputes=disputes or [], go=go)
+        if choice == stepwise.WORK:
+            judgement.update(joins=True, said=_work_said(go, state, proposed),
+                             new_questions=[{"dispute": entry["dispute_id"], "question": entry["question"],
+                                             "why_needed": entry["why_needed"], "law_to_check": entry["law_to_check"]}
+                                            for entry in proposed])
     elif kind in ("information", "correction"):
         judgement["disputes"] = [name for name in named if name in state["order"]]
         # 48i (D156): the questions it raises for what is new, each for one of the matter's disputes and in words.
-        ids = {entry["dispute"] for entry in asked_questions(held) if entry["questions"]}
-        judgement["new_questions"] = [
-            {"dispute": entry["dispute"], "question": " ".join(entry["question"].split()),
-             "why_needed": " ".join(str(entry.get("why_needed") or "").split()),
-             "law_to_check": [" ".join(law.split()) for law in entry.get("law_to_check") or () if isinstance(law, str) and law.strip()]}
-            for entry in data.get("new_questions") or () if isinstance(entry, dict) and entry.get("dispute") in ids
-            and isinstance(entry.get("question"), str) and entry["question"].strip()][:stepwise.MOST_PROPOSED]
+        judgement["new_questions"] = _new_questions(data, held)
         if kind == "correction":
             # 48g (D148): the item it changes must be one NM read of this matter; otherwise none is marked, and NM says so.
             items = read_items(held)
@@ -343,4 +394,4 @@ def read(model, held, message):
         log.info("The message reader's judgement was not admitted: %s", why)
         asked = {**given, "your_last_judgement": data, "why_it_cannot_be_taken": why}
     return {"kind": "unclear", "choice": None, "disputes": [], "go": None, "critical": False, "corrects": "", "item": "",
-            "value": "", "new_questions": [], "said": SAID["unclear"], "ask": ASK}
+            "value": "", "new_questions": [], "said": SAID["unclear"], "ask": ASK, "joins": False}

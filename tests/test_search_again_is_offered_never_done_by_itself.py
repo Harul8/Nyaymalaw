@@ -121,11 +121,11 @@ def test_an_answer_written_as_a_whole_is_searched_again_as_a_whole(served, monke
 
 def test_every_list_of_go_aheads_knows_search_again():
     # The guided stops' own moves (AN.62-AN.64) go by their own route and are never a step's record; the reader also reads a
-    # batch of disputes as its step (D309).
+    # batch of disputes as its step (D309), and a specific request as work (61b), which no button gives.
     taken = set(stepwise.GOS) - set(stepwise.MOVES)
-    assert "search_again" in taken and "draft" in taken
+    assert "search_again" in taken and "draft" in taken and stepwise.WORK not in taken
     assert taken == set(step_record_store.CHOICES) == set(get_args(TurnGo.model_fields["choice"].annotation))
-    assert set(message_reader.CHOICES) == set(stepwise.GOS) | set(message_reader.BATCH_CHOICES)
+    assert set(message_reader.CHOICES) == set(stepwise.GOS) | set(message_reader.BATCH_CHOICES) | {stepwise.WORK}
 
 
 def test_a_version_two_step_store_is_carried_over_with_its_records_as_they_were(tmp_path):

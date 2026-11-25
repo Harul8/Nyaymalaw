@@ -291,7 +291,7 @@ def _with_steered(documents, steers, added=()):
 def added_messages(turn_id, added):
     """Plan AN.48 (48h, D159): what the advocate added while a matter waited, as their own messages - each its own source, after
     the turn's message, labelled as their own account and quoted word for word."""
-    return [{"source_id": f"{turn_id}:added{number}", "turn_id": turn_id, "speaker": "advocate",
+    return [{"source_id": stepwise.added_id(turn_id, number), "turn_id": turn_id, "speaker": "advocate",
              "record_role": "original_account", "text": entry["text"]} for number, entry in enumerate(added, 1)]
 
 
