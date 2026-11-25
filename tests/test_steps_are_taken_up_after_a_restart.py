@@ -15,6 +15,7 @@ from nm.app import api
 from nm.app.step_jobs import StepJobs
 from nm.arrive.advocate_contracts import token_fingerprint
 from nm.core_engine import steps as stepwise
+from nm.core_engine.conversation import ConversationRefused, chat_matter_id, save_waiting, shown_of
 from nm.shared.step_record_store import _SQL_V4, FileStepRecords
 from tests.guided import intake
 from tests.served_application import OTHER, OWNER
@@ -98,6 +99,55 @@ def test_next_keeps_its_original_stop_when_the_record_store_is_reopened(tmp_path
     old_again, bound = FileStepRecords(path).left()
     assert old_again == old
     assert bound["turn_id"] == "t2" and bound["stop_at"] == when and bound["disputes"] == ["D1"]
+
+
+def test_a_bound_next_runs_once_and_a_fresh_stop_can_be_answered(served):
+    scripted = Scripted()
+    scripted_answers(served, scripted)
+    assert served.client.post('/api/turn', json=SENT).status_code == 409
+    first = intake(served.client, CHAT)
+    request = {"advocate_id": OWNER, "chat_id": CHAT, "turn_id": "turn-1", "choice": "next", "disputes": ["D1"],
+               "session_current": lambda: True}
+    with pytest.raises(ConversationRefused) as researched:
+        served.app.go_turn(**request, stop_at=first['at'])
+    assert researched.value.code == 'waiting'
+    checked = held(served)
+    assert stepwise.waiting_of(checked) == 'researched'
+    calls = list(served.model.calls)
+    with pytest.raises(ConversationRefused) as duplicate:
+        served.app.go_turn(**request, stop_at=first['at'])
+    assert duplicate.value.code == 'stale_stop'
+    assert held(served) == checked and served.model.calls == calls
+    assert not scripted.payloads('core_response_writer')
+
+    with pytest.raises(ConversationRefused) as written:
+        served.app.go_turn(**request, stop_at=checked['go']['waiting']['at'])
+    assert written.value.code == 'waiting' and stepwise.waiting_of(held(served)) == 'written'
+    assert len(scripted.payloads('core_response_writer', 'D1')) == 1
+
+
+def test_a_bound_next_cannot_race_a_change_to_the_saved_stop(served, monkeypatch):
+    scripted_answers(served, Scripted())
+    assert served.client.post('/api/turn', json=SENT).status_code == 409
+    stop = intake(served.client, CHAT)
+    do_run = served.app.run_turn
+    store = served.store
+
+    def changed(**request):
+        matter = store.load(chat_matter_id(OWNER, CHAT))
+        held_now = shown_of(matter)
+        held_now['go'] = stepwise.waited(held_now['go'], 'understood')
+        save_waiting(store, matter, held_now)
+        return do_run(**request)
+
+    monkeypatch.setattr(served.app, 'run_turn', changed)
+    calls = list(served.model.calls)
+    with pytest.raises(ConversationRefused) as stale:
+        served.app.go_turn(advocate_id=OWNER, chat_id=CHAT, turn_id='turn-1', choice='next', disputes=['D1'],
+                           stop_at=stop['at'], session_current=lambda: True)
+    assert stale.value.code == 'stale_version' and served.model.calls == calls
+    current = held(served)
+    assert current['go']['waiting']['at'] != stop['at'] and current['steps']['parts'] == {}
 
 
 def test_a_sign_in_is_found_by_its_fingerprint_only_while_it_holds_and_only_for_its_advocate(served):

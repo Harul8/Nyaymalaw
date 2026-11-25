@@ -533,17 +533,20 @@ class Application:
                              effort=asked.get('effort'), message=held['message'], turn_id=turn_id,
                              chat_id=asked['chat_id'], go=go)
 
-    def go_turn(self, *, advocate_id, chat_id, turn_id, choice, session_current, disputes=None):
+    def go_turn(self, *, advocate_id, chat_id, turn_id, choice, session_current, disputes=None, stop_at=None):
         """The advocate's go-ahead at a stop (plan AN.48, 48a3, 48b): "research" or "write" - that step for the disputes named
         (None: every dispute it can now take, D163); "next" - the next step for every dispute; "end_to_end" - every remaining step
         without stopping (D135); "done" - finish with what is written and save it as one answer (D147), or, before any analysis is
-        written, save the matter as it stands with no step run. ConversationRefused where the matter does not wait for the
-        advocate here, or the go-ahead is not one its stop offers."""
+        written, save the matter as it stands with no step run. A dated Next applies to the stop it answered. ConversationRefused
+        where the matter does not wait for the advocate here, the stop changed, or the go-ahead is not one it offers."""
         from nm.core_engine import steps as stepwise, turn
         from nm.core_engine.conversation import ConversationRefused
         matter, held = self._held(advocate_id, chat_id)
         if held is None or held['turn_id'] != turn_id or stepwise.waiting_of(held) is None:
             raise ConversationRefused('This matter is not waiting for your go-ahead.', status=409, code='not_waiting')
+        if stop_at is not None and (choice != 'next' or held['go']['waiting']['at'] != stop_at):
+            raise ConversationRefused('This go-ahead was for an earlier stop. Check the current choices before continuing.',
+                                      code='stale_stop')
         if self.turn_running(advocate_id, turn_id):
             raise ConversationRefused('NM is already working on this answer.', code='turn_in_progress')
         try:
@@ -562,7 +565,8 @@ class Application:
         return self.run_turn(advocate_id=advocate_id, session_current=session_current,
                              document_refs=tuple(asked.get('document_refs', ())), model_choice=asked.get('model'),
                              effort=asked.get('effort'), message=held['message'], turn_id=turn_id,
-                             chat_id=asked['chat_id'], go=go)
+                             chat_id=asked['chat_id'], go=go,
+                             expected_version=matter.version if stop_at is not None else None)
 
     def _moved(self, matter, held, go):
         """Plan AN.62-AN.64: a guided stop settled - the matter is saved waiting at its next stop, with no step run and no model
