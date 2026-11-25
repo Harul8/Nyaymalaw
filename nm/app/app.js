@@ -5317,6 +5317,123 @@ async function deleteChat({ erase = false } = {}) {
   said.clearing = setTimeout(() => { said.textContent = ''; }, 15000);
 }
 
+// THE DIARY OF TIME LIMITS (plan AN.55, piece 55e2; D257, D332, D355(f)). Opened from the history, beside Recently deleted: for
+// each conversation, the time limits its latest answer worked out - still to come soonest first, then those passed - each with
+// its last day, the days from today, what it is, how it stood when worked out and the conversation it is in, which opens from
+// there; then those not worked out, with why. Code's own note above them says what the diary is and is not. Where it cannot
+// be read, the page says so and never shows it as empty.
+function limitDay(day) {
+  const when = typeof day === 'string' ? new Date(`${day}T00:00:00`) : null;
+  return when && !Number.isNaN(when.getTime())
+    ? when.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '';
+}
+
+function daysSaid(days) {
+  if (days === 0) return 'today';
+  if (days === 1) return 'tomorrow';
+  if (days === -1) return 'yesterday';
+  return days > 0 ? `in ${days} days` : `${-days} days ago`;
+}
+
+// How a time limit stood on the day it was worked out, in code's words for code's own states (limitation.standing).
+const LIMIT_STOOD = {
+  open: 'Still open when worked out',
+  expired: 'Already passed when worked out',
+  in_time: 'The step was taken in time',
+  late: 'The step was taken after the last day',
+  early: 'The step was taken before its earliest day',
+  taken: 'The step was taken; whether in time is not known',
+};
+
+function limitConversation(row) {
+  const open = document.createElement('button');
+  open.type = 'button';
+  open.className = 'ghost time-limit-chat';
+  open.textContent = historyTitle(row);
+  open.setAttribute('aria-label', `Open conversation: ${open.textContent}`);
+  // The conversation opens behind the diary, which closes once it has; where it cannot be read, the diary says so and stays.
+  open.addEventListener('click', async () => {
+    try {
+      await restorePendingChat(row.chat_id);
+      $('time-limits-dialog').close();
+    } catch (e) {
+      if (e.obsolete) return;
+      $('time-limits-status').textContent = `That conversation could not be read: ${e.message.replace(/[.\s]+$/, '')}.`;
+    }
+  });
+  return open;
+}
+
+function timeLimitRow(row) {
+  const item = document.createElement('li');
+  item.className = 'time-limit-row';
+  const day = document.createElement('p');
+  day.className = 'time-limit-day';
+  day.textContent = `${limitDay(row.last_day)} · ${daysSaid(row.days_from_today)}`;
+  const what = document.createElement('p');
+  what.className = 'time-limit-what';
+  what.textContent = [row.what, [row.provision, row.act].filter(Boolean).join(', ')].filter(Boolean).join(' — ');
+  const stood = document.createElement('p');
+  stood.className = 'hint';
+  stood.textContent = [LIMIT_STOOD[row.stood] || '', row.worked_on ? `worked out on ${limitDay(row.worked_on)}` : '']
+    .filter(Boolean).join(' · ');
+  item.append(day, what, stood, limitConversation(row));
+  return item;
+}
+
+function notWorkedRow(row) {
+  const item = document.createElement('li');
+  item.className = 'time-limit-row not-worked';
+  const what = document.createElement('p');
+  what.className = 'time-limit-what';
+  what.textContent = row.what || 'Its time limits';
+  const why = document.createElement('p');
+  why.className = 'hint';
+  why.textContent = row.why || '';
+  item.append(what, why, limitConversation(row));
+  return item;
+}
+
+function limitsSection(heading, rows, rowOf) {
+  if (!Array.isArray(rows) || !rows.length) return [];
+  const title = document.createElement('h3');
+  title.className = 'time-limits-heading';
+  title.textContent = heading;
+  const list = document.createElement('ul');
+  list.className = 'time-limits-rows';
+  list.append(...rows.map(rowOf));
+  return [title, list];
+}
+
+async function openTimeLimits() {
+  const dialog = $('time-limits-dialog');
+  if (!dialog.open) dialog.showModal();
+  $('time-limits-said').textContent = '';
+  $('time-limits-list').replaceChildren();
+  $('time-limits-status').textContent = 'Reading your time limits…';
+  let diary;
+  try {
+    diary = await api('/api/time-limits');
+  } catch (e) {
+    if (e.obsolete) return;
+    $('time-limits-status').textContent = `The time limits could not be read: ${e.message.replace(/[.\s]+$/, '')}. `
+      + 'This is a failure to read them, not a statement that there are none.';
+    return;
+  }
+  $('time-limits-said').textContent = typeof diary.said === 'string' ? diary.said : '';
+  const shown = [
+    ...limitsSection('Still to come', diary.coming, timeLimitRow),
+    ...limitsSection('Passed', diary.passed, timeLimitRow),
+    ...limitsSection('Not worked out', diary.not_worked, notWorkedRow),
+  ];
+  if (diary.state !== 'ok') {
+    shown.unshift(stateBlock('unbuildable',
+      'Some conversations could not be read, so their time limits are not here. Retry before relying on this list.'));
+  }
+  $('time-limits-status').textContent = shown.length ? '' : 'None of your conversations has time limits worked out yet.';
+  $('time-limits-list').replaceChildren(...shown);
+}
+
 async function openDeletedChats() {
   const dialog = $('deleted-chats-dialog');
   if (!dialog.open) dialog.showModal();
@@ -7985,6 +8102,9 @@ $('delete-chat-confirm').addEventListener('click', () => deleteChat());
 $('delete-chat-erase').addEventListener('click', () => deleteChat({ erase: true }));
 $('deleted-chats-open').addEventListener('click', () => openDeletedChats());
 $('deleted-chats-close').addEventListener('click', () => $('deleted-chats-dialog').close());
+// Plan AN.55 (55e2, D257): the diary of time limits.
+$('time-limits-open').addEventListener('click', () => openTimeLimits());
+$('time-limits-close').addEventListener('click', () => $('time-limits-dialog').close());
 // Plan AN.55 (55b, D254): the history's search.
 $('history-search-words').addEventListener('input', (event) => searchHistory(event.target.value));
 $('history-search').addEventListener('submit', (event) => {

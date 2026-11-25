@@ -48,6 +48,8 @@ PAGE_TESTS = [
     "a_conversations_particulars.mjs",
     # Plan AN.55 (55b, D254): the history's search box, paged like the history, each row saying where it was found.
     "history_search.mjs",
+    # Plan AN.55 (55e2, D257): the diary of time limits, beside Recently deleted.
+    "time_limits_diary.mjs",
 ]
 #: Run, with the cases it is given, by tests/test_the_screen_never_folds_a_disclosure.py.
 RUN_ELSEWHERE = {"render_turn_partition.mjs"}

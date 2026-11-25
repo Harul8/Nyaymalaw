@@ -425,6 +425,8 @@
       <h2 id="rail-title">Recent work</h2>
       <!-- Plan AN.53 (D241): what the advocate deleted, to put back within thirty days or erase now. -->
       <button type="button" id="deleted-chats-open" class="ghost rail-deleted">Recently deleted</button>
+      <!-- Plan AN.55 (55e2; D257, D355(f)): the time limits worked out across the advocate's conversations. -->
+      <button type="button" id="time-limits-open" class="ghost rail-limits">Time limits</button>
     </div>
     <!-- THE HISTORY'S SEARCH (plan AN.55, 55b; D254, D355(e)): every word typed, in a title, the particulars or the advocate's own
          messages; an empty box is the whole history. -->
@@ -695,6 +697,15 @@
     <p id="particulars-status" role="status" aria-live="polite"></p>
     <div class="delete-chat-actions"><button type="submit" id="particulars-save" class="primary">Save</button></div>
   </form>
+</dialog>
+<!-- THE DIARY OF TIME LIMITS (plan AN.55, 55e2; D257, D332, D355(f)): what code worked out in each conversation's latest answer
+     that worked any out; code's note says what it is and is not. -->
+<dialog id="time-limits-dialog" class="account-dialog time-limits-dialog" aria-labelledby="time-limits-title">
+  <div class="dialog-heading"><h2 id="time-limits-title">Time limits</h2>
+    <button type="button" id="time-limits-close" class="ghost">Close</button></div>
+  <p id="time-limits-said" class="help"></p>
+  <p id="time-limits-status" role="status" aria-live="polite"></p>
+  <div id="time-limits-list" class="time-limits-list"></div>
 </dialog>
 <dialog id="deleted-chats-dialog" class="account-dialog" aria-labelledby="deleted-chats-title">
   <div class="dialog-heading"><h2 id="deleted-chats-title">Recently deleted</h2>

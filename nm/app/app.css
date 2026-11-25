@@ -1667,6 +1667,15 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 
 /* ---------------------------------------------------- deleting a conversation (plan AN.53, D241) --- */
 .rail-head .rail-deleted { margin-left: auto; font-size: 0.85rem; padding: 0.2rem 0.55rem; }
+/* The diary of time limits (plan AN.55, D257): opened beside Recently deleted; each last day, what it is, and its conversation. */
+.rail-head .rail-limits { font-size: 0.85rem; padding: 0.2rem 0.55rem; }
+.time-limits-list { display: grid; gap: 0.4rem; margin-top: 0.6rem; }
+.time-limits-heading { margin: 0.6rem 0 0.2rem; font: 600 1rem/1.3 var(--f-serif); }
+.time-limits-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.time-limit-row { padding: 0.55rem 0.7rem; border: 1px solid var(--rule); border-radius: 6px; }
+.time-limit-row p { margin: 0 0 0.15rem; overflow-wrap: anywhere; }
+.time-limit-day { font-weight: 600; }
+.time-limit-row .time-limit-chat { margin-top: 0.25rem; font-size: 0.85rem; padding: 0.15rem 0.5rem; text-align: left; }
 /* The conversation's own actions under its heading: Rename and Delete (plan AN.55, D355(b); AN.53, D241). */
 .thread-title + .thread-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.4rem; margin: -0.7rem 0 1rem; }
 .thread-actions button { font-size: 0.85rem; padding: 0.2rem 0.6rem; }
