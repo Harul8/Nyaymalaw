@@ -66,6 +66,7 @@ from nm.core_engine import (
     research_note,
     response_writer,
     search_said,
+    shown_words,
     voice,
 )
 from nm.core_engine import documents as document_rules
@@ -106,6 +107,7 @@ from nm.core_engine.turn import SECTIONED as SECTIONED_CORE_TURNS
 from nm.core_engine.turn import STOP_NEEDS, STOPS, activity_of, saved_rows
 from nm.shared.citation_contracts import judgment_place, provision_label, statute_title
 from nm.shared.clock_contracts import FORUM
+from nm.shared.clock_contracts import today as forum_today
 from nm.shared.egress_contracts import EgressRefused
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.identity_contracts import source_fingerprint
@@ -2420,7 +2422,8 @@ _KEPT_LOCK = threading.Lock()
 #: history-line-3 (plan AN.55, 55c2; D255): the title is the advocate's own name where they gave one, and the line says so.
 #: history-line-4 (plan AN.55, 55d2; D256): a line carries the conversation's particulars, where it has any.
 #: history-line-5 (plan AN.55, 55a; D254): a line carries what the history's search reads of its conversation.
-_LINE_VERSION = f'history-line-5/{CONVERSATION_CONTRACT}'
+#: history-line-6 (plan AN.55, 55e1; D257): a line carries the time limits its conversation's latest answer worked out.
+_LINE_VERSION = f'history-line-6/{CONVERSATION_CONTRACT}'
 #: The most a page of the history may ask for; the page asks for ten (O29, 26 Oct 2026).
 _HISTORY_PAGE_MAX = 100
 _history_log = logging.getLogger('nm.history')
@@ -2512,6 +2515,10 @@ def _derived_line(store, matter_id):
                     line['chat']['waiting'] = waiting
                 # Plan AN.55 (55a, D254): what the history's search reads - never sent with the list.
                 line['find'] = _searched(matter, rows, particulars)
+                # Plan AN.55 (55e1, D257): the time limits its latest answer worked out, for the diary.
+                worked = _worked_limits(rows)
+                if worked is not None:
+                    line['limits'] = worked
     else:
         # Old records remain history; reading never upgrades their contracts.
         line['matter'] = {'matter_id': matter.id, 'matter': matter.title, 'state': 'historical'}
@@ -2656,27 +2663,11 @@ def prepare_history():
         _prepare_line(store, matter_id)
 
 
-@app.get('/api/work')
-def work(advocate_id: Advocate, request: Request,
-         limit: Annotated[int | None, Query(ge=1, le=_HISTORY_PAGE_MAX)] = None,
-         offset: Annotated[int, Query(ge=0)] = 0,
-         q: Annotated[str | None, Query(max_length=200)] = None):
-    """The advocate's history: their conversations, newest first. With a limit, one page of it (owner decision O29, 26 Oct 2026:
-    ten at a time): the count is of the whole history, and has_more and next_offset say whether, and where, the next page begins.
-    Without one, all of it.
-
-    PLAN AN.48 (D307; the owner, 18 Nov 2026): CONVERSATIONS ONLY. A matter saved before conversations was listed after them for
-    screens that opened it; those screens were deleted (AN.57, D292), so it is no longer listed. Its file stays stored, untouched,
-    and its line is still kept beside it (`_listed`), so that the history never opens such a file again to find it is not a
-    conversation.
-
-    PLAN AN.55 (55a; D254, D355(e)): q, the words searched for - the conversations holding every one of them, in the titles,
-    the particulars or the advocate's own messages, without regard to case, each saying where; paged and counted the same way.
-    Read from each conversation's line, never by opening it. A conversation that could not be read could not be searched, and
-    is said as before."""
+def _own_lines(advocate_id):
+    """The advocate's conversations' lines, newest saved first, each with when it was saved; and the files of theirs that
+    could not be read. One reading for the history, its search and the diary of time limits (plan AN.55, 55e1)."""
     store = application().store
-    chats, unavailable = [], []
-    words = _plain(q).split() if q else []
+    lines, unavailable = [], []
     # Plan AN.53 (53b, D217): the store's listing for this advocate - no file recorded as another's is in it, so none of
     # another's is opened and no line of another's is read. `owned` is True where the store's record says the file is this
     # advocate's, and None where no owner is recorded and the file itself says whose it is.
@@ -2699,12 +2690,39 @@ def work(advocate_id: Advocate, request: Request,
             continue
         elif line.get('unavailable'):
             unavailable.append(matter_id)
-        elif line.get('chat') and not words:
-            chats.append({**line['chat'], 'last_updated': saved_at})
         elif line.get('chat'):
-            found = _found_in(line.get('find'), words)
-            if found:
-                chats.append({**line['chat'], 'last_updated': saved_at, 'found_in': found})
+            lines.append((line, saved_at))
+    return lines, unavailable
+
+
+@app.get('/api/work')
+def work(advocate_id: Advocate, request: Request,
+         limit: Annotated[int | None, Query(ge=1, le=_HISTORY_PAGE_MAX)] = None,
+         offset: Annotated[int, Query(ge=0)] = 0,
+         q: Annotated[str | None, Query(max_length=200)] = None):
+    """The advocate's history: their conversations, newest first. With a limit, one page of it (owner decision O29, 26 Oct 2026:
+    ten at a time): the count is of the whole history, and has_more and next_offset say whether, and where, the next page begins.
+    Without one, all of it.
+
+    PLAN AN.48 (D307; the owner, 18 Nov 2026): CONVERSATIONS ONLY. A matter saved before conversations was listed after them for
+    screens that opened it; those screens were deleted (AN.57, D292), so it is no longer listed. Its file stays stored, untouched,
+    and its line is still kept beside it (`_listed`), so that the history never opens such a file again to find it is not a
+    conversation.
+
+    PLAN AN.55 (55a; D254, D355(e)): q, the words searched for - the conversations holding every one of them, in the titles,
+    the particulars or the advocate's own messages, without regard to case, each saying where; paged and counted the same way.
+    Read from each conversation's line, never by opening it. A conversation that could not be read could not be searched, and
+    is said as before."""
+    chats = []
+    words = _plain(q).split() if q else []
+    lines, unavailable = _own_lines(advocate_id)
+    for line, saved_at in lines:
+        if not words:
+            chats.append({**line['chat'], 'last_updated': saved_at})
+            continue
+        found = _found_in(line.get('find'), words)
+        if found:
+            chats.append({**line['chat'], 'last_updated': saved_at, 'found_in': found})
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     total = len(chats)
@@ -2719,6 +2737,99 @@ def chats(advocate_id: Advocate, request: Request,
           limit: Annotated[int | None, Query(ge=1, le=_HISTORY_PAGE_MAX)] = None,
           offset: Annotated[int, Query(ge=0)] = 0):
     return work(advocate_id, request, limit, offset)
+
+
+# ------------------------------------------------------------------ the diary of time limits across matters ---
+#
+# PLAN AN.55 (55e1; D257, D332, D355(f)). One view of the time limits code worked out across the advocate's conversations: for
+# each, those of its latest answer that worked any out - each last day with its conversation, those still to come soonest
+# first and those passed after them, the days from today counted by code, and how each stood on the day it was worked out.
+# Those not worked out are said, with why. Read from each conversation's line (history-line-6), never by opening it. Never a
+# model's dates: the last days are code's arithmetic on the dates given in the conversation (calculation.py, limitation.py).
+
+#: Code's own words over the diary (D257): what it is and what it is not.
+DIARY_SAID = ("These are the last days NM worked out in each conversation's latest answer that worked any out, from the dates "
+              "given in that conversation. It is not a court diary: court closures are not counted (Limitation Act s.4), and "
+              "NM does not know of anything done since that answer.")
+#: How a time limit stood on the day it was worked out, as code worked it out (limitation.standing; calculation._compute).
+_STOOD = {'open', 'expired', 'in_time', 'late', 'early', 'taken'}
+_NOT_WORKED_SAID = 'NM could not work this time limit out.'
+
+
+def _shown_name(text, otherwise):
+    """A model's short words outside an answer, through the door for names (51b): one line, no link, no request for a secret."""
+    line = ' '.join(text.split()) if isinstance(text, str) else ''
+    return line if line and not shown_words.unsafe(line) else otherwise
+
+
+def _worked_limits(rows):
+    """Plan AN.55 (55e1): the time limits of the conversation's latest answer that worked any out, as code saved them -
+    {"turn_id", "worked_on", "limits", "not_assessed"} - or, where no answer worked any out and the latest that tried could
+    not, {"turn_id", "unavailable": why}; None where none tried. Read as saved; an entry that does not read as one is said
+    not worked out."""
+    tried = None
+    for row in reversed(rows):
+        activities = row.get('activities') if isinstance(row, dict) else None
+        record = activities.get('calculation') if isinstance(activities, dict) else None
+        if not isinstance(record, dict):
+            continue
+        if record.get('state') == 'unavailable' and tried is None:
+            tried = {'turn_id': row.get('turn_id'), 'unavailable': _shown_name(record.get('why'), _NOT_WORKED_SAID)}
+        if record.get('state') != 'worked':
+            continue
+        limits, not_assessed = [], []
+        for entry in record.get('calculations') or ():
+            try:
+                last_day = date.fromisoformat(entry['working']['last_day']).isoformat()
+                stood = entry['standing']['state']
+                if stood not in _STOOD:
+                    raise ValueError(stood)
+            except (KeyError, TypeError, ValueError):
+                not_assessed.append({'what': _shown_name((entry or {}).get('what') if isinstance(entry, dict) else None,
+                                                         'A time limit'),
+                                     'why': "This time limit's record could not be read."})
+                continue
+            limits.append({'what': _shown_name(entry.get('what'), 'A time limit'),
+                           'provision': _shown_name(entry.get('provision_name'), ''),
+                           'act': _shown_name((entry.get('provision') or {}).get('act'), ''), 'last_day': last_day,
+                           'stood': stood, 'taken': bool(entry.get('done'))})
+        for item in record.get('not_assessed') or ():
+            if isinstance(item, dict):
+                not_assessed.append({'what': _shown_name(item.get('what'), 'A time limit'),
+                                     'why': shown_words.reading(item.get('why')) or _NOT_WORKED_SAID})
+        return {'turn_id': row.get('turn_id'), 'worked_on': record.get('today'), 'limits': limits,
+                'not_assessed': not_assessed}
+    return tried
+
+
+@app.get('/api/time-limits')
+def time_limits(advocate_id: Advocate, request: Request, response: Response):
+    """The diary of time limits across the advocate's conversations (D257): those still to come, soonest first; those whose last
+    day has passed, latest first; those not worked out; and the conversations that could not be read, as the history says them."""
+    today = forum_today()
+    coming, passed, not_worked = [], [], []
+    lines, unavailable = _own_lines(advocate_id)
+    for line, _saved_at in lines:
+        worked = line.get('limits')
+        if not isinstance(worked, dict):
+            continue
+        chat = line['chat']
+        about = {'chat_id': chat.get('chat_id'), 'title': chat.get('title'), 'preview': chat.get('preview')}
+        if 'unavailable' in worked:
+            not_worked.append({**about, 'what': None, 'why': worked['unavailable']})
+            continue
+        for entry in worked['limits']:
+            days = (date.fromisoformat(entry['last_day']) - today).days
+            (coming if days >= 0 else passed).append({**about, **entry, 'worked_on': worked['worked_on'],
+                                                      'days_from_today': days})
+        not_worked.extend({**about, **item} for item in worked['not_assessed'])
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    coming.sort(key=lambda entry: entry['last_day'])
+    passed.sort(key=lambda entry: entry['last_day'], reverse=True)
+    response.headers['Cache-Control'] = 'no-store'
+    return {'state': 'partial' if unavailable else 'ok', 'today': today.isoformat(), 'said': DIARY_SAID, 'coming': coming,
+            'passed': passed, 'not_worked': not_worked, 'unavailable': unavailable}
 
 @app.get('/api/chats/{chat_id}')
 def chat(chat_id: str, advocate_id: Advocate, request: Request, response: Response):
