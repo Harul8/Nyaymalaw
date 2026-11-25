@@ -14,6 +14,7 @@ import re
 import threading
 import time
 import traceback
+import unicodedata
 from collections import OrderedDict
 from contextlib import contextmanager
 from copy import deepcopy
@@ -79,6 +80,7 @@ from nm.core_engine.conversation import (
     asking_of,
     chat_matter_id,
     checked_rows,
+    name_of,
     named,
     particulars_of,
     queued_of,
@@ -87,6 +89,7 @@ from nm.core_engine.conversation import (
     shown_of,
     shown_title,
     stored_chat,
+    title_of,
 )
 from nm.core_engine.matter_board import board as matter_board
 from nm.core_engine.reasoning import CHOICE_WORDS as EFFORT_WORDS
@@ -2416,7 +2419,8 @@ _KEPT_LOCK = threading.Lock()
 #: history-line-2 (plan AN.43, D81): a line carries the conversation's title.
 #: history-line-3 (plan AN.55, 55c2; D255): the title is the advocate's own name where they gave one, and the line says so.
 #: history-line-4 (plan AN.55, 55d2; D256): a line carries the conversation's particulars, where it has any.
-_LINE_VERSION = f'history-line-4/{CONVERSATION_CONTRACT}'
+#: history-line-5 (plan AN.55, 55a; D254): a line carries what the history's search reads of its conversation.
+_LINE_VERSION = f'history-line-5/{CONVERSATION_CONTRACT}'
 #: The most a page of the history may ask for; the page asks for ten (O29, 26 Oct 2026).
 _HISTORY_PAGE_MAX = 100
 _history_log = logging.getLogger('nm.history')
@@ -2506,10 +2510,53 @@ def _derived_line(store, matter_id):
                 waiting = stepwise.waiting_said(_held(matter))
                 if waiting:
                     line['chat']['waiting'] = waiting
+                # Plan AN.55 (55a, D254): what the history's search reads - never sent with the list.
+                line['find'] = _searched(matter, rows, particulars)
     else:
         # Old records remain history; reading never upgrades their contracts.
         line['matter'] = {'matter_id': matter.id, 'matter': matter.title, 'state': 'historical'}
     return line
+
+
+def _plain(text):
+    """Words as the history's search compares them (D254, D355(e)): one form of each character, without regard to case, the
+    spaces evened."""
+    return ' '.join(unicodedata.normalize('NFKC', text).casefold().split()) if isinstance(text, str) else ''
+
+
+def _searched(matter, rows, particulars):
+    """Plan AN.55 (55a; D254, D355(e)): what the history's search reads of a conversation, by where it is - its titles (the
+    advocate's name for it and NM's own title, each where there is one), its particulars and the advocate's own messages (each
+    saved message, and the one NM is working on or stopped on). Kept in the line, which is sealed under the conversation's own
+    key like the conversation itself; never sent with the history's list. The words of answers and papers are not searched."""
+    titles = []
+    for read in (name_of, title_of):
+        try:
+            held = read(matter)
+        except ValueError:
+            continue
+        titles.append(held['text'] if isinstance(held, dict) else held)
+    messages = [row.get('message') for row in rows]
+    held = _held(matter)
+    if held is not None:
+        messages.append(held.get('message'))
+    return {'titles': '\n'.join(_plain(text) for text in titles if text),
+            'particulars': '\n'.join(_plain(value) for value in particulars.values()),
+            'messages': '\n'.join(_plain(text) for text in messages if isinstance(text, str) and text.strip())}
+
+
+#: Where the search found the words, as the history's rows say it (D355(e)).
+_FOUND_IN = {'titles': 'title', 'particulars': 'particulars', 'messages': 'your messages'}
+
+
+def _found_in(find, words):
+    """Where a conversation holds the words searched for, or None where it does not hold every one of them."""
+    if not isinstance(find, dict):
+        return None
+    places = {place: find.get(place) if isinstance(find.get(place), str) else '' for place in _FOUND_IN}
+    if not all(any(word in text for text in places.values()) for word in words):
+        return None
+    return [said for place, said in _FOUND_IN.items() if any(word in places[place] for word in words)]
 
 
 def _title_text(matter):
@@ -2612,7 +2659,8 @@ def prepare_history():
 @app.get('/api/work')
 def work(advocate_id: Advocate, request: Request,
          limit: Annotated[int | None, Query(ge=1, le=_HISTORY_PAGE_MAX)] = None,
-         offset: Annotated[int, Query(ge=0)] = 0):
+         offset: Annotated[int, Query(ge=0)] = 0,
+         q: Annotated[str | None, Query(max_length=200)] = None):
     """The advocate's history: their conversations, newest first. With a limit, one page of it (owner decision O29, 26 Oct 2026:
     ten at a time): the count is of the whole history, and has_more and next_offset say whether, and where, the next page begins.
     Without one, all of it.
@@ -2620,9 +2668,15 @@ def work(advocate_id: Advocate, request: Request,
     PLAN AN.48 (D307; the owner, 18 Nov 2026): CONVERSATIONS ONLY. A matter saved before conversations was listed after them for
     screens that opened it; those screens were deleted (AN.57, D292), so it is no longer listed. Its file stays stored, untouched,
     and its line is still kept beside it (`_listed`), so that the history never opens such a file again to find it is not a
-    conversation."""
+    conversation.
+
+    PLAN AN.55 (55a; D254, D355(e)): q, the words searched for - the conversations holding every one of them, in the titles,
+    the particulars or the advocate's own messages, without regard to case, each saying where; paged and counted the same way.
+    Read from each conversation's line, never by opening it. A conversation that could not be read could not be searched, and
+    is said as before."""
     store = application().store
     chats, unavailable = [], []
+    words = _plain(q).split() if q else []
     # Plan AN.53 (53b, D217): the store's listing for this advocate - no file recorded as another's is in it, so none of
     # another's is opened and no line of another's is read. `owned` is True where the store's record says the file is this
     # advocate's, and None where no owner is recorded and the file itself says whose it is.
@@ -2645,8 +2699,12 @@ def work(advocate_id: Advocate, request: Request,
             continue
         elif line.get('unavailable'):
             unavailable.append(matter_id)
-        elif line.get('chat'):
+        elif line.get('chat') and not words:
             chats.append({**line['chat'], 'last_updated': saved_at})
+        elif line.get('chat'):
+            found = _found_in(line.get('find'), words)
+            if found:
+                chats.append({**line['chat'], 'last_updated': saved_at, 'found_in': found})
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     total = len(chats)
@@ -2654,7 +2712,7 @@ def work(advocate_id: Advocate, request: Request,
     more = end < total
     return {'state': 'partial' if unavailable else 'ok', 'chats': chats[start:end],
             'chat_count': total, 'unreadable': unavailable, 'unavailable': unavailable, 'total': total, 'offset': start,
-            'has_more': more, 'next_offset': end if more else None}
+            'has_more': more, 'next_offset': end if more else None, **({'searched': ' '.join(words)} if words else {})}
 
 @app.get('/api/chats')
 def chats(advocate_id: Advocate, request: Request,
