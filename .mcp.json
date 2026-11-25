@@ -6,10 +6,9 @@
         "-NoProfile",
         "-ExecutionPolicy",
         "Bypass",
-        "-File",
-        "development_environment/developer_tooling/crg_serve.ps1"
+        "-Command",
+        "$ErrorActionPreference = 'Stop'; $nmGraphRoot = $env:CLAUDE_PROJECT_DIR; if (-not $nmGraphRoot) { $nmGraphRoot = git rev-parse --show-toplevel; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }; Set-Location -LiteralPath $nmGraphRoot; & './development_environment/developer_tooling/crg_serve.ps1'; exit $LASTEXITCODE"
       ],
-      "cwd": "C:\\Users\\rahul\\Nyaymalaw",
       "type": "stdio"
     }
   }
