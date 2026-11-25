@@ -914,6 +914,20 @@ function historyTitle(chat) {
   return words.length ? words.slice(0, 10).join(' ') + (words.length > 10 ? '…' : '') : 'Conversation';
 }
 
+// A conversation's particulars as its history row shows them, in the order they are written; '' where it has none (plan AN.55,
+// 55d3; D256).
+function particularsLine(particulars) {
+  if (!particulars || typeof particulars !== 'object') return '';
+  const day = typeof particulars.next_date === 'string' ? new Date(`${particulars.next_date}T00:00:00`) : null;
+  return [
+    typeof particulars.client === 'string' && particulars.client ? `Client: ${particulars.client}` : '',
+    typeof particulars.court === 'string' ? particulars.court : '',
+    typeof particulars.case_number === 'string' && particulars.case_number ? `Case: ${particulars.case_number}` : '',
+    day && !Number.isNaN(day.getTime())
+      ? `Next date: ${day.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : '',
+  ].filter(Boolean).join(' · ');
+}
+
 // counter: the state's generation the list this row is in belongs to - the history list's, or the short list's of recent work
 // (plan AN.77, D333).
 function historyChatRow(chat, generation, session, counter = 'matterListGeneration') {
@@ -933,6 +947,14 @@ function historyChatRow(chat, generation, session, counter = 'matterListGenerati
   details.textContent = `${chat.turn_count} message${chat.turn_count === 1 ? '' : 's'}`
     + historyWhen(chat.last_updated);
   row.append(title, details);
+  // Plan AN.55 (55d3, D256): its particulars, where the advocate wrote any.
+  const written = particularsLine(chat.particulars);
+  if (written) {
+    const line = document.createElement('div');
+    line.className = 'hint particulars-line';
+    line.textContent = written;
+    row.appendChild(line);
+  }
   // Plan AN.48 (D164): where the conversation waits for the advocate, and for what.
   if (typeof chat.waiting === 'string' && chat.waiting) {
     const waiting = document.createElement('div');
@@ -5054,6 +5076,13 @@ function threadTitle() {
   rename.textContent = 'Rename';
   rename.setAttribute('aria-label', 'Rename this conversation');
   rename.addEventListener('click', () => askToRenameChat(chatId, typeof known === 'string' ? known : ''));
+  // Plan AN.55 (55d3, D256): its particulars - the client, the court, the case number, the next date.
+  const particulars = document.createElement('button');
+  particulars.type = 'button';
+  particulars.className = 'ghost thread-particulars';
+  particulars.textContent = 'Particulars';
+  particulars.setAttribute('aria-label', "This conversation's particulars");
+  particulars.addEventListener('click', () => askForParticulars(chatId));
   // Plan AN.53 (D241): the conversation's own Delete - it asks first, naming the conversation.
   const remove = document.createElement('button');
   remove.type = 'button';
@@ -5061,8 +5090,94 @@ function threadTitle() {
   remove.textContent = 'Delete';
   remove.setAttribute('aria-label', 'Delete this conversation');
   remove.addEventListener('click', () => askToDeleteChat(chatId, typeof known === 'string' ? known : null));
-  actions.append(rename, remove);
+  actions.append(rename, particulars, remove);
   return [heading, actions];
+}
+
+// THE CONVERSATION'S PARTICULARS (plan AN.55, piece 55d3; D256, D332, D355). The client, the court, the case number and the
+// next date are the advocate's, each optional, shown on the history row. Where NM's last understanding of the matter holds a
+// client or a proceeding with its number, the server offers it under its box, saying where it came from; pressing it fills the
+// box, and nothing is saved until Save. The server's own words are said where it refuses, and nothing else changes.
+const PARTICULAR_FIELDS = ['client', 'court', 'case_number', 'next_date'];
+const PROPOSED_FIELDS = ['client', 'case_number'];
+
+async function askForParticulars(chatId) {
+  const dialog = $('particulars-dialog');
+  dialog.dataset.chatId = chatId;
+  for (const field of PARTICULAR_FIELDS) {
+    $(`particulars-${field}`).value = '';
+    $(`particulars-${field}`).disabled = true;
+  }
+  for (const field of PROPOSED_FIELDS) $(`particulars-${field}-proposed`).replaceChildren();
+  $('particulars-save').disabled = true;
+  $('particulars-status').textContent = 'Reading the particulars…';
+  if (!dialog.open) dialog.showModal();
+  let said;
+  try {
+    said = await api(`/api/chats/${encodeURIComponent(chatId)}/particulars`);
+  } catch (e) {
+    if (e.obsolete || dialog.dataset.chatId !== chatId) return;
+    $('particulars-status').textContent = `The particulars could not be read: ${e.message}`;
+    return;
+  }
+  if (dialog.dataset.chatId !== chatId) return;
+  const kept = said.particulars && typeof said.particulars === 'object' ? said.particulars : {};
+  for (const field of PARTICULAR_FIELDS) {
+    $(`particulars-${field}`).value = typeof kept[field] === 'string' ? kept[field] : '';
+    $(`particulars-${field}`).disabled = false;
+  }
+  for (const field of PROPOSED_FIELDS) {
+    const offered = said.proposed && Array.isArray(said.proposed[field]) ? said.proposed[field] : [];
+    $(`particulars-${field}-proposed`).replaceChildren(...offered
+      .filter((entry) => entry && typeof entry.value === 'string' && entry.value)
+      .map((entry) => particularProposal(field, entry)));
+  }
+  $('particulars-save').disabled = false;
+  $('particulars-status').textContent = '';
+  $('particulars-client').focus();
+}
+
+// One of NM's proposals: its words, and code's words for where it came from; pressing it fills the box, and saves nothing.
+function particularProposal(field, entry) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'ghost particulars-proposal';
+  const value = document.createElement('span');
+  value.textContent = entry.value;
+  const where = document.createElement('span');
+  where.className = 'hint';
+  where.textContent = typeof entry.said === 'string' ? entry.said : '';
+  button.append(value, where);
+  button.setAttribute('aria-label', `Fill the box with ${entry.value}${where.textContent ? ` (${where.textContent})` : ''}`);
+  button.addEventListener('click', () => {
+    $(`particulars-${field}`).value = entry.value;
+    $(`particulars-${field}`).focus();
+  });
+  return button;
+}
+
+async function saveParticulars() {
+  const dialog = $('particulars-dialog');
+  const chatId = dialog.dataset.chatId;
+  if (!chatId) return;
+  const save = $('particulars-save');
+  save.disabled = true;
+  $('particulars-status').textContent = 'Saving…';
+  const given = Object.fromEntries(PARTICULAR_FIELDS.map((field) => [field, $(`particulars-${field}`).value]));
+  try {
+    await api(`/api/chats/${encodeURIComponent(chatId)}/particulars`, { method: 'PUT',
+      headers: { 'content-type': 'application/json' }, body: JSON.stringify(given) });
+  } catch (e) {
+    if (e.obsolete) return;
+    $('particulars-status').textContent = [409, 422].includes(e.status) ? e.message
+      : `The particulars could not be saved: ${e.message}`;
+    save.disabled = false;
+    return;
+  }
+  dialog.close();
+  delete dialog.dataset.chatId;
+  $('particulars-status').textContent = '';
+  loadMatterList();
 }
 
 // RENAMING A CONVERSATION (plan AN.55, piece 55c3; D255, D355). The advocate's own name for it stands in place of NM's title in
@@ -7837,6 +7952,9 @@ $('deleted-chats-close').addEventListener('click', () => $('deleted-chats-dialog
 // Plan AN.55 (55c3, D255): renaming a conversation.
 $('rename-chat-close').addEventListener('click', () => $('rename-chat-dialog').close());
 $('rename-chat-form').addEventListener('submit', (event) => { event.preventDefault(); renameChat(); });
+// Plan AN.55 (55d3, D256): the conversation's particulars.
+$('particulars-close').addEventListener('click', () => $('particulars-dialog').close());
+$('particulars-form').addEventListener('submit', (event) => { event.preventDefault(); saveParticulars(); });
 $('sessions-dialog').addEventListener('close', () => {
   state.sessionsGeneration += 1;
   $('sessions-body').textContent = '';

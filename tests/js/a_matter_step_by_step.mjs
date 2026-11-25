@@ -100,7 +100,7 @@ const button = (node, text) => (node._text === text ? node : (node.children || [
 {
   const context = vm.createContext({ document: { createElement: (tag) => new Element(tag) }, state: { railGeneration: 1,
     sessionGeneration: 1 }, historyWhen: () => '', restorePendingChat: () => Promise.resolve() });
-  vm.runInContext(fn('historyTitle') + fn('historyChatRow'), context);
+  vm.runInContext(fn('historyTitle') + fn('particularsLine') + fn('historyChatRow'), context);
   const row = context.historyChatRow({ chat_id: 'c1', preview: 'The shop lease', title: 'Shop lease', turn_count: 1,
     waiting: 'Waiting for you: research' }, 1, 1);
   assert.ok(texts(row).includes('Waiting for you: research'));

@@ -667,6 +667,28 @@
     <div class="delete-chat-actions"><button type="submit" id="rename-chat-save" class="primary">Save</button></div>
   </form>
 </dialog>
+<!-- THE CONVERSATION'S PARTICULARS (plan AN.55, 55d3; D256, D332, D355): the advocate's, each optional; NM's proposals from its
+     last understanding of the matter are offered under their boxes and fill a box only when pressed. -->
+<dialog id="particulars-dialog" class="account-dialog" aria-labelledby="particulars-title">
+  <div class="dialog-heading"><h2 id="particulars-title">Particulars</h2>
+    <button type="button" id="particulars-close" class="ghost">Cancel</button></div>
+  <form id="particulars-form" class="particulars-form">
+    <p class="help">Yours to write, each optional, and shown in your history. Where NM read a client or a case number in the
+      matter, it is offered under the box: press it to fill the box. Nothing is saved until you press Save.</p>
+    <label for="particulars-client">Client</label>
+    <input id="particulars-client" type="text" maxlength="200" autocomplete="off">
+    <div id="particulars-client-proposed" class="particulars-proposed"></div>
+    <label for="particulars-court">Court</label>
+    <input id="particulars-court" type="text" maxlength="200" autocomplete="off">
+    <label for="particulars-case_number">Case number</label>
+    <input id="particulars-case_number" type="text" maxlength="100" autocomplete="off">
+    <div id="particulars-case_number-proposed" class="particulars-proposed"></div>
+    <label for="particulars-next_date">Next date</label>
+    <input id="particulars-next_date" type="date">
+    <p id="particulars-status" role="status" aria-live="polite"></p>
+    <div class="delete-chat-actions"><button type="submit" id="particulars-save" class="primary">Save</button></div>
+  </form>
+</dialog>
 <dialog id="deleted-chats-dialog" class="account-dialog" aria-labelledby="deleted-chats-title">
   <div class="dialog-heading"><h2 id="deleted-chats-title">Recently deleted</h2>
     <button type="button" id="deleted-chats-close" class="ghost">Close</button></div>

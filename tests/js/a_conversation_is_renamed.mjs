@@ -51,6 +51,7 @@ function aPage(answer) {
     repaint: () => { seen.painted += 1; },
     loadMatterList: () => { seen.listed += 1; },
     askToDeleteChat: () => {},
+    askForParticulars: () => {},
   });
   vm.runInContext(['shownChatId', 'threadTitle', 'askToRenameChat', 'renameChat'].map(fn).join(''), context);
   return { page: context, $: context.$, seen };
@@ -61,7 +62,7 @@ function aPage(answer) {
   const { page, $, seen } = aPage({ state: 'saved', chat_id: 'c1', title: 'Mehta lease renewal', named: true });
   const [heading, actions] = page.threadTitle();
   assert.equal(heading.textContent, 'Lease of a shop');
-  assert.deepEqual(actions.children.map((button) => button.textContent), ['Rename', 'Delete']);
+  assert.deepEqual(actions.children.map((button) => button.textContent), ['Rename', 'Particulars', 'Delete']);
   const rename = actions.children[0];
   assert.equal(rename.attributes['aria-label'], 'Rename this conversation');
   await rename.click();

@@ -44,6 +44,8 @@ PAGE_TESTS = [
     "drafts_shown.mjs",
     # Plan AN.55 (55c3, D255): Rename beside Delete under the conversation's heading.
     "a_conversation_is_renamed.mjs",
+    # Plan AN.55 (55d3, D256): the conversation's particulars, with NM's proposals, and on the history row.
+    "a_conversations_particulars.mjs",
 ]
 #: Run, with the cases it is given, by tests/test_the_screen_never_folds_a_disclosure.py.
 RUN_ELSEWHERE = {"render_turn_partition.mjs"}

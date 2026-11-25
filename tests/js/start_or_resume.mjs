@@ -49,7 +49,7 @@ const context = vm.createContext({
   restorePendingChat: (chatId) => { opened.push(chatId); return Promise.reject(new Error('It is not there')); },
   stateBlock: (kind, text) => Object.assign(new Element('div'), { className: kind, _text: text }),
 });
-vm.runInContext(fn('historyChatRow') + fn('showRecentWork'), context);
+vm.runInContext(fn('particularsLine') + fn('historyChatRow') + fn('showRecentWork'), context);
 const chats = [{ chat_id: 'c3', title: 'Shop lease', turn_count: 2 }, { chat_id: 'c2', title: 'Cheque returned', turn_count: 1 },
   { chat_id: 'c1', title: 'Boundary wall', turn_count: 4 }];
 const later = () => { let answer; const promise = new Promise((resolve) => { answer = resolve; }); return { promise, answer }; };

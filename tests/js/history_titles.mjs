@@ -20,7 +20,7 @@ class Element {
 }
 const context = vm.createContext({ document: { createElement: (tag) => new Element(tag) }, historyWhen: () => ' · 4 Nov',
   restorePendingChat: async () => {}, state: {} });
-vm.runInContext(fn('historyTitle') + fn('historyChatRow'), context);
+vm.runInContext(fn('historyTitle') + fn('particularsLine') + fn('historyChatRow'), context);
 
 const message = 'Please analyse the attached sale deed and the two notices from the bank and tell me what we can do';
 const titled = context.historyChatRow({ chat_id: 'c1', title: 'Asha Rao v. Greenfield Builders', preview: message, turn_count: 2 }, 1, 1);
