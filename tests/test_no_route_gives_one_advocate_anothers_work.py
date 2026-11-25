@@ -64,7 +64,10 @@ def owned(served):
     matter = served.store.list_for(OWNER).matters[0]
     return {"chat_id": reply["chat_id"], "turn_id": reply["turn_id"], "matter_id": matter.id, "element": 0, "source": 0,
             "tag": "S1", "document_ref": "doc-of-the-owner", "account_id": OWNER, "batch_id": "batch-1",
-            "ref": matter.id}  # plan AN.53 (D241): a deleted conversation's reference, the owner's own
+            "ref": matter.id,  # plan AN.53 (D241): a deleted conversation's reference, the owner's own
+            # Plan AN.67 (23d3, D331): a draft's dispute and version, in the route added after this file - found by it on 25 Nov
+            # 2026 (AN.55), when it had failed on that route since 23d3 was built.
+            "dispute": "whole", "version": 1}
 
 
 def test_the_route_table_is_read_and_holds_the_routes_this_test_is_for():
