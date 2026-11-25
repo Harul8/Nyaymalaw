@@ -67,3 +67,33 @@ jobs:
           # A journey that cannot find its browser here must fail, not skip: the job exists so that the page is watched.
           python -c "import playwright.sync_api"
           python -m pytest $files -o addopts="" -q -p no:cacheprovider -rs
+
+  # THE LINT AND THE TYPE CHECK, HELD ON WHAT A PUSH CHANGES (plan AN.57, pieces 57c and 57d; D265, D354; the second review of
+  # 17 Nov 2026). The project's lint rules were never enforced and there was no type check; the thousands of findings in code
+  # written before are not reflowed in one sweep. So the push is held to the lines it adds: the tool reads them from Git
+  # (against the commit the push started from, or the pull request's base), runs the checker on the Python files they are in,
+  # and fails on a finding on an added line - every rule but the length of a line, which it counts and says (D354). The whole
+  # history is fetched so the earlier commit is there. The type check runs even where the lint fails, so both are seen. Neither
+  # installs the application's libraries: nothing here runs it.
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      # The lint at the version this laptop runs (25 Nov 2026), so a finding here is a finding there.
+      - name: Install the lint and the type checker
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "ruff==0.16.8" "mypy>=1.15,<2"
+      - name: The lint on changed lines
+        run: python development_environment/developer_tooling/changed_lines.py lint --base "$BASE"
+      - name: The type check on touched files
+        if: ${{ !cancelled() }}
+        run: python development_environment/developer_tooling/changed_lines.py types --base "$BASE"

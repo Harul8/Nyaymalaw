@@ -128,6 +128,18 @@ select = ["E", "F", "I", "N", "W", "B"]
 # they read better at the call site than StaleWriteError would. The names are
 # deliberate, so the rule is disabled with a reason rather than worked around.
 ignore = ["N818"]
+# THESE RULES ARE HELD ON THE LINES A PUSH CHANGES, every one but the length of a line (plan AN.57, 57c; D265, D354):
+# development_environment/developer_tooling/changed_lines.py, run by the hosted runner's lint job. The code written
+# before it is not reflowed in one sweep.
+
+# THE TYPE CHECK, held the same way on the files a push touches (plan AN.57, 57d; D265). The runner checks them without
+# installing the libraries they use, so a library is read as untyped; the files they import are read, and what is found
+# in those is not reported. Functions without annotations are not checked, as the checker does by default.
+[tool.mypy]
+ignore_missing_imports = true
+follow_imports = "silent"
+explicit_package_bases = true
+mypy_path = "."
 
 [tool.pylint.messages_control]
 # The rename sweep. pyflakes does not find these, and a stale call site after a
