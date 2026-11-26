@@ -47,6 +47,7 @@ import json
 import re
 from copy import deepcopy
 from datetime import datetime
+from xml.etree import ElementTree
 
 from nm.core_engine import answer_sources, reasoning, research, research_note, response_writer
 from nm.core_engine import rounds as runner
@@ -133,12 +134,18 @@ def check_template(template):
     or a computed value, the part itself stating none) or used only when something holds ("when": what must hold); at least one
     part is written."""
     if (not isinstance(template, dict) or not {"id", "version", "title", "law", "parts"} <= set(template)
-            or not set(template) <= {"id", "version", "title", "law", "parts", "computed", "notes"}
+            or not set(template) <= {"id", "version", "title", "law", "parts", "computed", "notes", "forum", "word_layout"}
             or not isinstance(template["id"], str) or not template["id"] or type(template["version"]) is not int
             or not _said_text(template["title"])
             or not isinstance(template["law"], dict) or set(template["law"]) != {"act", "sections"}
             or not isinstance(template["parts"], list) or not template["parts"]):
         raise ValueError("A template names itself, its version, its law and its parts")
+    if "forum" in template and (not isinstance(template["forum"], list) or not template["forum"]
+                                or not all(_said_text(name) for name in template["forum"])):
+        raise ValueError("A court-specific template gives the exact accepted names of its forum")
+    if "word_layout" in template and (not isinstance(template["word_layout"], str)
+                                      or template["word_layout"] not in _WORD_LAYOUTS):
+        raise ValueError("A template uses a registered Word layout")
     parts, particulars, written, marks = set(), set(), set(), set()
     for part in template["parts"]:
         if (not isinstance(part, dict) or not {"id", "title", "for", "particulars"} <= set(part)
@@ -807,6 +814,35 @@ DRAFTED = ("Drafted by Nyaymalaw for your review from the conversation, its pape
 STILL_AT_FAULT = "NM's own checks still find that this part does not stand as the papers and the held law give it; check it against them."
 
 
+def _delhi_word_layout(document):
+    """Main pleading format in Delhi High Court Practice Direction 90/Rules/DHC (10 Oct 2022)."""
+    namespace = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+    root = ElementTree.fromstring(document)
+    margins = root.find(f".//{namespace}pgMar")
+    for name, value in {"left": "2268", "right": "2268", "top": "1134", "bottom": "1134"}.items():
+        margins.set(namespace + name, value)
+    for paragraph in root.iter(namespace + "p"):
+        properties = paragraph.find(namespace + "pPr")
+        ElementTree.SubElement(properties, namespace + "spacing", {
+            namespace + "line": "360", namespace + "lineRule": "auto",
+        })
+    for run in root.iter(namespace + "r"):
+        properties = run.find(namespace + "rPr")
+        if properties is None:
+            properties = ElementTree.Element(namespace + "rPr")
+            run.insert(0, properties)
+        font = ElementTree.Element(namespace + "rFonts", {
+            namespace + name: "Times New Roman" for name in ("ascii", "hAnsi", "cs", "eastAsia")
+        })
+        properties.insert(0, font)
+        properties.insert(1, ElementTree.Element(namespace + "sz", {namespace + "val": "28"}))
+        properties.insert(2, ElementTree.Element(namespace + "szCs", {namespace + "val": "28"}))
+    return ElementTree.tostring(root, encoding="unicode")
+
+
+_WORD_LAYOUTS = {"delhi_a4_v1": _delhi_word_layout}
+
+
 def word(record, saved_at):
     """The saved draft as a Word file (23c), from what the draft saved and nothing else (record: a draft validate has read;
     saved_at: when it was saved): its title, each part's heading and paragraphs as they stand, a particular not given highlighted
@@ -846,7 +882,9 @@ def word(record, saved_at):
         body += [research_note.paragraph("Normal", f"• {note}") for note in notes]
     body.append(research_note.paragraph("Meta", DRAFTED))
     name = f"Draft {moment:%Y-%m-%d} - " + (" ".join(re.sub(r"[^\w\s-]", "", template["title"]).split())[:60].strip() or "document")
-    return name, research_note.word_file(research_note.document_xml(body), name, saved_at)
+    document = research_note.document_xml(body)
+    layout = _WORD_LAYOUTS.get(template.get("word_layout"))
+    return name, research_note.word_file(layout(document) if layout else document, name, saved_at)
 
 
 
@@ -1022,19 +1060,92 @@ PRIVATE_PAYMENT_V1 = {
     ],
 }
 
+def _written_part(identity, title, purpose, particulars, *, when=None):
+    part = {"id": identity, "title": title, "for": purpose,
+            "particulars": [{"id": field, "said": said} for field, said in particulars.items()]}
+    if when is not None:
+        part["when"] = when
+    return part
+
+
+def _fixed_part(identity, title, purpose, *paragraphs):
+    return {"id": identity, "title": title, "for": purpose, "particulars": [], "wording": list(paragraphs)}
+
+
+_DELHI_HIGH_COURT = ["High Court of Delhi", "Delhi High Court"]
+_ARTICLE_226 = {"act": "Constitution of India, 1950", "sections": ["Article 226"]}
+
+#: AN.69, D317. Civil writ petition under Article 226 in the High Court of Delhi.
+DELHI_CIVIL_WRIT_V1 = {
+    "id": "delhi_high_court_civil_writ", "version": 1,
+    "title": "Civil writ petition under Article 226 in the High Court of Delhi",
+    "forum": list(_DELHI_HIGH_COURT), "law": deepcopy(_ARTICLE_226),
+    "word_layout": "delhi_a4_v1",
+    "parts": [
+        _fixed_part("court", "Cause title", "Identify the named forum and the jurisdiction.",
+                    "IN THE HIGH COURT OF DELHI AT NEW DELHI", "CIVIL WRIT JURISDICTION",
+                    "W.P.(C) No. ______ of ______"),
+        _written_part("parties", "Memo of parties", "Identify and describe each party in its supported role.", {
+            "petitioners": "each petitioner's name, description and service particulars",
+            "respondents": "each respondent's name, designation and service particulars",
+        }),
+        _written_part("synopsis", "Synopsis and list of dates",
+                      "Summarise the case and set out the necessary events in chronological order.", {
+            "short_case": "the challenged act or omission and the relief sought",
+            "dated_facts": "the material events and their supported dates",
+        }),
+        _written_part("facts", "Material facts", "Plead numbered, concise material facts and identify their annexures.", {
+            "grounds_facts": "the material facts and their supporting records",
+            "impugned_act": "the challenged decision, action or omission and the respondent responsible",
+        }),
+        _written_part("maintainability", "Jurisdiction and maintainability",
+                      "Set out the basis of territorial jurisdiction and maintainability, including available "
+                      "alternative remedies and any explanation the papers support.", {
+            "venue_facts": "the material facts giving this court territorial jurisdiction",
+            "remedy_position": "the basis for proceeding by writ and the position on alternative remedies",
+            "delay_position": "the filing chronology and any explanation for delay",
+        }),
+        _written_part("grounds", "Grounds", "State each supported ground separately, tied to the facts and held law.", {
+            "legal_grounds": "the grounds the advocate relies on and the supporting authority and facts",
+        }),
+        _written_part("previous", "Earlier proceedings",
+                      "Disclose earlier or parallel proceedings for related relief. Do not assume that there were none.", {
+            "prior_proceedings": "the stated position on related proceedings and any earlier petition and order",
+        }),
+        _written_part("prayer", "Prayer", "Identify the specific writ, direction or relief and the respondent it is sought against.", {
+            "relief": "the exact final relief sought and against whom",
+        }),
+        _written_part("interim", "Interim relief", "State the supported interim request and its urgency separately.", {
+            "interim_relief": "the precise interim relief and its factual basis",
+        }, when="the advocate has asked for interim relief"),
+        _written_part("filing", "Annexures and signatures", "Identify existing annexures and leave dispatch, signature and filing for review.", {
+            "annexures": "the annexures relied on, including the challenged order where applicable",
+            "signatures": "the petitioner and counsel who will sign and their filing particulars",
+        }),
+    ],
+    "notes": [
+        "Prepare the signed memo of parties, synopsis and chronology, indexed annexures and a separate attested "
+        "supporting affidavit. Include relevant earlier petitions and orders where disclosed.",
+        "Check advance service and proof, including service on nominated counsel where required by the "
+        "Delhi High Court amended civil writ rules. Verify the current registry checklist before filing.",
+    ],
+}
+
+
 #: The templates NM drafts from, by id and version (AN.67: template selection is the owner's). A version, once a draft of it is
 #: saved, stays held as it is so that the draft reads as saved (P46); a change is a new version.
 TEMPLATES: dict[tuple[str, int], dict] = {
     (template["id"], template["version"]): check_template(template)
-    for template in (NI_138_V1, PRIVATE_PAYMENT_V1)
+    for template in (NI_138_V1, PRIVATE_PAYMENT_V1, DELHI_CIVIL_WRIT_V1)
 }
 
 
-def rests_on(record):
+def rests_on(record, *, requested=None):
     """The held templates a dispute's research rests on (plan AN.67, 23d2; D331), the latest version of each, in the order NM
     holds them: those whose Act, and a section of it the template names, the research's picks chose (research.chosen_candidates).
     The Act is matched by its instrument key - the one grouping of held copies (citation_contracts) - and the section by its one
-    rendering; never by topic words or a near title. [] where none does."""
+    rendering; never by topic words or a near title. Court-specific templates additionally need an explicit selection
+    with the named forum checked by the request reader. [] where none does."""
     read = set()
     for candidate in research.chosen_candidates(record):
         if candidate["kind"] != "provision":
@@ -1043,7 +1154,8 @@ def rests_on(record):
         title = statute_title(row.get("act_name") or row.get("title") or "", row.get("act_id") or "")
         read.add((instrument_key(title), provision_label("", str(row.get("section_number") or ""))))
     return [template for template in held()
-            if any((instrument_key(template["law"]["act"]), provision_label("", section)) in read
+            if (not template.get("forum") or template["id"] == requested)
+            and any((instrument_key(template["law"]["act"]), provision_label("", section)) in read
                    for section in template["law"]["sections"])]
 
 
@@ -1059,7 +1171,15 @@ def held():
 def law_said(template):
     """The law a template rests on, in words: "section 138 of the Negotiable Instruments Act, 1881"."""
     sections = template["law"]["sections"]
+    if all(section.startswith("Article ") for section in sections):
+        return f"{' or '.join(sections)} of the {template['law']['act']}"
     return f"{'section' if len(sections) == 1 else 'sections'} {' or '.join(sections)} of the {template['law']['act']}"
+
+
+def forum_named(template, words):
+    """The exact name of the court named in the original request, not a semantic routing rule."""
+    names = template.get("forum")
+    return not names or any(re.search(rf"(?<!\w){re.escape(name)}(?!\w)", words, flags=re.IGNORECASE) for name in names)
 
 
 # Piece 23d5 (D331, D309): a draft asked for in the advocate's message. The understanding of the message, made already, marks each
@@ -1119,6 +1239,10 @@ def asked_for(model, requests, disputes):
         data = canonical_schema_data(receipt.data, schema) if receipt.usable and receipt.data is not None else None
         why = _asked_refused(data, templates, ids)
         if why is None:
-            return {"template": templates.get(data["document"]), "disputes": [name for name in ids if name in data["disputes"]]}
+            chosen = templates.get(data["document"])
+            selection = {"template": chosen, "disputes": [name for name in ids if name in data["disputes"]]}
+            if chosen is not None and not all(forum_named(chosen, request["words"]) for request in requests):
+                selection["forum_needed"] = chosen["forum"][0]
+            return selection
         asked = {**given, "your_last_answer": data, "why_it_cannot_be_taken": why}
     return None

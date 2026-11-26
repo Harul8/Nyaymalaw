@@ -363,6 +363,38 @@ def test_a_template_names_its_parts_and_particulars_once():
         assert drafting.check_template(template) is template
 
 
+def test_a_writ_template_requires_the_named_forum_and_its_selected_article(monkeypatch):
+    identity = "delhi_high_court_civil_writ"
+    template = next(item for item in drafting.held() if item["id"] == identity)
+    source = {"act_name": "Constitution of India", "act_id": "constitution_1950", "section_number": "Article_226"}
+    monkeypatch.setattr(drafting.research, "chosen_candidates", lambda record: [{"kind": "provision", "source": source}])
+    assert template not in drafting.rests_on({})
+    assert template in drafting.rests_on({}, requested=identity)
+    assert drafting.law_said(template) == "Article 226 of the Constitution of India, 1950"
+    assert drafting.forum_named(template, "Please draft an Article 226 petition in the High Court of Delhi.")
+    assert drafting.forum_named(template, "Prepare a civil writ petition for the Delhi High Court.")
+    assert not drafting.forum_named(template, "Prepare a civil writ petition for the Allahabad High Court.")
+    source["section_number"] = "Article_227"
+    assert template not in drafting.rests_on({}, requested=identity)
+
+
+def test_the_delhi_word_draft_sets_the_court_page_and_text_dimensions():
+    from xml.etree import ElementTree
+
+    document = drafting.research_note.document_xml([drafting.research_note.paragraph("Normal", "Court draft")])
+    root = ElementTree.fromstring(drafting._delhi_word_layout(document))
+    word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    ns = {"w": word}
+    def attr(key):
+        return f"{{{word}}}{key}"
+    size, margins = root.find(".//w:pgSz", ns), root.find(".//w:pgMar", ns)
+    assert [size.get(attr(k)) for k in ("w", "h")] == ["11906", "16838"]
+    assert [margins.get(attr(k)) for k in ("left", "right", "top", "bottom")] == ["2268", "2268", "1134", "1134"]
+    assert root.find(".//w:rFonts", ns).get(attr("ascii")) == "Times New Roman"
+    assert root.find(".//w:sz", ns).get(attr("val")) == "28"
+    assert root.find(".//w:spacing", ns).get(attr("line")) == "360"
+
+
 def test_the_writer_and_the_reviewer_are_told_the_purpose_and_work_in_a_loop():
     for said in (drafting.WRITER, drafting.REVIEWER):
         assert "Purpose:" in said and "Outcome:" in said and "Work in a loop" in said
