@@ -35,7 +35,48 @@ jobs:
             pytest==9.2.0 pytest-bdd==9.0.1 pytest-asyncio==1.5.0 pytest-xdist==3.8.0
       # The browser journeys (tests/test_the_journey*) drive a real page and are run where a browser is installed for them.
       - name: The offline tests
-        run: python -m pytest tests -o addopts="" -q -n 4 -p no:cacheprovider --ignore-glob='tests/test_the_journey*'
+        run: >-
+          python -m pytest tests -o addopts="" -q -n 4 -p no:cacheprovider
+          --ignore-glob='tests/test_the_journey*' --junitxml="$RUNNER_TEMP/nm-offline-tests.xml"
+      # A failed check should identify the tests even when the viewer cannot read the job log.
+      - name: Identify failed offline tests
+        if: failure()
+        shell: bash
+        run: |
+          python - "$RUNNER_TEMP/nm-offline-tests.xml" <<'PY'
+          from collections import Counter
+          from pathlib import Path
+          import re
+          import sys
+          from xml.etree import ElementTree
+
+          report = Path(sys.argv[1])
+          if not report.is_file():
+              print("::notice title=Offline test report::Pytest did not write a report. Read the failing job step.")
+              raise SystemExit(0)
+
+          failures = Counter()
+          for case in ElementTree.parse(report).iter("testcase"):
+              if case.find("failure") is None and case.find("error") is None:
+                  continue
+              name = case.get("name", "").split("[", 1)[0]
+              identity = ".".join(filter(None, (case.get("classname", ""), name)))
+              # Show code identifiers only. Parameter values and failure messages stay in the log.
+              if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.]*", identity) and len(identity) <= 240:
+                  failures[identity] += 1
+              else:
+                  failures["Unidentified test case"] += 1
+
+          if not failures:
+              print("::notice title=Offline test report::The report named no failing test cases. Read the failing job step.")
+          else:
+              shown = sorted(failures)[:64]
+              print(f"::notice title=Offline test report::{sum(failures.values())} failures or errors in "
+                    f"{len(failures)} test names. Showing {len(shown)}.")
+              for start in range(0, len(shown), 8):
+                  names = [f"{name} ({failures[name]})" for name in shown[start:start + 8]]
+                  print("::notice title=Failing offline tests::" + ", ".join(names))
+          PY
 
   # THE BROWSER JOURNEYS ON EVERY PUSH (plan AN.57, piece 57a; D263; the second review of 17 Nov 2026). The page itself is driven in
   # the runner's own Chromium against a server started on a throwaway store, with stand-in models: no model is called and nothing
