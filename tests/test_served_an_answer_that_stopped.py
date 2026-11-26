@@ -5,11 +5,17 @@ Offline: the scripted served application; not browser QA."""
 import threading
 
 from nm.app import api
-from nm.core_engine.conversation import stored_chat
+from nm.core_engine.conversation import chat_matter_id, save_waiting, shown_of, stored_chat
 from tests.served_application import OWNER
 from tests.test_core_answer_sections import Scripted, scripted_answers
 
 SENT = {"message": "Inspect this reported account.", "turn_id": "turn-1"}
+REUSE_NOTICE = "Some saved work could not be reused"
+
+
+def progress_labels(served):
+    seen = served.client.get("/api/turn-progress?turn_id=turn-1").json()
+    return [step["label"] for step in seen["steps"]]
 
 
 def stopped_at_the_overview(served):
@@ -36,9 +42,32 @@ def test_continue_finishes_the_answer_where_it_stopped(served):
     assert reply.json()["committed"] == "committed"
     assert not scripted.payloads("core_response_writer"), "the sections finished are not written again"
     assert len(scripted.payloads("core_response_overview")) == 1
+    assert REUSE_NOTICE not in progress_labels(served)
     reopened = served.client.get(f"/api/chats/{chat_id}").json()
     assert "pending" not in reopened and [turn["turn_id"] for turn in reopened["turns"]] == ["turn-1"]
     assert served.client.post("/api/turn/continue", json={"chat_id": chat_id, "turn_id": "turn-1"}).status_code == 404
+
+
+def test_continue_reports_when_saved_work_cannot_be_reused(served):
+    chat_id = stopped_at_the_overview(served)
+    matter = served.store.load(chat_matter_id(OWNER, chat_id))
+    pending = shown_of(matter)
+    pending["steps"]["parts"]["D2"]["state"] = "forged"
+    save_waiting(served.store, matter, pending)
+    scripted = Scripted()
+    scripted_answers(served, scripted)
+
+    reply = served.client.post("/api/turn/continue", json={"chat_id": chat_id, "turn_id": "turn-1"})
+
+    assert reply.status_code == 200, reply.text
+    assert reply.json()["committed"] == "committed"
+    assert not scripted.payloads("core_response_writer", "D1")
+    assert len(scripted.payloads("core_response_writer", "D2")) == 1
+    reopened = served.client.get(f"/api/chats/{chat_id}").json()
+    assert "pending" not in reopened and [turn["turn_id"] for turn in reopened["turns"]] == ["turn-1"]
+    labels = progress_labels(served)
+    assert labels.count(REUSE_NOTICE) == 1
+    assert labels.index(REUSE_NOTICE) < labels.index("Searching the statutes and judgments")
 
 
 def test_after_a_restart_the_progress_reads_the_saved_conversation(served):

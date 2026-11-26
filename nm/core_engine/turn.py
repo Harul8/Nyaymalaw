@@ -869,7 +869,15 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
     if gate.again and resume and not steered and resume.get("understood") and not adding:
         resume, again = _searched_again(resume, gate.again, keep)
         started.update(again)
-    kept = _kept(resume, context, report) if resume and not steered else deepcopy(_NOTHING_KEPT)
+    if resume and not steered:
+        kept = _kept(resume, context, report)
+        # D225(b): report only work the reuse checks left out, after any deliberate changes to the requested work.
+        lost_stage = any(resume.get(name) is not None and kept[name] is None for name in ("understood", "limits"))
+        lost_units = any(set(resume.get(name) or ()) - kept[name].keys() for name in ("parts", "cases", "drafts"))
+        if lost_stage or lost_units or resume.get("answered") != kept["answered"]:
+            report("saved_work_not_reused")
+    else:
+        kept = deepcopy(_NOTHING_KEPT)
     if keep is not None and resume and (resume.get("drafts") or {}) != kept["drafts"]:
         # Plan AN.67 (23d2): a draft that no longer passes its check again, or any draft after a steer, is not kept.
         keep.drafts_kept(kept["drafts"])
