@@ -12,8 +12,8 @@ import pytest
 from assurance.journeys.served import PASSWORD, running
 from nm.core_engine import response_rendering, turn
 from nm.core_engine.conversation import commit_turn, hold_title, open_turn
-from tests.test_the_journey_login_to_logout import _reach_rail, _sign_in
-from tests.test_the_journey_login_to_logout import page as browser_page
+from tests.journey_support import _reach_rail, _sign_in
+from tests.journey_support import page as browser_page
 
 pytestmark = pytest.mark.journey
 page = browser_page

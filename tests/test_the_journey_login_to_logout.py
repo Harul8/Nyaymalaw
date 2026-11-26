@@ -43,16 +43,12 @@ import urllib.request
 
 import pytest
 
+from tests.journey_support import _reach_rail, _sign_in
+from tests.journey_support import page as page
 
 pytestmark = pytest.mark.journey
 
-playwright_api = pytest.importorskip(
-    "playwright.sync_api",
-    reason="the journey suite needs a browser: pip install -e .[journey] "
-           "&& python -m playwright install chromium")
-
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-ARTIFACTS = ROOT / ".nm" / "journey"
 
 BRIEF = ("We act for the plaintiff at Hyderabad. Goods were supplied against "
          "invoices on 14 March 2023. Nothing has been paid.")
@@ -115,59 +111,6 @@ def journey(tmp_path_factory):
                "password": PASSWORD}
 
 
-@pytest.fixture
-def page(journey, request):
-    """A fresh browser page, with an artifact written for any failed phase."""
-    with playwright_api.sync_playwright() as p:
-        browser = p.chromium.launch()
-        context = browser.new_context(viewport={"width": 1280, "height": 900})
-        pg = context.new_page()
-        # CONSOLE ERRORS ARE COLLECTED, not ignored. A page that throws in a
-        # submit handler does nothing visible, which is the exact failure
-        # `test_the_page_and_the_script_agree` was written after.
-        errors: list[str] = []
-        pg.on("pageerror", lambda e: errors.append(str(e)))
-        pg.errors = errors
-        try:
-            yield pg
-        finally:
-            # `rep_call` is set by the makereport hook in `conftest.py`.
-            # `getattr` because a phase that errored in SETUP never reaches
-            # the call phase, and an artifact is worth having for that too.
-            report = getattr(request.node, "rep_call", None)
-            # AN XFAIL IS EVIDENCE, NOT A SKIP. Wave 0's release gate is that
-            # the current counterexamples fail FOR THE STATED REASONS and the
-            # artifacts are reviewable -- so a reproduced BK-32 or BK-40 is
-            # exactly the screenshot somebody needs to look at. `report.failed`
-            # is False for an xfail (its outcome is `skipped`), so capturing on
-            # failure alone would throw away the only phases that currently
-            # have something to show.
-            if (report is None or report.failed
-                    or hasattr(report, "wasxfail")):
-                ARTIFACTS.mkdir(parents=True, exist_ok=True)
-                stem = request.node.name.replace("/", "_")[:80]
-                try:
-                    pg.screenshot(path=str(ARTIFACTS / f"{stem}.png"),
-                                  full_page=True)
-                    (ARTIFACTS / f"{stem}.html").write_text(
-                        pg.content(), encoding="utf-8")
-                except Exception:  # noqa: BLE001 -- an artifact is best effort
-                    pass
-            context.close()
-            browser.close()
-
-
-def _sign_in(page, journey, width=1280, height=900):
-    page.set_viewport_size({"width": width, "height": height})
-    page.goto(journey["base"] + "/app")
-    page.wait_for_selector("#gate:not([hidden])", timeout=15000)
-    page.fill("#login-id", journey["advocate"])
-    page.fill("#login-password", journey["password"])
-    page.click("#login-go")
-    page.wait_for_selector("#masthead:not([hidden])", timeout=15000)
-    return page
-
-
 def _open_matter(page, journey, client=None, **kw):
     """Sign in and open a new conversation -- the state every later phase needs.
 
@@ -209,6 +152,8 @@ def _advise(page, message: str):
     never a state transition and did not even match the Unicode ellipsis the
     page renders.
     """
+    from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
     answers = ".turn:not(.opening-note)"
     before = page.locator(answers).count()
     page.fill("#message", message)
@@ -222,7 +167,7 @@ def _advise(page, message: str):
         # The stop card is read from the conversation after the reply (D69), so it comes a moment after the red message.
         try:
             whole.last.wait_for(timeout=10000)
-        except playwright_api.TimeoutError:
+        except PlaywrightTimeoutError:
             pass  # a stop that is not a go-ahead: the phase reads it as it stands
     if whole.count():
         whole.last.click()
@@ -236,31 +181,6 @@ def _until_idle(page):
     """Send is drawn as an arrow, a ring while NM works (D74-D76, D173): the turn is finished when it is Send again."""
     page.wait_for_function("() => { const send = document.getElementById('send');"
                            " return send.dataset.state === 'send' && !send.disabled; }", timeout=90000)
-
-
-def _reach_rail(page, width):
-    """Get the matter navigator on screen, however this width offers it.
-
-    THE RULE IS REACHABLE, NOT VISIBLE (BK-32). The rail was once a drawer
-    below 820px behind a toggle; it is now the conversation history the top
-    bar opens at every width. A phase that returned early when the rail
-    happened to be on screen asserted nothing - which is what BK-47 was - so
-    this always goes through the control.
-    """
-    # THE TOP BAR'S CONVERSATION HISTORY (owner, 15 and 16 Oct 2026: no tabs, no drawer): at every width it is the control that
-    # opens the list of conversations, and the page publishes that it is open by marking it the current page. Ask that control,
-    # not the rail's geometry: a list moved off-screen would read as visible.
-    history = page.locator("#top-history")
-    assert history.is_visible(), (
-        f"at {width}px no control opens the conversation history, so an "
-        f"advocate can work the matter they are in and reach no other one")
-    if history.get_attribute("aria-current") != "page":
-        history.click()
-    page.wait_for_selector("#top-history[aria-current='page']", timeout=10000)
-    page.wait_for_selector("#rail", state="visible", timeout=10000)
-    box = page.locator("#rail").bounding_box()
-    assert box and box["x"] + box["width"] > 0 and box["x"] < width, (
-        f"at {width}px the control opened a list that is not on the screen")
 
 
 def _visible_text(page) -> str:
