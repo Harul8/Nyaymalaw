@@ -1629,12 +1629,20 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         return out
 
     def withdraw():
-        """A turn withheld whole keeps nothing it showed (G-CORE), nor anything it saved as it worked."""
+        """Remove this turn's pending work (G-CORE). True when the write removed published sections."""
         keeper.close()
-        try:
-            holder["context"] = drop_shown(store, holder["context"])
-        except (OSError, StaleWrite):
-            log.warning("What an unanswered turn showed could not be withdrawn", exc_info=True)
+        with beside:
+            current = holder["context"]
+            try:
+                published = shown_of(current.matter, copied=False)
+            except ValueError:
+                published = None
+            try:
+                holder["context"] = drop_shown(store, current)
+            except (OSError, StaleWrite):
+                log.warning("What an unanswered turn showed could not be withdrawn", exc_info=True)
+                return False
+        return bool(published and published["turn_id"] == turn_id and published["elements"])
 
     def stopped(code, exc, *, answered=None):
         """Plan AN.41 (D69): the turn stopped part-way; all it finished is kept with why, for Continue or Discard. Kept is said
@@ -1751,8 +1759,9 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         refusal.metrics = calls.metrics()
         raise refusal from exc
     except ModelError as exc:
+        withdrew_sections = False
         if isinstance(exc, ContextOverflow):
-            withdraw()
+            withdrew_sections = withdraw()
             why = "This conversation exceeds the current processing capacity. Your saved conversation is unchanged."
             code = "context_capacity"
         elif isinstance(exc, UsageLimitReached):
@@ -1764,7 +1773,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         elif isinstance(exc, (ReleaseWithheld, CorrectionUnavailable, SchemaViolation)):
             # What the check still found, and what the advocate can do (owner decision,
             # 17 Oct 2026), where the release boundary itself withheld the answer (G-CORE: nothing of it is kept).
-            withdraw()
+            withdrew_sections = withdraw()
             found = getattr(exc, "found", None)
             why = ("I could not provide a sufficiently reliable answer to this message. "
                    + (f"After the rewrites NM may make, the independent check still found: {found} You can "
@@ -1774,6 +1783,8 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         else:
             why = "The response could not be completed at present. Your saved conversation is unchanged."
             code = "response_unavailable"
+        if withdrew_sections:
+            why += " The sections shown so far have been withdrawn."
         refusal = ConversationRefused(why, status=402 if code == "usage_limit" else 503, code=code,
                                      retryable=code in ("response_unavailable", "usage_limit"))
         if code in ("usage_limit", "response_unavailable"):

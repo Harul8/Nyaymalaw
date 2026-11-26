@@ -4,13 +4,16 @@ an answer being worked on; what waits to be sent is kept with the conversation; 
 Offline: the scripted served application; not browser QA."""
 import threading
 
+import pytest
+
 from nm.app import api
-from nm.core_engine.conversation import chat_matter_id, save_waiting, shown_of, stored_chat
+from nm.core_engine.conversation import SHOWN, chat_matter_id, save_waiting, shown_of, stored_chat
 from tests.served_application import OWNER
 from tests.test_core_answer_sections import Scripted, scripted_answers
 
 SENT = {"message": "Inspect this reported account.", "turn_id": "turn-1"}
 REUSE_NOTICE = "Some saved work could not be reused"
+WITHDRAWAL_NOTICE = "The sections shown so far have been withdrawn."
 
 
 def progress_labels(served):
@@ -68,6 +71,48 @@ def test_continue_reports_when_saved_work_cannot_be_reused(served):
     labels = progress_labels(served)
     assert labels.count(REUSE_NOTICE) == 1
     assert labels.index(REUSE_NOTICE) < labels.index("Searching the statutes and judgments")
+
+
+@pytest.mark.parametrize("operation,shown", [("core_response_overview", True), ("core_response_writer", False)])
+def test_a_whole_answer_refusal_says_only_if_published_sections_were_withdrawn(served, operation, shown):
+    scripted_answers(served, Scripted(withhold={operation}))
+    chat_id = stored_chat(OWNER, None, SENT["turn_id"])
+    replying = served.model.structured
+    seen = []
+
+    def see_before_refusal(prompt, schema, tier, **kwargs):
+        if prompt.operation == operation:
+            chat = served.client.get(f"/api/chats/{chat_id}").json()
+            seen.append(bool(chat["pending"]["elements"]))
+        return replying(prompt, schema, tier, **kwargs)
+
+    served.model.structured = see_before_refusal
+    reply = served.client.post("/api/turn", json=SENT)
+
+    assert seen and all(was_shown is shown for was_shown in seen)
+    assert reply.status_code == 503 and reply.json()["detail"]["code"] == "answer_withheld"
+    matter = served.store.load(chat_matter_id(OWNER, chat_id))
+    assert shown_of(matter) is None and not matter.brain_chat
+    assert (WITHDRAWAL_NOTICE in reply.json()["detail"]["why"]) is shown
+
+
+def test_a_whole_answer_refusal_does_not_claim_an_unconfirmed_withdrawal(served, monkeypatch):
+    scripted_answers(served, Scripted(withhold={"core_response_overview"}))
+    commit = served.store.commit
+    chat_id = stored_chat(OWNER, None, SENT["turn_id"])
+    matter_id = chat_matter_id(OWNER, chat_id)
+
+    def refuse_withdrawal(candidate, **kwargs):
+        if candidate.id == matter_id and SHOWN not in candidate.intake_answers:
+            raise OSError("Synthetic withdrawal write failure")
+        return commit(candidate, **kwargs)
+
+    monkeypatch.setattr(served.store, "commit", refuse_withdrawal)
+    reply = served.client.post("/api/turn", json=SENT)
+
+    assert reply.status_code == 503 and reply.json()["detail"]["code"] == "answer_withheld"
+    assert WITHDRAWAL_NOTICE not in reply.json()["detail"]["why"]
+    assert shown_of(served.store.load(matter_id))["elements"]
 
 
 def test_after_a_restart_the_progress_reads_the_saved_conversation(served):
