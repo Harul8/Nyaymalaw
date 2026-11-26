@@ -12,6 +12,9 @@ const app = readFileSync(new URL('../../nm/app/app.js', import.meta.url), 'utf8'
 const from = app.indexOf('// A DRAFT THE ADVOCATE ASKED FOR');
 const to = app.indexOf('// THE LIMITS OF THE SEARCH', from);
 assert.ok(from >= 0 && to > from);
+const restore = app.indexOf('function restoredTurn(');
+const afterRestore = app.indexOf('// LB-83.', restore);
+assert.ok(restore >= 0 && afterRestore > restore);
 
 class Node {
   constructor(tag) {
@@ -39,7 +42,7 @@ function harness(reply) {
     api: async (url) => { asked.push(url); if (reply instanceof Error) throw reply; return reply; },
     saveWordFile: async (url, status, said) => { saved.push({ url, said }); },
   });
-  vm.runInContext(app.slice(from, to), context);
+  vm.runInContext(app.slice(from, to) + app.slice(restore, afterRestore), context);
   return { context, asked, saved };
 }
 const settle = () => new Promise((resolve) => setImmediate(resolve));
@@ -155,11 +158,15 @@ const answer = { chat_id: 'chat 1', turn_id: 't/1', blocked: false, committed: t
 {
   const said = ['Demand notice: not drafted - it rests on section 138, which is not among the law NM\'s research relied on.'];
   const { context, asked } = harness({ drafts: [], said });
-  const opened = context.answerDrafts({ ...answer, drafts: [], drafts_said: said });
+  const restored = context.restoredTurn({ ...answer, release_state: 'released', drafts: [], drafts_said: said });
+  const opened = context.answerDrafts(restored.answer);
   assert.equal(opened.hidden, false);
   assert.deepEqual(opened.children.map((node) => [node.className, node.textContent]), [['draft-not-written', said[0]]]);
-  const withDraft = context.answerDrafts({ ...answer, drafts: [draft], drafts_said: said });
+  const mixed = context.restoredTurn({ ...answer, release_state: 'released', drafts: [draft], drafts_said: said });
+  const withDraft = context.answerDrafts(mixed.answer);
   assert.deepEqual(withDraft.children.map((node) => node.className), ['draft-block', 'draft-not-written']);
+  const withheld = context.restoredTurn({ ...answer, release_state: 'withheld', drafts: [draft], drafts_said: said });
+  assert.equal(context.answerDrafts(withheld.answer), null);
   const given = { ...answer, committed: 'committed' };
   const box = context.answerDrafts(given);
   await settle();

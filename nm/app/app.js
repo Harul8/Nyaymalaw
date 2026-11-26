@@ -1145,8 +1145,9 @@ function restoredTurn(turn) {
     committed: true,
     search_said: turn.search_said === null || (turn.search_said && typeof turn.search_said === 'object')
       ? turn.search_said : undefined,
-    // Plan AN.67 (23d3): the drafts saved with the answer, drawn beneath it (answerDrafts).
+    // Plan AN.67 (23d3, 23d5): the saved drafts and any explanation for a draft that was not written.
     drafts: Array.isArray(turn.drafts) ? turn.drafts : undefined,
+    drafts_said: Array.isArray(turn.drafts_said) ? turn.drafts_said : undefined,
     service_status: typeof turn.service_status === 'string' ? turn.service_status : null,
     // Plan AN.37: what NM asked while it worked, and how each answer came to stand.
     questions_asked: turn.questions_asked && typeof turn.questions_asked === 'object' ? turn.questions_asked : null,
