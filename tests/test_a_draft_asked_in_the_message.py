@@ -22,6 +22,7 @@ BODY = {"message": WORDS, "turn_id": "turn-1", "steps": "interactive"}
 DRAFTS = f"/api/chats/{CHAT}/turns/turn-1/drafts"
 NOTICE = drafting.NI_138_V1
 LAW = "section 138 of the Negotiable Instruments Act, 1881"
+RECOVERY = "private_contractual_payment_demand"
 
 
 def _result(data, tier):
@@ -29,7 +30,7 @@ def _result(data, tier):
 
 
 def asking(served, *, readings=({"document": NOTICE["id"], "disputes": []},), section="138", way="specific", request=True,
-           fail=()):
+           fail=(), facts="A cheque returned unpaid."):
     """The served application for a message asking for the notice: its understanding marks the request as drafting (request), the
     scripted search returns the held law with the section given, the drafting calls are answered (a writing that marks every
     particular, a review that finds nothing) and the reading of the request answers from readings in turn (an exception raises).
@@ -47,7 +48,7 @@ def asking(served, *, readings=({"document": NOTICE["id"], "disputes": []},), se
         if prompt.operation == "core_understanding":
             latest = json.loads(prompt.user)["latest"]["text"]
             return _result({"courtesies": [], "restrictions": [],
-                            "information": [{"quote": latest, "meaning": "A cheque returned unpaid.", "context": [],
+                            "information": [{"quote": latest, "meaning": facts, "context": [],
                                              "unresolved": []}],
                             "requests": [{"quote": latest, "meaning": "The advocate asks for the demand notice to be drafted.",
                                           "context": [], "unresolved": [], "requested_work": "drafting",
@@ -87,7 +88,8 @@ def test_a_draft_asked_in_a_message_worked_straight_through_is_written_after_the
                                "wanted": "A draft of the demand notice."}]
     assert [(dispute["id"], dispute["name"]) for dispute in asked["disputes"]] == [("D1", "Dispute 1"), ("D2", "Dispute 2")]
     assert asked["disputes"][0]["legal_questions"] == ["Which rule governs point 1 of dispute 1?"]
-    assert asked["documents_we_hold"] == [{"id": NOTICE["id"], "title": NOTICE["title"], "rests_on": LAW}]
+    assert asked["documents_we_hold"][0] == {"id": NOTICE["id"], "title": NOTICE["title"], "rests_on": LAW}
+    assert {entry["id"] for entry in asked["documents_we_hold"]} == {template["id"] for template in drafting.held()}
     assert calls.count("core_understanding") == 1, "the message is not read again for the request"
     at = calls.index(drafting.ASKED_OPERATION)
     assert at > max(index for index, operation in enumerate(calls) if operation.startswith("core_response_"))
@@ -107,6 +109,57 @@ def test_a_draft_asked_for_one_dispute_is_written_for_that_dispute_alone(served)
     activity = answered(served)
     assert list(activity["drafts"]) == ["D2"] and "drafts_said" not in activity
     assert calls.count(drafting.OPERATION) == 1
+
+
+def test_a_private_payment_notice_uses_the_selected_template_and_keeps_unknown_particulars_open(served):
+    words = ACTS_FOR + " The buyer still owes INR 20,000 on the confirmed invoice. Draft a private payment demand."
+    calls, _ = asking(served, readings=({"document": RECOVERY, "disputes": ["D1"]},), facts="An unpaid invoice.")
+    for row in served.app.legal_search.inner.collections["provision"].rows.values():
+        row["act_name"], row["section_number"] = "The Indian Contract Act, 1872", "37"
+    configured = served.model.structured
+
+    def write_notice(prompt, schema, tier, **kwargs):
+        if prompt.operation != drafting.OPERATION:
+            return configured(prompt, schema, tier, **kwargs)
+        calls.append(prompt.operation)
+        payload = json.loads(prompt.user)
+        document = payload["document"]
+        expected = [part for part in document["parts"] if "set_wording" not in part and "used_only_when" not in part]
+        parts = [{"part_id": part["part_id"], "paragraphs": [{
+            "text": " ".join("[[" + item["id"] + "]]" for item in part["particulars"]),
+            "source_ids": [], "particulars": [], "missing": [item["id"] for item in part["particulars"]],
+        }]} for part in expected]
+        account = next(part["paragraphs"][0] for part in parts if part["part_id"] == "account")
+        source = payload["original_context"]["latest"]["source_id"]
+        account["text"] = "The amount claimed is INR 20,000. [[default_details]]"
+        account["source_ids"] = [source]
+        account["particulars"] = [{"particular_id": "amount_due", "source_id": source, "words": "INR 20,000"}]
+        account["missing"] = ["default_details"]
+        return _result({"parts": parts}, tier)
+
+    served.model.structured = write_notice
+    reply = served.client.post("/api/turn", json={**BODY, "message": words})
+    assert reply.status_code == 200 and reply.json()["committed"] == "committed", reply.text
+    activity = saved(served)
+    assert list(activity.get("drafts", {})) == ["D1"]
+    record, = activity["drafts"]["D1"]
+    assert record["template"]["id"] == RECOVERY and record["template"]["version"] == 1
+    assert calls.count(drafting.OPERATION) == calls.count(drafting.REVIEW_OPERATION) == 1
+    view, = shown(served)["drafts"]
+    assert view["title"] == record["template"]["title"]
+    parts = {part["part_id"]: part["paragraphs"] for part in view["parts"]}
+    assert "interest" not in parts and "reply_terms" not in parts
+    assert "INR 20,000" in " ".join(parts["demand_amount"])
+    assert "particular needed" in " ".join(parts["parties"])
+    download = served.client.get(f"{DRAFTS}/D1/1.docx")
+    assert download.status_code == 200 and download.content.startswith(b"PK")
+
+
+def test_the_private_payment_notice_requires_the_matching_instrument(served):
+    calls, _ = asking(served, section="37", readings=({"document": RECOVERY, "disputes": ["D1"]},))
+    activity = answered(served)
+    assert drafting.OPERATION not in calls and "drafts" not in activity
+    assert "Indian Contract Act, 1872" in activity["drafts_said"][0]
 
 
 def test_research_that_did_not_rely_on_the_section_drafts_nothing_and_says_so(served):
@@ -130,7 +183,8 @@ def test_a_document_nm_holds_no_template_for_is_said_with_those_it_holds(served)
     calls, _ = asking(served, readings=({"document": "none", "disputes": []},))
     activity = answered(served)
     assert "drafts" not in activity and drafting.OPERATION not in calls
-    assert activity["drafts_said"] == [turn.NO_DRAFT_HELD.format(held=NOTICE["title"])]
+    names = "; ".join(template["title"] for template in drafting.held())
+    assert activity["drafts_said"] == [turn.NO_DRAFT_HELD.format(held=names)]
 
 
 def test_a_reading_that_cannot_be_admitted_is_asked_once_more_then_said_not_told(served):
@@ -139,7 +193,8 @@ def test_a_reading_that_cannot_be_admitted_is_asked_once_more_then_said_not_told
     activity = answered(served)
     assert calls.count(drafting.ASKED_OPERATION) == 2 and drafting.OPERATION not in calls
     assert sent[1]["your_last_answer"] == {"document": "plaint", "disputes": []}
-    assert sent[1]["why_it_cannot_be_taken"] == f"document must be one of: {NOTICE['id']}, none"
+    allowed = ", ".join([*(template["id"] for template in drafting.held()), "none"])
+    assert sent[1]["why_it_cannot_be_taken"] == f"document must be one of: {allowed}"
     assert activity["drafts_said"] == [turn.NO_DRAFT_TOLD] and "drafts" not in activity
     # Admitted on the second asking, it is drafted.
     for wrong in ({"document": NOTICE["id"], "disputes": ["D9"]}, {"document": NOTICE["id"]}, None, []):

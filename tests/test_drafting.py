@@ -357,7 +357,10 @@ def test_a_template_names_its_parts_and_particulars_once():
                 {k: v for k, v in TEMPLATE.items() if k != "law"}):
         with pytest.raises(ValueError):
             drafting.check_template(bad)
-    assert drafting.TEMPLATES == {("ni_138_demand_notice", 1): drafting.NI_138_V1}
+    assert drafting.TEMPLATES[("ni_138_demand_notice", 1)] == drafting.NI_138_V1
+    for key, template in drafting.TEMPLATES.items():
+        assert key == (template["id"], template["version"])
+        assert drafting.check_template(template) is template
 
 
 def test_the_writer_and_the_reviewer_are_told_the_purpose_and_work_in_a_loop():

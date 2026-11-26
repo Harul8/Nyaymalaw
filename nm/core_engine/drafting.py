@@ -938,9 +938,96 @@ NI_138_V1 = {
     ],
 }
 
+#: AN.68, D316. Ordinary English demand for payment between private contracting parties.
+PRIVATE_PAYMENT_V1 = {
+    "id": "private_contractual_payment_demand",
+    "version": 1,
+    "title": "Private contractual payment demand notice",
+    "law": {"act": "Indian Contract Act, 1872", "sections": ["37", "73"]},
+    "parts": [
+        {
+            "id": "heading", "title": "Date and delivery",
+            "for": "State the notice date and the proposed delivery method, with no claim that service has occurred.",
+            "particulars": [
+                {"id": "notice_date", "said": "the date of the notice"},
+                {"id": "delivery_method", "said": "the proposed method of delivery"},
+            ],
+        },
+        {
+            "id": "parties", "title": "Sender and recipient",
+            "for": "Identify the advocate, the client claiming payment and the contracting party addressed.",
+            "particulars": [
+                {"id": "advocate", "said": "the advocate's name and correspondence address"},
+                {"id": "claimant", "said": "the client's correct name and address"},
+                {"id": "recipient", "said": "the recipient's correct legal name and service address"},
+            ],
+        },
+        {
+            "id": "agreement", "title": "Agreement and obligation",
+            "for": "Summarise the agreement, the client's performance and the recipient's payment obligation in order. "
+                   "Use the actual agreement, invoice or other identified record and attribute disputed facts.",
+            "particulars": [
+                {"id": "agreement_reference", "said": "the agreement or transaction giving rise to the demand"},
+                {"id": "performance", "said": "what the claimant supplied or performed"},
+                {"id": "payment_obligation", "said": "the payment term, including when the amount fell due"},
+            ],
+        },
+        {
+            "id": "account", "title": "Balance claimed",
+            "for": "Explain the default and identify the amount the client claims is outstanding after supported "
+                   "credits or payments. Preserve disputed amounts and never calculate a new balance.",
+            "particulars": [
+                {"id": "default_details", "said": "what remains unpaid and the basis for saying so"},
+                {"id": "amount_due", "said": "the stated outstanding principal amount"},
+            ],
+        },
+        {
+            "id": "interest", "title": "Interest or additional sum",
+            "for": "State the amount or rate, period and basis of any additional sum separately from the principal.",
+            "when": "the advocate asks to include it and the papers or held law support its basis",
+            "particulars": [
+                {"id": "interest_basis", "said": "the basis, amount or rate, and period of the additional claim"},
+            ],
+        },
+        {
+            "id": "demand_amount", "title": "Demand",
+            "for": "State the claimant's demand for the supported outstanding principal.",
+            "particulars": [],
+            "wording": ["On my client's instructions, I call upon you to pay the claimed outstanding principal "
+                        "of [[amount_due]]."],
+        },
+        {
+            "id": "reply_terms", "title": "Payment and response terms",
+            "for": "Give only the supported payment or reply instructions. Identify any requested period as the "
+                   "client's request unless a supported contractual term governs it.",
+            "when": "the advocate gives payment instructions, requests a reply by a stated time, "
+                    "or the papers establish an applicable notice or cure term",
+            "particulars": [
+                {"id": "response_terms", "said": "the stated payment instructions or response terms"},
+            ],
+        },
+        {
+            "id": "close", "title": "Close",
+            "for": "Reserve the client's position without stating that any action will be taken.",
+            "particulars": [],
+            "wording": ["My client reserves the remedies available under the agreement and applicable law.",
+                        "Yours faithfully,", "[[advocate]]"],
+        },
+    ],
+    "notes": [
+        "This template is for a private contractual payment demand. Check any applicable contract notice clause, "
+        "cure period, special statutory procedure and limitation separately before issuing it.",
+        "Check the parties, payment ledger and credits against original records. Confirm the delivery address and "
+        "method, and retain proof of dispatch and receipt.",
+    ],
+}
+
 #: The templates NM drafts from, by id and version (AN.67: template selection is the owner's). A version, once a draft of it is
 #: saved, stays held as it is so that the draft reads as saved (P46); a change is a new version.
-TEMPLATES: dict[tuple[str, int], dict] = {(NI_138_V1["id"], NI_138_V1["version"]): check_template(NI_138_V1)}
+TEMPLATES: dict[tuple[str, int], dict] = {
+    (template["id"], template["version"]): check_template(template)
+    for template in (NI_138_V1, PRIVATE_PAYMENT_V1)
+}
 
 
 def rests_on(record):
