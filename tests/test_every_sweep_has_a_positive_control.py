@@ -175,6 +175,10 @@ CONTROLS: dict[str, str] = {
     # BK-13 -- no enum value reaches the advocate, over every Element in nm/
     "test_no_enum_value_reaches_the_advocate":
         "test_the_value_scan_can_see_an_identifier_reaching_the_advocate",
+    "test_no_message_the_page_can_show_speaks_as_a_system":
+        "test_the_page_sweep_can_see_a_status_number_shown",
+    "test_no_route_answers_as_a_system":
+        "test_the_route_sweep_can_see_a_status_number_answered",
     # M5 -- three states, over every enum in nm/
     "test_every_outcome_enum_can_say_that_nothing_was_established":
         "test_the_third_state_is_a_value_and_never_a_null",

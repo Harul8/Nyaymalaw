@@ -1039,7 +1039,8 @@ def top_bar_brand_new_and_history(app_page):
     assert 'aria-hidden="true"' in home.group(1) and '<span class="top-label">Home</span>' in home.group(1)
     assert ribbon.index('id="top-home"') < ribbon.index('id="top-new"') < ribbon.index('id="top-history"')
     assert '<button type="button" id="top-new" class="ghost top-action">+ New matter</button>' in ribbon
-    assert re.search(r'<button type="button" id="top-history"[^>]*>Conversation history</button>', ribbon)
+    # The conversation history is opened through the Recent work button (AN.75).
+    assert re.search(r'<button type="button" id="top-history"[^>]*>Recent work</button>', ribbon)
     script = _asset("app.js")
     assert "$('top-new').addEventListener('click', () => startMatter());" in script
     assert "$('top-history').addEventListener('click', () => openTab('advise'));" in script
@@ -1189,7 +1190,7 @@ def history_read_afresh(page_script):
     assert "await loadMatterList();" in _function(page_script, "showMatterList")
     load = _function(page_script, "loadMatterList")
     assert "const generation = ++state.matterListGeneration;" in load
-    assert "data = await api(`/api/work?limit=${HISTORY_PAGE}&offset=0`);" in load
+    assert "data = await api(historyAddress(0, words));" in load
 
 
 # ---------------------------------------------------------------- F-B-02 ---
@@ -1210,7 +1211,9 @@ def board_beside_the_conversation(app_page, page_script):
 def board_from_the_server(page_script):
     assert "await api(`/api/chats/${encodeURIComponent(chatId)}/board`)" in _function(page_script, "loadChatBoard")
     assert "loadChatBoard();" in _function(page_script, "startMatter")
-    assert "else if (intent.chatId) loadChatBoard();" in _function(page_script, "deliver")
+    deliver = _function(page_script, "deliver")
+    assert "if (intent.chatId) loadChatBoard();" in deliver
+    assert deliver.index("entry.answer = answer;") < deliver.index("loadChatBoard();")
 
 
 @then("while NM works on a message the board says what NM is doing")
@@ -1320,7 +1323,9 @@ def board_once_it_has_something(page_script, stylesheet):
 @then("the conversation history is read from the server ten at a time and lists every saved conversation as more is asked for")
 def list_from_the_server(page_script):
     load = _function(page_script, "loadMatterList")
-    assert "data = await api(`/api/work?limit=${HISTORY_PAGE}&offset=0`);" in load
+    assert "data = await api(historyAddress(0, words));" in load
+    address = _function(page_script, "historyAddress")
+    assert "`/api/work?limit=${HISTORY_PAGE}&offset=${offset}" in address
     assert "const HISTORY_PAGE = 10;" in page_script and "api('/api/work')" not in page_script
     assert "for (const chat of page.chats)" in load and "historyChatRow(chat, generation, session)" in load
     assert "row.dataset.chatId = chat.chat_id;" in _function(page_script, "historyChatRow")
@@ -1330,9 +1335,10 @@ def list_from_the_server(page_script):
 def ten_at_a_time(page_script):
     load = _function(page_script, "loadMatterList")
     more = _function(page_script, "offerMoreHistory")
-    assert "shown.has(`chat:${chat.chat_id}`)" in load and "shown.has(`matter:${m.matter_id}`)" in load
+    assert "shown.has(`chat:${chat.chat_id}`)" in load and "shown.add(`chat:${chat.chat_id}`)" in load
     assert "button.textContent = 'Load more';" in more
-    assert "page = await api(`/api/work?limit=${HISTORY_PAGE}&offset=${next}`);" in more
+    assert "page = await api(historyAddress(next, words));" in more
+    assert "next = page.next_offset;" in more
     assert "footer.before(...rows);" in more and "footer.remove();" in more
     assert "status.textContent = `Showing ${count} of ${total}`;" in more
 

@@ -35,6 +35,7 @@ const rendererSource = between("function appendReplyBody(", "const REPLY_ICONS")
   // The matter re-entry that restored an earlier matter's turns was deleted with its screens (plan AN.57, D292); a
   // conversation's saved turns come back through restoredTurn alone.
   + "\n" + between("function restoredTurn(turn) {", "function appendReplyBody(")
+  + "\n" + between("// A DRAFT THE ADVOCATE ASKED FOR", "// THE LIMITS OF THE SEARCH")
   + "\n" + between("function renderTurn(entry) {", "function repaint()");
 
 // ---------------------------------------------------------- the stub DOM ---
@@ -308,8 +309,7 @@ context.fetch = async () => ({ ok: false, status: 503, json: async () => ({
 let withoutReason;
 try { await context.api('/api/turn', {method: 'POST'}, {sessionBound: false}); }
 catch (error) { withoutReason = error; }
-if (!withoutReason?.message.includes('The server could not complete this request')
-    || withoutReason.message.includes('private-receipt')) {
+if (withoutReason?.message !== 'NM could not finish this just now. Try again in a moment.') {
   fails.push('an unlabelled structured failure leaked metadata instead of readable fallback');
 }
 

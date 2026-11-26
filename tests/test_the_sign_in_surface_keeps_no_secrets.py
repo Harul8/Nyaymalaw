@@ -90,7 +90,8 @@ def test_the_reset_scan_sees_each_planted_leak():
     script = _script()
     mutations = {
         "the reset token stays in the address bar":
-            script.replace("history.replaceState(", "void (", 1),
+            script.replace("resetToken = match[1];\n  history.replaceState(",
+                           "resetToken = match[1];\n  void (", 1),
         "the new passwords stay in the DOM during the request":
             script.replace("  clearResetPasswords();\n  if (!token)", "  if (!token)", 1),
         "leaving the reset card keeps its passwords":
