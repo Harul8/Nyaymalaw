@@ -49,6 +49,7 @@ STAGES = {
     "waiting_for_answer": "Waiting for your answer",
     # Plan AN.41 (D70) and AN.42 (D79).
     "continuing": "Checking the work already finished",
+    "saved_work_not_reused": "Some saved work could not be reused",
     "steering": "Taking in what you added",
     # Plan AN.48 (48f2, D167): the step waits for a free place on the server; 'ahead' says how many wait before it.
     "queued": "Waiting for NM to be free",

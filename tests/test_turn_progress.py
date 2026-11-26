@@ -50,6 +50,21 @@ def test_each_advocate_reads_only_their_own_turn_and_entries_lapse_after_the_tur
     assert progress.read("a", "t1") == {"state": "unknown"}
 
 
+def test_a_saved_work_notice_remains_in_the_progress_history():
+    progress = TurnProgress(clock=Clock())
+    progress.report("a", "t1", "continuing")
+    progress.report("a", "t1", "saved_work_not_reused", {"reason": "private matter words"})
+    progress.report("a", "t1", "searching")
+    progress.report("a", "t2", "continuing")
+    progress.report("a", "t2", "searching")
+    seen = progress.read("a", "t1")
+    notice = "Some saved work could not be reused"
+    assert [step["label"] for step in seen["steps"]] == [STAGES["continuing"], notice, STAGES["searching"]]
+    assert "private matter words" not in str(seen)
+    assert all(step["label"] != notice for step in progress.read("a", "t2")["steps"])
+    assert progress.read("b", "t1") == {"state": "unknown"}
+
+
 def test_a_turn_reports_its_stages_in_order(store):
     seen = []
     response = run(store, ScriptedModel(legal=True), progress=lambda stage, **detail: seen.append((stage, detail)))
