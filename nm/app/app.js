@@ -4929,6 +4929,14 @@ function renderWaiting(entry) {
   for (const line of Array.isArray(card.unsearched) ? card.unsearched : []) {
     box.appendChild(make('p', 'waiting-next waiting-unsearched', line));
   }
+  // AN.65–AN.66: show the saved research that is ready for the advocate to review before an analysis.
+  const work = entry.work;
+  if (card.after === 'researched' && work?.understood) {
+    const written = new Set((work.sections || []).filter((section) => section.done).map((section) => section.dispute_id));
+    const disputes = work.disputes.filter((dispute) => dispute.researched && !written.has(dispute.id));
+    if (disputes.length) box.appendChild(renderWork({ ...work, disputes }, {},
+      { chat_id: entry.chatId || entry.context?.chatId || null, turn_id: entry.turnId }));
+  }
   // Plan AN.48 (48d; D142): NM's questions wait for the advocate's answers - no default - answered here.
   const asked = Array.isArray(card.questions) ? card.questions : [];
   const open = asked.filter((question) => !question.answer);
@@ -5818,7 +5826,7 @@ async function refreshStopped(entry, chatId) {
 // What the conversation holds of a turn being worked on, taken into its entry (D66-D69, D79).
 function takePending(entry, pending) {
   entry.shownElements = Array.isArray(pending.elements) ? pending.elements : [];
-  if (pending.work) entry.work = pending.work;
+  entry.work = pending.work || null;
   entry.steers = Array.isArray(pending.steers) ? pending.steers : [];
   // Plan AN.58 (D287): a message worked straight through as it asked, in code's words.
   if (typeof pending.way === 'string') entry.way = pending.way;

@@ -69,6 +69,34 @@ const button = (node, text) => (node._text === text ? node : (node.children || [
   assert.equal(red.className, 'failure stopped');
 }
 
+// At the analysis approval, show the saved research for disputes still awaiting analysis.
+{
+  const rendered = [];
+  const context = vm.createContext({ document: { createElement: (tag) => new Element(tag) }, activeDelivery: null,
+    renderWork: (work, parts, where) => {
+      rendered.push({ disputes: work.disputes, where });
+      return new Element('div');
+    } });
+  vm.runInContext(fn('renderWaiting') + fn('takePending'), context);
+  const researched = { id: 'D2', researched: true, law: [{ tag: 'picked-source' }] };
+  const work = { understood: true,
+    disputes: [{ id: 'D1', researched: true }, researched, { id: 'D3', researched: false }],
+    sections: [{ dispute_id: 'D1', done: true }, { dispute_id: 'D2', done: false }] };
+  const entry = { chatId: 'owned-chat', turnId: 'same-turn', work,
+    stopped: { waiting: { after: 'researched', gos: [] } } };
+  context.renderWaiting(entry);
+  assert.deepEqual(JSON.parse(JSON.stringify(rendered)), [
+    { disputes: [researched], where: { chat_id: 'owned-chat', turn_id: 'same-turn' } },
+  ]);
+  entry.stopped.waiting.after = 'understood';
+  context.renderWaiting(entry);
+  assert.equal(rendered.length, 1, 'does not show research at an earlier stop');
+  entry.stopped.waiting.after = 'researched';
+  context.takePending(entry, { state: 'working' });
+  context.renderWaiting(entry);
+  assert.equal(rendered.length, 1, 'does not use a previous projection if the new one has no work');
+}
+
 // --- each go-ahead goes by its own route (48a3) ---------------------------------------------------------------------------------
 {
   const delivered = [];
