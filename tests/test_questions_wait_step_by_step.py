@@ -29,8 +29,12 @@ CHAT = stored_chat(OWNER, None, "turn-1")
 
 
 def go(served, choice, disputes=None):
-    return served.client.post("/api/turn/go", json={"chat_id": CHAT, "turn_id": "turn-1", "choice": choice,
-                                                    **({"disputes": disputes} if disputes else {})})
+    request = {"chat_id": CHAT, "turn_id": "turn-1", "choice": choice,
+               **({"disputes": disputes} if disputes else {})}
+    if choice == "next":
+        pending = served.client.get(f"/api/chats/{CHAT}").json()["pending"]
+        request["at"] = pending["stopped"]["waiting"]["at"]
+    return served.client.post("/api/turn/go", json=request)
 
 
 def answer(served, given):

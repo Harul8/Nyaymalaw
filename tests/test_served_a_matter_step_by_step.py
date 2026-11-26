@@ -18,8 +18,11 @@ def waiting(served):
     return served.client.get(f"/api/chats/{CHAT}").json()["pending"]["stopped"]
 
 
-def go(served, choice):
-    return served.client.post("/api/turn/go", json={"chat_id": CHAT, "turn_id": "turn-1", "choice": choice})
+def go(served, choice, *, at=None):
+    request = {"chat_id": CHAT, "turn_id": "turn-1", "choice": choice}
+    if choice == "next":
+        request["at"] = at if at is not None else waiting(served)["waiting"]["at"]
+    return served.client.post("/api/turn/go", json=request)
 
 
 def test_a_message_sent_step_by_step_stops_at_each_step_and_done_saves_the_answer(served):
@@ -47,12 +50,13 @@ def test_a_message_sent_step_by_step_stops_at_each_step_and_done_saves_the_answe
     assert scripted.payloads("core_response_writer") and not scripted.payloads("core_response_cross_check")
     assert [g["choice"] for g in waiting(served)["waiting"]["gos"]] == ["done"]
 
-    saved = go(served, "next")
+    at = waiting(served)["waiting"]["at"]
+    saved = go(served, "next", at=at)
     assert saved.status_code == 200, saved.text
     assert saved.json()["committed"] == "committed"
     reopened = served.client.get(f"/api/chats/{CHAT}").json()
     assert "pending" not in reopened and [turn["turn_id"] for turn in reopened["turns"]] == ["turn-1"]
-    assert go(served, "next").json()["detail"]["code"] == "not_waiting"
+    assert go(served, "next", at=at).json()["detail"]["code"] == "not_waiting"
 
 
 def test_next_requires_a_dispute_when_more_than_one_can_be_researched(served):
@@ -85,6 +89,35 @@ def test_next_requires_a_dispute_when_more_than_one_can_be_researched(served):
     after = waiting(served)["waiting"]
     assert [(d["id"], d["researched"], d["written"]) for d in after["disputes"]] == [
         ("D1", True, True), ("D2", False, False)]
+    assert len(scripted.payloads("core_response_writer", "D1")) == 1
+    assert not scripted.payloads("core_response_writer", "D2")
+
+
+def test_replaying_next_does_not_authorise_the_new_stop(served):
+    scripted = Scripted()
+    scripted_answers(served, scripted)
+    assert served.client.post("/api/turn", json=SENT).status_code == 409
+    start = intake(served.client, CHAT)
+    route = "/api/turn/go"
+    request = {"chat_id": CHAT, "turn_id": "turn-1", "choice": "next", "disputes": ["D1"]}
+    calls = list(served.model.calls)
+    for unbound in (request, {**request, "at": "2026-11-26"}):
+        refused = served.client.post(route, json=unbound)
+        assert refused.status_code == 422 and refused.json()["detail"]["code"] == "stop_required"
+    assert waiting(served)["waiting"] == start and served.model.calls == calls
+
+    bound = {**request, "at": start["at"]}
+    assert served.client.post(route, json=bound).json()["detail"]["code"] == "waiting"
+    researched = waiting(served)["waiting"]
+    assert researched["after"] == "researched"
+    calls = list(served.model.calls)
+    replay = served.client.post(route, json=bound)
+    assert replay.status_code == 409 and replay.json()["detail"]["code"] == "stale_stop"
+    assert waiting(served)["waiting"] == researched and served.model.calls == calls
+    assert not scripted.payloads("core_response_writer")
+
+    assert served.client.post(route, json={**request, "at": researched["at"]}).json()["detail"]["code"] == "waiting"
+    assert waiting(served)["waiting"]["after"] == "written"
     assert len(scripted.payloads("core_response_writer", "D1")) == 1
     assert not scripted.payloads("core_response_writer", "D2")
 

@@ -150,6 +150,33 @@ def test_a_bound_next_cannot_race_a_change_to_the_saved_stop(served, monkeypatch
     assert current['go']['waiting']['at'] != stop['at'] and current['steps']['parts'] == {}
 
 
+def test_restart_keeps_a_saved_next_bound_to_its_original_stop(served):
+    scripted = Scripted()
+    scripted_answers(served, scripted)
+    assert served.client.post('/api/turn', json=SENT).status_code == 409
+    original = intake(served.client, CHAT)
+    record = {"route": "go", "chat_id": CHAT, "choice": "next", "disputes": ["D1"],
+              "session": fingerprint_of(served)}
+    calls = list(served.model.calls)
+    served.app.step_records.taken(OWNER, 'turn-1', **record)
+    assert api.continue_interrupted_steps() == 0
+    assert stepwise.waiting_of(held(served)) == 'understood' and served.model.calls == calls
+
+    def recover():
+        served.app.step_records.taken(OWNER, 'turn-1', stop_at=original['at'], **record)
+        assert api.continue_interrupted_steps() == 1
+        served.app.step_jobs.of(OWNER, 'turn-1').exception(timeout=30)
+        return outcome(served).json()['detail']['code']
+
+    assert recover() == 'waiting'
+    researched = held(served)
+    assert stepwise.waiting_of(researched) == 'researched'
+    calls = list(served.model.calls)
+    assert recover() == 'stale_stop'
+    assert held(served) == researched and served.model.calls == calls
+    assert not scripted.payloads('core_response_writer')
+
+
 def test_a_sign_in_is_found_by_its_fingerprint_only_while_it_holds_and_only_for_its_advocate(served):
     fingerprint, now = fingerprint_of(served), datetime.now(timezone.utc)
     assert served.directory.working_session(OWNER, fingerprint, now).advocate_id == OWNER

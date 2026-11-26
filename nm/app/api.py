@@ -18,7 +18,7 @@ import unicodedata
 from collections import OrderedDict
 from contextlib import contextmanager
 from copy import deepcopy
-from datetime import date
+from datetime import date, datetime
 from math import ceil
 from pathlib import Path
 from typing import Annotated, Literal
@@ -1747,6 +1747,19 @@ def _converted(run, req, *, signed_in, active):
     return _release(output)
 
 
+def _next_binding(choice, at):
+    """The dated stop a relative go-ahead answers, for both the request and its recovered delivery."""
+    if choice != 'next':
+        return {}
+    try:
+        dated = isinstance(at, str) and 0 < len(at) <= 64 and datetime.fromisoformat(at).utcoffset() is not None
+    except ValueError:
+        dated = False
+    if not dated:
+        raise ConversationRefused('Open the current waiting choices before using Next.', status=422, code='stop_required')
+    return {'stop_at': at}
+
+
 def _run_of(app, advocate_id, spec, signed_in):
     """The run a step names (plan AN.48, 48f4): {"route": send | continue | go | answers | message, "given": what its request
     gave} - the same call in the web server's own process or in the step worker's."""
@@ -1762,7 +1775,8 @@ def _run_of(app, advocate_id, spec, signed_in):
                                          session_current=signed_in)
     if route == 'go':
         return lambda: app.go_turn(advocate_id=advocate_id, chat_id=given['chat_id'], turn_id=given['turn_id'],
-                                   choice=given['choice'], disputes=given['disputes'], session_current=signed_in)
+                                   choice=given['choice'], disputes=given['disputes'], session_current=signed_in,
+                                   **_next_binding(given['choice'], given.get('stop_at')))
     if route == 'answers':
         return lambda: app.answer_turn(advocate_id=advocate_id, chat_id=given['chat_id'], turn_id=given['turn_id'],
                                        answers=given['answers'], session_current=signed_in)
@@ -1794,6 +1808,8 @@ def _answered(spec, req, request, advocate_id, background, *, held=False):
     record = {'route': spec['route'], 'chat_id': req.chat_id, 'choice': given.get('choice'),
               'disputes': list(given['disputes']) if given.get('disputes') else None,
               'session': token_fingerprint(token) if token else None}
+    if 'stop_at' in given:
+        record['stop_at'] = given['stop_at']
     if app.steps_mode == 'web':
         return _handed(app, spec, req, advocate_id, held, record)
     run = _run_of(app, advocate_id, spec, lambda: _session_current(request, advocate_id))
@@ -1976,10 +1992,16 @@ def continue_interrupted_steps(app=None):
                    app.continue_turn(advocate_id=a, chat_id=c, turn_id=t, session_current=s))
             record = {'route': 'continue', 'chat_id': chat_id, 'session': fingerprint}
         elif left['route'] == 'go':
-            run = (lambda a=advocate_id, c=chat_id, t=turn_id, s=signed_in, choice=left['choice'], named=left['disputes']:
-                   app.go_turn(advocate_id=a, chat_id=c, turn_id=t, choice=choice, disputes=named, session_current=s))
             record = {'route': 'go', 'chat_id': chat_id, 'choice': left['choice'], 'disputes': left['disputes'],
                       'session': fingerprint}
+            try:
+                binding = _next_binding(left['choice'], left.get('stop_at'))
+            except ConversationRefused:
+                # Older unbound Next records cannot authorise whichever step now happens to be next.
+                continue
+            record.update(binding)
+            given = {'chat_id': chat_id, 'turn_id': turn_id, 'choice': left['choice'], 'disputes': left['disputes'], **binding}
+            run = _run_of(app, advocate_id, {'route': 'go', 'given': given}, signed_in)
         else:
             continue
         req = SimpleNamespace(turn_id=turn_id, chat_id=chat_id)
@@ -2036,12 +2058,13 @@ class TurnGo(BaseModel):
     """The advocate's go-ahead at a stop of a matter worked step by step (plan AN.48, 48a3, 48b): the step, and for research or
     the analyses the disputes it is for (none: every dispute that step can now take); Search again (plan AN.52, D282) names the one
     dispute whose failed searches are made again (none: the answer written as a whole); Draft (plan AN.67, 23d2) names the one
-    dispute whose draft the stop offers (none: the answer written as a whole)."""
+    dispute whose draft the stop offers (none: the answer written as a whole). Next carries the time of the stop it answers."""
     model_config = ConfigDict(extra='forbid')
     chat_id: str = Field(min_length=1, max_length=200)
     turn_id: str = Field(min_length=1, max_length=200)
     choice: Literal['next', 'research', 'write', 'end_to_end', 'done', 'search_again', 'draft']
     disputes: list[Annotated[str, Field(min_length=1, max_length=200)]] | None = Field(default=None, min_length=1, max_length=50)
+    at: str | None = Field(default=None, min_length=1, max_length=64)
 
 
 @app.post('/api/turn/go', dependencies=[CsrfProtected])
@@ -2051,8 +2074,12 @@ def go_turn(req: TurnGo, advocate_id: Advocate, request: Request, background: Ba
     again, or is saved as one answer. Done before any analysis saves it as it stands."""
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
+    try:
+        binding = _next_binding(req.choice, req.at)
+    except ConversationRefused as exc:
+        raise HTTPException(exc.status, _conversation_error(exc, req)) from exc
     return _answered({'route': 'go', 'given': {'chat_id': req.chat_id, 'turn_id': req.turn_id, 'choice': req.choice,
-                                              'disputes': req.disputes}},
+                                              'disputes': req.disputes, **binding}},
                      req, request, advocate_id, background, held=True)
 
 

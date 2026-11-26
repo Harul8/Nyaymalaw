@@ -39,7 +39,8 @@ def test_the_first_stop_of_a_new_conversation_names_it_and_its_card_is_read_by_t
 def test_a_stop_in_an_open_conversation_names_that_conversation(served):
     scripted_answers(served, Scripted())
     chat = served.client.post("/api/turn", json=SENT).json()["detail"]["chat_id"]
-    went = served.client.post("/api/turn/go", json={"chat_id": chat, "turn_id": "turn-1", "choice": "next"})
+    card = served.client.get(f"/api/chats/{chat}").json()["pending"]["stopped"]["waiting"]
+    went = served.client.post("/api/turn/go", json={"chat_id": chat, "turn_id": "turn-1", "choice": "next", "at": card["at"]})
     assert went.status_code == 409 and went.json()["detail"]["chat_id"] == chat
 
 
