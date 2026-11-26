@@ -800,23 +800,27 @@ def test_a_turn_whose_usage_runs_out_after_showing_part_of_its_answer_keeps_what
     from tests.test_core_turn import run
     model = through_turns(Scripted())
     model.knows_the_case = True  # its case calls come here, not to the stand-in that sets out nothing
-    researching, lock, cases = model.structured, threading.Lock(), []
+    researching = model.structured
+    published = threading.Event()
+
+    def progress(stage, **detail):
+        if stage == "shown":
+            published.set()
 
     def structured(prompt, schema, tier, **kwargs):
         if prompt.operation not in ("core_case", "core_case_check"):
             return researching(prompt, schema, tier, **kwargs)
-        with lock:
-            cases.append(prompt.operation)
-            first = len(cases) == 1
-        if first:
+        if prompt.operation == "core_case" and json.loads(prompt.user)["dispute"]["id"] == "D2":
+            assert published.wait(timeout=15), "D1 must be published before simulating the outage"
             raise UsageLimitReached(USAGE_LIMIT_MESSAGE)
         return _result({key: [] for key in schema["required"]}, tier)  # nothing set out, in the case's own shape (D291: v3)
     model.structured = structured
     with pytest.raises(ConversationRefused) as stopped:
-        run(store, model)
+        run(store, model, progress=progress)
     assert stopped.value.code == "usage_limit" and stopped.value.status == 402 and stopped.value.kept
     held = held_now(store)
     assert held["stopped"]["code"] == "usage_limit"
+    assert [section["dispute_id"] for section in held["steps"]["answered"]["sections"]] == ["D1"]
     chat_id = held["request"]["chat_id"]
     response = turn.discard(store, store.load(chat_matter_id("owner", chat_id)), "owner", "t1", session_current=lambda: True)
     assert response["committed"] == "committed" and response["service_status"] == turn.STOPPED_FOR_USAGE
